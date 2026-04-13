@@ -1,12 +1,11 @@
 import path from "node:path";
 import { runCapture } from "../capture/run-capture";
-import { runComparison } from "../compare/run-comparison";
 import { configSchema } from "../config/schema";
-import { updateScreenshotLibrary, listFilesRecursive } from "../evidence/screenshot-library";
-import { normalizeIntent } from "../intent/normalize-intent";
 import { log } from "../shared/log";
+import { removeDirectory } from "../shared/fs";
 import { ResolvedSourceWorkspace } from "../target/resolve-target";
 import { buildCaptureItemsFromCatalog } from "./capture/build-capture-items";
+import { getDemoScreenshotRoot } from "./capture/screenshot-paths";
 import { SURFACE_CATALOG } from "./model/catalog";
 import { startSurfaceCatalogServer } from "./server/start-surface-catalog-server";
 
@@ -110,112 +109,48 @@ function buildWorkspace(config: ReturnType<typeof buildConfig>): ResolvedSourceW
   };
 }
 
+function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
+  return [
+    path.join(workspaceRoot, "artifacts", "library", "demo-components"),
+    path.join(workspaceRoot, "artifacts", "runs", "demo-baseline-captures"),
+    path.join(workspaceRoot, "artifacts", "runs", "demo-baseline-diffs"),
+    path.join(workspaceRoot, "artifacts", "runs", "demo-compare-captures"),
+    path.join(workspaceRoot, "artifacts", "runs", "demo-compare-diffs")
+  ];
+}
+
 async function runDemoLibrary(): Promise<void> {
   const server = await startSurfaceCatalogServer(SURFACE_CATALOG);
   const config = buildConfig(server.baseUrl);
   const workspace = buildWorkspace(config);
+  const workspaceRoot = process.cwd();
+  const screenshotRoot = getDemoScreenshotRoot(workspaceRoot);
 
   try {
-    const normalizedIntentBaseline = normalizeIntent({
-      rawPrompt: "Create baseline screenshot library for demo components",
-      runMode: "baseline",
-      defaultSourceId: "demo-components",
-      continueOnCaptureError: false,
-      linearEnabled: false,
-      publishToSourceWorkspace: false,
-      availableSources: {
-        "demo-components": {
-          aliases: ["components"],
-          capture: workspace.source.capture,
-          planning: workspace.source.planning,
-          source: workspace.source.source
-        }
-      }
-    });
+    await Promise.all(getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));
+    await removeDirectory(screenshotRoot);
 
-    const baselineCapturesDir = path.join(process.cwd(), "artifacts", "runs", "demo-baseline-captures");
-    const baselineDiffsDir = path.join(process.cwd(), "artifacts", "runs", "demo-baseline-diffs");
-    const baselineRoot = path.join(process.cwd(), "evidence", "baselines", "demo-components");
-
-    const baselineCapture = await runCapture(
+    const captureResult = await runCapture(
       config,
       workspace,
       workspace.source.capture.items,
-      baselineCapturesDir,
-      process.cwd(),
+      screenshotRoot,
+      workspaceRoot,
       false
     );
-    const baselineComparison = await runComparison(
-      config,
-      "baseline",
-      baselineCapture.outcomes,
-      baselineRoot,
-      baselineDiffsDir
-    );
 
-    await updateScreenshotLibrary({
-      config,
-      sourceId: workspace.sourceId,
-      runId: "demo-baseline",
-      mode: "baseline",
-      captures: baselineCapture.outcomes,
-      comparison: baselineComparison,
-      normalizedIntent: normalizedIntentBaseline
-    });
+    if (captureResult.abortedDueToError) {
+      throw new Error("Demo screenshot generation aborted because at least one capture failed.");
+    }
 
-    server.setVariant("v2");
+    const capturedFiles = captureResult.outcomes
+      .filter((outcome) => outcome.status === "captured")
+      .map((outcome) => path.relative(workspaceRoot, outcome.outputPath))
+      .sort();
 
-    const normalizedIntentCompare = normalizeIntent({
-      rawPrompt: "Compare screenshot drift for demo components",
-      runMode: "compare",
-      defaultSourceId: "demo-components",
-      continueOnCaptureError: false,
-      linearEnabled: false,
-      publishToSourceWorkspace: false,
-      availableSources: {
-        "demo-components": {
-          aliases: ["components"],
-          capture: workspace.source.capture,
-          planning: workspace.source.planning,
-          source: workspace.source.source
-        }
-      }
-    });
-
-    const compareCapturesDir = path.join(process.cwd(), "artifacts", "runs", "demo-compare-captures");
-    const compareDiffsDir = path.join(process.cwd(), "artifacts", "runs", "demo-compare-diffs");
-
-    const compareCapture = await runCapture(
-      config,
-      workspace,
-      workspace.source.capture.items,
-      compareCapturesDir,
-      process.cwd(),
-      false
-    );
-    const compareComparison = await runComparison(
-      config,
-      "compare",
-      compareCapture.outcomes,
-      baselineRoot,
-      compareDiffsDir
-    );
-
-    const libraryResult = await updateScreenshotLibrary({
-      config,
-      sourceId: workspace.sourceId,
-      runId: "demo-compare",
-      mode: "compare",
-      captures: compareCapture.outcomes,
-      comparison: compareComparison,
-      normalizedIntent: normalizedIntentCompare
-    });
-
-    const files = await listFilesRecursive(libraryResult.sourceLibraryRoot);
-    const imageCount = files.filter((file) => file.endsWith(".png")).length;
     log.info("Demo screenshot library generated.", {
       sourceId: workspace.sourceId,
-      libraryRoot: libraryResult.sourceLibraryRoot,
+      screenshotRoot: path.relative(workspaceRoot, screenshotRoot),
       surfaceCount: SURFACE_CATALOG.length,
       layerBreakdown: {
         primitive: SURFACE_CATALOG.filter((item) => item.layer === "primitive").length,
@@ -223,9 +158,11 @@ async function runDemoLibrary(): Promise<void> {
         view: SURFACE_CATALOG.filter((item) => item.layer === "view").length,
         page: SURFACE_CATALOG.filter((item) => item.layer === "page").length
       },
-      imageCount,
-      comparisonCounts: compareComparison.counts,
-      files: files.map((file) => path.relative(process.cwd(), file))
+      imageCount: capturedFiles.length,
+      legacyArtifactPathsCleared: getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) =>
+        path.relative(workspaceRoot, targetPath)
+      ),
+      files: capturedFiles
     });
   } finally {
     await server.close();

@@ -45,6 +45,7 @@ const captureItemSchema = z.object({
   id: z.string().min(1),
   name: z.string().optional(),
   path: z.string().min(1),
+  relativeOutputPath: z.string().min(1).optional(),
   locator: z.string().optional(),
   waitForSelector: z.string().optional(),
   fullPage: z.boolean().optional(),

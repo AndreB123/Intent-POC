@@ -148,6 +148,12 @@ The Playwright integration tests validate:
 	- `latest/diffs/*.png` (for changed captures)
 	- manifests and hash indexes under both baseline/latest folders
 - approved baselines are written to `evidence/baselines/<sourceId>/`
+- `npm run demo:library` is a tracked demo-specific workflow and rewrites screenshots directly under `evidence/baselines/demo-components/`
+	- `primitives/*.png`
+	- `components/*.png`
+	- `views/*.png`
+	- `pages/*.png`
+	- the command does not generate demo diff PNGs; review image changes through Git
 - summaries are written as markdown and JSON artifacts
 
 To publish artifacts into the source repo as well:
@@ -163,16 +169,18 @@ To publish artifacts into the source repo as well:
 - The prompt entrypoint is intentionally unstructured. The runner converts it into a bounded internal plan.
 - The implementation currently uses a rules-based normalizer and deterministic runner logic.
 
-Generate a local demo screenshot library with real images and drift artifacts:
+Generate the tracked demo screenshot library with real images:
 
 ```bash
 npm run demo:library
 ```
 
-The demo library currently generates 46 captures per run from the internal demo app under `src/demo-app`:
+The demo library currently regenerates 46 tracked screenshots from the internal demo app under `src/demo-app`:
 - 10 primitives
 - 16 components
 - 12 views
 - 8 pages
+
+Each screenshot is written into the matching layer folder under `evidence/baselines/demo-components/`, so relationships stay obvious and Git can review the PNG changes directly.
 
 All styling is driven by a single theme token file at `src/demo-app/theme/theme.ts`, so one edit to token values can restyle every surface in one commit.

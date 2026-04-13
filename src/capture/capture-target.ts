@@ -42,6 +42,21 @@ function joinCssBlocks(config: AppConfig, workspace: ResolvedSourceWorkspace): s
   return cssBlocks.length > 0 ? cssBlocks.join("\n") : undefined;
 }
 
+function resolveCaptureOutputPath(item: CaptureItemConfig, capturesDir: string): string {
+  const relativePath = item.relativeOutputPath ?? `${item.id}.png`;
+
+  if (path.isAbsolute(relativePath)) {
+    throw new Error(`Capture output path for '${item.id}' must be relative.`);
+  }
+
+  const normalizedPath = path.normalize(relativePath);
+  if (normalizedPath === ".." || normalizedPath.startsWith(`..${path.sep}`)) {
+    throw new Error(`Capture output path for '${item.id}' cannot escape the capture root.`);
+  }
+
+  return path.join(capturesDir, normalizedPath);
+}
+
 export async function captureTarget(
   config: AppConfig,
   workspace: ResolvedSourceWorkspace,
@@ -52,12 +67,12 @@ export async function captureTarget(
 ): Promise<CaptureOutcome> {
   const startedAt = Date.now();
   const page = await context.newPage();
-  const outputPath = path.join(capturesDir, `${item.id}.png`);
+  const outputPath = resolveCaptureOutputPath(item, capturesDir);
   const url = new URL(`${workspace.source.capture.basePathPrefix}${item.path}`, workspace.baseUrl).toString();
   const viewport = item.viewport ?? config.playwright.viewport;
 
   try {
-    await ensureDirectory(capturesDir);
+    await ensureDirectory(path.dirname(outputPath));
     await page.goto(url, { waitUntil: "networkidle" });
 
     const css = joinCssBlocks(config, workspace);

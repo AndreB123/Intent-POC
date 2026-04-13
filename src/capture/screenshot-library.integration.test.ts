@@ -9,6 +9,7 @@ import { runComparison } from "../compare/run-comparison";
 import { configSchema } from "../config/schema";
 import { ResolvedSourceWorkspace } from "../target/resolve-target";
 import { buildCaptureItemsFromCatalog } from "../demo-app/capture/build-capture-items";
+import { getDemoSurfaceScreenshotPath } from "../demo-app/capture/screenshot-paths";
 import { SURFACE_CATALOG } from "../demo-app/model/catalog";
 import { startSurfaceCatalogServer } from "../demo-app/server/start-surface-catalog-server";
 
@@ -149,6 +150,21 @@ test("creates a component screenshot baseline library via Playwright", async (t)
       assert.ok(outcome.hash, `Expected hash for capture '${outcome.captureId}'.`);
       await fs.access(outcome.outputPath);
     }
+
+    const primitive = captureResult.outcomes.find((outcome) => outcome.captureId === "primitive-color-chip");
+    const component = captureResult.outcomes.find((outcome) => outcome.captureId === "component-button-primary");
+    const view = captureResult.outcomes.find((outcome) => outcome.captureId === "view-list-overview");
+    const page = captureResult.outcomes.find((outcome) => outcome.captureId === "page-analytics-overview");
+
+    assert.ok(primitive);
+    assert.ok(component);
+    assert.ok(view);
+    assert.ok(page);
+
+    assert.equal(primitive.outputPath.endsWith(getDemoSurfaceScreenshotPath(SURFACE_CATALOG[0])), true);
+    assert.equal(component.outputPath.endsWith("components/component-button-primary.png"), true);
+    assert.equal(view.outputPath.endsWith("views/view-list-overview.png"), true);
+    assert.equal(page.outputPath.endsWith("pages/page-analytics-overview.png"), true);
 
     const comparison = await runComparison(config, "baseline", captureResult.outcomes, baselineDir, diffDir);
 
