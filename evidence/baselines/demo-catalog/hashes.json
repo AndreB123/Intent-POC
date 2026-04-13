@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "generatedAt": "2026-04-09T21:07:09.396Z",
+  "items": [
+    {
+      "captureId": "library-index",
+      "relativePath": "artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/library-index.png",
+      "sha256": "a0992b84e4c8dab901fd0acae009a51bf0694f40418f13b8a3c93f73291b149b"
+    },
+    {
+      "captureId": "component-button-primary",
+      "relativePath": "artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/component-button-primary.png",
+      "sha256": "83dbf74e8206f171f72ffcf035ba3ba873f8d9c50fe206e1e2dd60558f3009db"
+    },
+    {
+      "captureId": "page-analytics-overview",
+      "relativePath": "artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/page-analytics-overview.png",
+      "sha256": "fc39a549397e74d737a6d9bd4a5d78b811f3cdb117bcc5fd70a6aa61131b391e"
+    }
+  ]
+}

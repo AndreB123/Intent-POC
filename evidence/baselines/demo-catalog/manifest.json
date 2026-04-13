@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "runId": "2026-04-09T21-07-04-387Z-baseline-demo-catalog",
+  "timestamp": "2026-04-09T21:07:09.396Z",
+  "intent": {
+    "intentId": "2026-04-09T21-07-04-386Z-create-baseline-screenshot-evidence-for-demo-catalog",
+    "receivedAt": "2026-04-09T21:07:04.387Z",
+    "rawPrompt": "Create a baseline screenshot library for the built-in demo catalog.",
+    "summary": "create baseline screenshot evidence for demo-catalog",
+    "intentType": "baseline",
+    "targetId": "demo-catalog",
+    "captureScope": {
+      "mode": "all",
+      "captureIds": []
+    },
+    "artifacts": {
+      "requireScreenshots": true,
+      "requireManifest": true,
+      "requireHashes": true,
+      "requireComparison": false
+    },
+    "linear": {
+      "createIssue": true,
+      "issueTitle": "Intent POC: create baseline screenshot evidence for demo-catalog"
+    },
+    "execution": {
+      "runMode": "baseline",
+      "continueOnCaptureError": false
+    },
+    "normalizationMeta": {
+      "source": "rules",
+      "warnings": []
+    }
+  },
+  "linear": null,
+  "target": {
+    "id": "demo-catalog",
+    "sourceType": "local",
+    "rootDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+    "appDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+    "baseUrl": "http://127.0.0.1:6006"
+  },
+  "playwright": {
+    "browser": "chromium",
+    "headless": true,
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "deviceScaleFactor": 1,
+    "locale": "en-US",
+    "timezoneId": "UTC",
+    "colorScheme": "light",
+    "disableAnimations": true,
+    "extraHTTPHeaders": {}
+  },
+  "captures": [
+    {
+      "captureId": "library-index",
+      "name": "Demo Catalog Index",
+      "path": "/library",
+      "url": "http://127.0.0.1:6006/library",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/library-index.png",
+      "relativeOutputPath": "artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/library-index.png",
+      "durationMs": 1192,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "a0992b84e4c8dab901fd0acae009a51bf0694f40418f13b8a3c93f73291b149b",
+      "width": 1440,
+      "height": 1819,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-primary",
+      "name": "Demo Primary Button",
+      "path": "/library/component-button-primary",
+      "url": "http://127.0.0.1:6006/library/component-button-primary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/component-button-primary.png",
+      "relativeOutputPath": "artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/component-button-primary.png",
+      "durationMs": 1028,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-primary']",
+      "status": "captured",
+      "hash": "83dbf74e8206f171f72ffcf035ba3ba873f8d9c50fe206e1e2dd60558f3009db",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "page-analytics-overview",
+      "name": "Demo Analytics Overview",
+      "path": "/library/page-analytics-overview",
+      "url": "http://127.0.0.1:6006/library/page-analytics-overview",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/page-analytics-overview.png",
+      "relativeOutputPath": "artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/page-analytics-overview.png",
+      "durationMs": 976,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "fc39a549397e74d737a6d9bd4a5d78b811f3cdb117bcc5fd70a6aa61131b391e",
+      "width": 1440,
+      "height": 900,
+      "warnings": []
+    }
+  ],
+  "summary": {
+    "mode": "baseline",
+    "hasDrift": false,
+    "counts": {
+      "baseline-written": 3,
+      "unchanged": 0,
+      "changed": 0,
+      "missing-baseline": 0,
+      "capture-failed": 0,
+      "diff-error": 0
+    },
+    "items": [
+      {
+        "captureId": "library-index",
+        "status": "baseline-written",
+        "baselinePath": "/home/andre/Desktop/GeniusMonkey/Intent POC/evidence/baselines/demo-catalog/images/library-index.png",
+        "currentPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/library-index.png",
+        "currentHash": "a0992b84e4c8dab901fd0acae009a51bf0694f40418f13b8a3c93f73291b149b",
+        "baselineHash": "a0992b84e4c8dab901fd0acae009a51bf0694f40418f13b8a3c93f73291b149b"
+      },
+      {
+        "captureId": "component-button-primary",
+        "status": "baseline-written",
+        "baselinePath": "/home/andre/Desktop/GeniusMonkey/Intent POC/evidence/baselines/demo-catalog/images/component-button-primary.png",
+        "currentPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/component-button-primary.png",
+        "currentHash": "83dbf74e8206f171f72ffcf035ba3ba873f8d9c50fe206e1e2dd60558f3009db",
+        "baselineHash": "83dbf74e8206f171f72ffcf035ba3ba873f8d9c50fe206e1e2dd60558f3009db"
+      },
+      {
+        "captureId": "page-analytics-overview",
+        "status": "baseline-written",
+        "baselinePath": "/home/andre/Desktop/GeniusMonkey/Intent POC/evidence/baselines/demo-catalog/images/page-analytics-overview.png",
+        "currentPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/runs/2026-04-09T21-07-04-387Z-baseline-demo-catalog/captures/page-analytics-overview.png",
+        "currentHash": "fc39a549397e74d737a6d9bd4a5d78b811f3cdb117bcc5fd70a6aa61131b391e",
+        "baselineHash": "fc39a549397e74d737a6d9bd4a5d78b811f3cdb117bcc5fd70a6aa61131b391e"
+      }
+    ]
+  }
+}

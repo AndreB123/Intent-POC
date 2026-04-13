@@ -1,0 +1,143 @@
+version: 1
+linear:
+  enabled: false
+  apiKeyEnv: LINEAR_API_KEY
+  teamId: ENG
+  projectId: null
+  createIssueOnStart: false
+  commentOnProgress: false
+  commentOnCompletion: false
+  defaultStateIds:
+    started: null
+    completed: null
+    failed: null
+agent:
+  mode: bounded-runner
+  provider: openai
+  model: gpt-5.4
+  temperature: 0.1
+  allowPromptNormalization: true
+  fallbackToRules: true
+sources:
+  client-systems-postgres:
+    aliases:
+      - client-systems
+      - cs
+      - postgres
+      - pg
+    source:
+      type: git
+      gitUrl: https://github.com/geniusmonkey/client-systems.git
+      ref: master
+      authTokenEnv: CLIENT_SYSTEMS_GIT_TOKEN
+    workspace:
+      checkoutMode: clone-if-missing
+      cloneRoot: ./.workdirs
+      installTimeoutMs: 600000
+      env: {}
+    app:
+      workdir: .
+      startCommand: docker compose up -d postgres
+      stopCommand: docker compose stop postgres
+      baseUrl: http://127.0.0.1:6006
+      startTimeoutMs: 120000
+      env: {}
+      readiness:
+        type: http
+        url: http://127.0.0.1:6006
+        expectedStatus: 200
+        timeoutMs: 180000
+        intervalMs: 2000
+    capture:
+      waitAfterLoadMs: 700
+      injectCss:
+        - "*, *::before, *::after { animation: none !important; transition: none
+          !important; caret-color: transparent !important; }"
+      defaultFullPage: true
+      items:
+        - id: ui-overview
+          name: UI Overview
+          path: /
+          fullPage: true
+        - id: ui-primary-surface
+          name: UI Primary Surface
+          path: /iframe.html?id=button--primary
+          fullPage: true
+  example-storybook:
+    aliases:
+      - storybook
+      - demo
+    source:
+      type: local
+      localPath: ../target-app
+    workspace:
+      checkoutMode: existing
+      installCommand: npm ci
+      installTimeoutMs: 600000
+      env: {}
+    app:
+      workdir: .
+      startCommand: npm run storybook -- --port 6006 --ci
+      baseUrl: http://127.0.0.1:6006
+      startTimeoutMs: 120000
+      env: {}
+      readiness:
+        type: http
+        url: http://127.0.0.1:6006
+        expectedStatus: 200
+        timeoutMs: 120000
+        intervalMs: 2000
+    capture:
+      waitAfterLoadMs: 700
+      injectCss:
+        - "*, *::before, *::after { animation: none !important; transition: none
+          !important; caret-color: transparent !important; }"
+      defaultFullPage: false
+      items:
+        - id: button-primary
+          name: Primary Button
+          path: /iframe.html?id=button--primary
+          locator: "[data-testid='button-root']"
+          waitForSelector: "[data-testid='button-root']"
+        - id: card-default
+          name: Default Card
+          path: /iframe.html?id=card--default
+          locator: "[data-testid='card-root']"
+playwright:
+  browser: chromium
+  headless: true
+  viewport:
+    width: 1440
+    height: 900
+  deviceScaleFactor: 1
+  locale: en-US
+  timezoneId: UTC
+  colorScheme: light
+  disableAnimations: true
+artifacts:
+  storageMode: controller
+  runRoot: ./artifacts/runs
+  libraryRoot: ./artifacts/library
+  baselineRoot: ./evidence/baselines
+  copyToSourcePath: .intent-poc/artifacts
+  writeMarkdownSummary: true
+  writeJsonSummary: true
+  retainRuns: 20
+  cleanBeforeRun: false
+comparison:
+  enabled: true
+  hashAlgorithm: sha256
+  diffMethod: pixelmatch
+  pixelThreshold: 0.01
+  failOnChange: false
+  onMissingBaseline: error
+  writeDiffImages: true
+run:
+  sourceId: example-storybook
+  mode: compare
+  intent: null
+  captureIds: []
+  continueOnCaptureError: false
+  allowBaselinePromotion: false
+  metadata: {}
+  dryRun: false

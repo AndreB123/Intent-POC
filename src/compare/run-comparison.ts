@@ -1,0 +1,203 @@
+import path from "node:path";
+import { promises as fs } from "node:fs";
+import { AppConfig, RunMode } from "../config/schema";
+import { CaptureOutcome } from "../capture/capture-target";
+import { copyFile, ensureDirectory, pathExists } from "../shared/fs";
+import { hashFile } from "./hash-image";
+import { generatePixelDiff } from "./pixel-diff";
+
+export type ComparisonStatus =
+  | "baseline-written"
+  | "unchanged"
+  | "changed"
+  | "missing-baseline"
+  | "capture-failed"
+  | "diff-error";
+
+export interface ComparisonItem {
+  captureId: string;
+  status: ComparisonStatus;
+  baselinePath?: string;
+  currentPath?: string;
+  baselineHash?: string;
+  currentHash?: string;
+  diffImagePath?: string;
+  diffPixels?: number;
+  diffRatio?: number;
+  note?: string;
+}
+
+export interface ComparisonSummary {
+  mode: RunMode;
+  hasDrift: boolean;
+  counts: Record<ComparisonStatus, number>;
+  items: ComparisonItem[];
+}
+
+function initializeCounts(): Record<ComparisonStatus, number> {
+  return {
+    "baseline-written": 0,
+    unchanged: 0,
+    changed: 0,
+    "missing-baseline": 0,
+    "capture-failed": 0,
+    "diff-error": 0
+  };
+}
+
+async function copyCapturesToBaseline(captures: CaptureOutcome[], baselineImagesDir: string): Promise<ComparisonItem[]> {
+  await ensureDirectory(baselineImagesDir);
+
+  const items: ComparisonItem[] = [];
+  for (const capture of captures) {
+    if (capture.status !== "captured") {
+      items.push({
+        captureId: capture.captureId,
+        status: "capture-failed",
+        currentPath: capture.outputPath,
+        note: capture.error
+      });
+      continue;
+    }
+
+    const baselinePath = path.join(baselineImagesDir, `${capture.captureId}.png`);
+    await copyFile(capture.outputPath, baselinePath);
+    items.push({
+      captureId: capture.captureId,
+      status: "baseline-written",
+      baselinePath,
+      currentPath: capture.outputPath,
+      currentHash: capture.hash,
+      baselineHash: capture.hash
+    });
+  }
+
+  return items;
+}
+
+export async function runComparison(
+  config: AppConfig,
+  mode: RunMode,
+  captures: CaptureOutcome[],
+  baselineRoot: string,
+  diffDir: string
+): Promise<ComparisonSummary> {
+  const baselineImagesDir = path.join(baselineRoot, "images");
+  const counts = initializeCounts();
+
+  if (mode === "baseline" || mode === "approve-baseline") {
+    const items = await copyCapturesToBaseline(captures, baselineImagesDir);
+    for (const item of items) {
+      counts[item.status] += 1;
+    }
+
+    return {
+      mode,
+      hasDrift: false,
+      counts,
+      items
+    };
+  }
+
+  const items: ComparisonItem[] = [];
+  for (const capture of captures) {
+    if (capture.status !== "captured") {
+      items.push({
+        captureId: capture.captureId,
+        status: "capture-failed",
+        currentPath: capture.outputPath,
+        note: capture.error
+      });
+      counts["capture-failed"] += 1;
+      continue;
+    }
+
+    const baselinePath = path.join(baselineImagesDir, `${capture.captureId}.png`);
+    const baselineExists = await pathExists(baselinePath);
+
+    if (!baselineExists) {
+      if (config.comparison.onMissingBaseline === "bootstrap") {
+        await ensureDirectory(baselineImagesDir);
+        await copyFile(capture.outputPath, baselinePath);
+        items.push({
+          captureId: capture.captureId,
+          status: "baseline-written",
+          baselinePath,
+          currentPath: capture.outputPath,
+          baselineHash: capture.hash,
+          currentHash: capture.hash,
+          note: "Baseline was missing and has been bootstrapped from the current run."
+        });
+        counts["baseline-written"] += 1;
+      } else {
+        items.push({
+          captureId: capture.captureId,
+          status: "missing-baseline",
+          currentPath: capture.outputPath,
+          currentHash: capture.hash,
+          note: "Baseline image not found."
+        });
+        counts["missing-baseline"] += 1;
+      }
+
+      continue;
+    }
+
+    const baselineHash = await hashFile(baselinePath);
+    if (baselineHash === capture.hash) {
+      items.push({
+        captureId: capture.captureId,
+        status: "unchanged",
+        baselinePath,
+        currentPath: capture.outputPath,
+        baselineHash,
+        currentHash: capture.hash
+      });
+      counts.unchanged += 1;
+      continue;
+    }
+
+    try {
+      const diffImagePath = path.join(diffDir, `${capture.captureId}.png`);
+      const diff = await generatePixelDiff(
+        baselinePath,
+        capture.outputPath,
+        diffImagePath,
+        config.comparison.pixelThreshold,
+        config.comparison.writeDiffImages
+      );
+
+      items.push({
+        captureId: capture.captureId,
+        status: "changed",
+        baselinePath,
+        currentPath: capture.outputPath,
+        baselineHash,
+        currentHash: capture.hash,
+        diffImagePath: diff.outputPath,
+        diffPixels: diff.diffPixels,
+        diffRatio: diff.diffRatio,
+        note: diff.note
+      });
+      counts.changed += 1;
+    } catch (error) {
+      items.push({
+        captureId: capture.captureId,
+        status: "diff-error",
+        baselinePath,
+        currentPath: capture.outputPath,
+        baselineHash,
+        currentHash: capture.hash,
+        note: error instanceof Error ? error.message : String(error)
+      });
+      counts["diff-error"] += 1;
+    }
+  }
+
+  return {
+    mode,
+    hasDrift: counts.changed > 0 || counts["missing-baseline"] > 0 || counts["diff-error"] > 0,
+    counts,
+    items
+  };
+}

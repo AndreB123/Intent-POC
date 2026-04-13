@@ -1,0 +1,138 @@
+import path from "node:path";
+import { promises as fs } from "node:fs";
+import { BrowserContext, Page } from "playwright";
+import { PNG } from "pngjs";
+import { AppConfig, CaptureItemConfig } from "../config/schema";
+import { hashBuffer } from "../compare/hash-image";
+import { ensureDirectory } from "../shared/fs";
+import { ResolvedSourceWorkspace } from "../target/resolve-target";
+
+export interface CaptureOutcome {
+  captureId: string;
+  name?: string;
+  path: string;
+  url: string;
+  kind: "page" | "locator";
+  outputPath: string;
+  relativeOutputPath: string;
+  durationMs: number;
+  viewport: { width: number; height: number };
+  locator?: string;
+  status: "captured" | "failed";
+  hash?: string;
+  width?: number;
+  height?: number;
+  error?: string;
+  warnings: string[];
+}
+
+function buildMaskLocators(page: Page, item: CaptureItemConfig) {
+  return item.maskSelectors.map((selector) => page.locator(selector));
+}
+
+function joinCssBlocks(config: AppConfig, workspace: ResolvedSourceWorkspace): string | undefined {
+  const cssBlocks = [...workspace.source.capture.injectCss];
+
+  if (config.playwright.disableAnimations) {
+    cssBlocks.push(
+      `*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }`
+    );
+  }
+
+  return cssBlocks.length > 0 ? cssBlocks.join("\n") : undefined;
+}
+
+export async function captureTarget(
+  config: AppConfig,
+  workspace: ResolvedSourceWorkspace,
+  context: BrowserContext,
+  item: CaptureItemConfig,
+  capturesDir: string,
+  controllerRoot: string
+): Promise<CaptureOutcome> {
+  const startedAt = Date.now();
+  const page = await context.newPage();
+  const outputPath = path.join(capturesDir, `${item.id}.png`);
+  const url = new URL(`${workspace.source.capture.basePathPrefix}${item.path}`, workspace.baseUrl).toString();
+  const viewport = item.viewport ?? config.playwright.viewport;
+
+  try {
+    await ensureDirectory(capturesDir);
+    await page.goto(url, { waitUntil: "networkidle" });
+
+    const css = joinCssBlocks(config, workspace);
+    if (css) {
+      await page.addStyleTag({ content: css });
+    }
+
+    if (item.waitForSelector) {
+      await page.waitForSelector(item.waitForSelector);
+    }
+
+    if (workspace.source.capture.waitAfterLoadMs > 0) {
+      await page.waitForTimeout(workspace.source.capture.waitAfterLoadMs);
+    }
+
+    if (item.delayMs > 0) {
+      await page.waitForTimeout(item.delayMs);
+    }
+
+    const mask = buildMaskLocators(page, item);
+    let screenshot: Buffer;
+
+    if (item.locator) {
+      const locator = page.locator(item.locator);
+      await locator.waitFor();
+      screenshot = await locator.screenshot({
+        animations: config.playwright.disableAnimations ? "disabled" : "allow",
+        mask
+      });
+    } else {
+      screenshot = await page.screenshot({
+        animations: config.playwright.disableAnimations ? "disabled" : "allow",
+        fullPage: item.fullPage ?? workspace.source.capture.defaultFullPage,
+        clip: item.clip,
+        mask
+      });
+    }
+
+    await fs.writeFile(outputPath, screenshot);
+    const png = PNG.sync.read(screenshot);
+
+    return {
+      captureId: item.id,
+      name: item.name,
+      path: item.path,
+      url,
+      kind: item.locator ? "locator" : "page",
+      outputPath,
+      relativeOutputPath: path.relative(controllerRoot, outputPath),
+      durationMs: Date.now() - startedAt,
+      viewport,
+      locator: item.locator,
+      status: "captured",
+      hash: hashBuffer(screenshot),
+      width: png.width,
+      height: png.height,
+      warnings: []
+    };
+  } catch (error) {
+    return {
+      captureId: item.id,
+      name: item.name,
+      path: item.path,
+      url,
+      kind: item.locator ? "locator" : "page",
+      outputPath,
+      relativeOutputPath: path.relative(controllerRoot, outputPath),
+      durationMs: Date.now() - startedAt,
+      viewport,
+      locator: item.locator,
+      status: "failed",
+      error: error instanceof Error ? error.message : String(error),
+      warnings: []
+    };
+  } finally {
+    await page.close();
+  }
+}
