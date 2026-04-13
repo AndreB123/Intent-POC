@@ -126,7 +126,9 @@ async function runDemoLibrary(): Promise<void> {
       availableSources: {
         "demo-components": {
           aliases: ["components"],
-          capture: workspace.source.capture
+          capture: workspace.source.capture,
+          planning: workspace.source.planning,
+          source: workspace.source.source
         }
       }
     });
@@ -173,7 +175,9 @@ async function runDemoLibrary(): Promise<void> {
       availableSources: {
         "demo-components": {
           aliases: ["components"],
-          capture: workspace.source.capture
+          capture: workspace.source.capture,
+          planning: workspace.source.planning,
+          source: workspace.source.source
         }
       }
     });

@@ -2,7 +2,7 @@ import { CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
 import { sanitizeFileSegment } from "../shared/fs";
 import { NormalizedIntent } from "./intent-types";
 
-type AvailableSourceDescriptor = Pick<SourceConfig, "aliases" | "capture">;
+type AvailableSourceDescriptor = Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">;
 
 interface NormalizeIntentOptions {
   rawPrompt: string;
@@ -12,6 +12,7 @@ interface NormalizeIntentOptions {
   availableSources: Record<string, AvailableSourceDescriptor>;
   linearEnabled?: boolean;
   publishToSourceWorkspace?: boolean;
+  resumeIssue?: string;
   sourceIdOverride?: string;
   modeOverride?: RunMode;
 }
@@ -459,6 +460,162 @@ function describeSelectionReason(reason: SourceSelection["selectionReason"], sou
   }
 }
 
+function describeRepoSelectionReason(reason: SourceSelection["selectionReason"], repoId: string, sourceIds: string[]): string {
+  if (sourceIds.length === 1) {
+    return describeSelectionReason(reason, sourceIds[0]);
+  }
+
+  switch (reason) {
+    case "operator-override":
+      return `Repo ${repoId} is in scope because the operator explicitly selected sources ${sourceIds.join(", ")}.`;
+    case "prompt-match":
+      return `Repo ${repoId} is in scope because the prompt referenced sources ${sourceIds.join(", ")}.`;
+    case "business-wide":
+      return `Repo ${repoId} is included because the prompt requests a business-wide or cross-system path.`;
+    case "default":
+    default:
+      return `Repo ${repoId} remains in scope because the current plan falls back to the configured default sources ${sourceIds.join(", ")}.`;
+  }
+}
+
+function buildRepoCandidates(input: {
+  availableSources: Record<string, AvailableSourceDescriptor>;
+  sourceSelection: SourceSelection;
+}): NormalizedIntent["planning"]["repoCandidates"] {
+  const repoEntries = new Map<
+    string,
+    {
+      repoId: string;
+      label: string;
+      role?: string;
+      summary?: string;
+      sourceIds: string[];
+      selectedSourceIds: string[];
+      sourceTypes: Set<"local" | "git">;
+      locations: Set<string>;
+      refs: Set<string>;
+      notes: Set<string>;
+      captureCount: number;
+    }
+  >();
+
+  for (const [sourceId, source] of Object.entries(input.availableSources)) {
+    const repoId = source.planning.repoId ?? sourceId;
+    const label = source.planning.repoLabel ?? repoId;
+    const entry = repoEntries.get(repoId) ?? {
+      repoId,
+      label,
+      role: source.planning.role,
+      summary: source.planning.summary,
+      sourceIds: [],
+      selectedSourceIds: [],
+      sourceTypes: new Set<"local" | "git">(),
+      locations: new Set<string>(),
+      refs: new Set<string>(),
+      notes: new Set<string>(),
+      captureCount: 0
+    };
+
+    entry.sourceIds.push(sourceId);
+    entry.captureCount += source.capture.items.length;
+    entry.sourceTypes.add(source.source.type);
+
+    if (source.source.type === "local") {
+      entry.locations.add(source.source.localPath);
+    } else {
+      entry.locations.add(source.source.gitUrl);
+      entry.refs.add(source.source.ref);
+      if (source.source.authTokenEnv) {
+        entry.notes.add(`Uses ${source.source.authTokenEnv} when authenticated git access is required.`);
+      }
+    }
+
+    for (const note of source.planning.notes) {
+      entry.notes.add(note);
+    }
+
+    if (input.sourceSelection.sourceIds.includes(sourceId)) {
+      entry.selectedSourceIds.push(sourceId);
+    }
+
+    repoEntries.set(repoId, entry);
+  }
+
+  return Array.from(repoEntries.values())
+    .map((entry) => {
+      const selectionStatus: NormalizedIntent["planning"]["repoCandidates"][number]["selectionStatus"] =
+        entry.selectedSourceIds.length > 0 ? "selected" : "candidate";
+      const notes = Array.from(entry.notes);
+      notes.push(`Configured visual captures across linked sources: ${entry.captureCount}.`);
+
+      return {
+        repoId: entry.repoId,
+        label: entry.label,
+        role: entry.role,
+        sourceIds: entry.sourceIds,
+        selectionStatus,
+        reason:
+          selectionStatus === "selected"
+            ? describeRepoSelectionReason(input.sourceSelection.selectionReason, entry.repoId, entry.selectedSourceIds)
+            : `Repo ${entry.repoId} remains available in the configured shortlist for future plan expansion.`,
+        summary: entry.summary,
+        sourceTypes: Array.from(entry.sourceTypes),
+        locations: Array.from(entry.locations),
+        refs: Array.from(entry.refs),
+        notes,
+        captureCount: entry.captureCount
+      };
+    })
+    .sort((left, right) => {
+      if (left.selectionStatus !== right.selectionStatus) {
+        return left.selectionStatus === "selected" ? -1 : 1;
+      }
+
+      return left.label.localeCompare(right.label);
+    });
+}
+
+function buildPlannerSections(sourceIds: string[]): NormalizedIntent["planning"]["plannerSections"] {
+  return [
+    {
+      id: "idd-plan",
+      title: "IDD Plan",
+      scope: "business",
+      summary: "Planner-owned business plan with acceptance criteria, repo context, execution lanes, and delivery notes."
+    },
+    ...sourceIds.map((sourceId) => ({
+      id: `idd-source-lane-${sanitizeFileSegment(sourceId)}`,
+      title: `IDD Source Lane: ${sourceId}`,
+      scope: "source" as const,
+      sourceId,
+      summary: `Planner-owned lane for ${sourceId}, intended for downstream implementation and verification handoff.`
+    }))
+  ];
+}
+
+function buildPlanningReviewNotes(input: {
+  repoCandidates: NormalizedIntent["planning"]["repoCandidates"];
+  sourceIds: string[];
+  resumeIssue?: string;
+}): string[] {
+  const notes: string[] = [];
+  const candidateRepoCount = input.repoCandidates.filter((repo) => repo.selectionStatus === "candidate").length;
+
+  if (input.resumeIssue) {
+    notes.push(`This plan is configured to resume Linear issue ${input.resumeIssue}.`);
+  }
+
+  if (candidateRepoCount > 0) {
+    notes.push(`${candidateRepoCount} additional configured repo candidates remain available if the plan expands.`);
+  }
+
+  if (input.sourceIds.length > 1) {
+    notes.push("The current executor still applies a single run mode across all selected repos; mixed per-repo modes are not yet supported.");
+  }
+
+  return notes;
+}
+
 export function normalizeIntent(options: NormalizeIntentOptions): NormalizedIntent {
   const trimmedPrompt = options.rawPrompt.trim();
   const sourceSelection = pickApplicableSourceIds(trimmedPrompt, options);
@@ -502,6 +659,15 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
     linearEnabled: options.linearEnabled ?? false,
     sourceIds: sourceSelection.sourceIds
   });
+  const repoCandidates = buildRepoCandidates({
+    availableSources: options.availableSources,
+    sourceSelection
+  });
+  const planningReviewNotes = buildPlanningReviewNotes({
+    repoCandidates,
+    sourceIds: sourceSelection.sourceIds,
+    resumeIssue: options.resumeIssue
+  });
   const reviewNotes: string[] = [];
 
   if (sourceSelection.sourceIds.length > 1) {
@@ -527,6 +693,19 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
       acceptanceCriteria,
       scenarios,
       workItems
+    },
+    planning: {
+      repoCandidates,
+      plannerSections: buildPlannerSections(sourceSelection.sourceIds),
+      reviewNotes: planningReviewNotes,
+      linearPlan: options.resumeIssue
+        ? {
+            mode: "resume-explicit",
+            issueReference: options.resumeIssue
+          }
+        : {
+            mode: "new"
+          }
     },
     executionPlan: {
       primarySourceId,
@@ -554,7 +733,7 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
     },
     normalizationMeta: {
       source: "rules",
-      warnings: reviewNotes
+      warnings: [...reviewNotes, ...planningReviewNotes]
     }
   };
 }

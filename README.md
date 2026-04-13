@@ -10,8 +10,10 @@ The initial implementation includes:
 - single-file YAML configuration
 - config validation and env expansion
 - bounded intent normalization
+- repo-context planning metadata derived from configured source shortlist
 - multi-source execution planning
 - Linear parent/child issue/comment/state integration
+- explicit Linear resume support with planner-managed issue sections
 - source workspace resolution for local and git sources
 - app install/start/readiness handling
 - Playwright capture pipeline
@@ -87,6 +89,12 @@ Dry run:
 npm run dev -- run --config ./intent-poc.yaml --intent "Create and maintain a screenshot library for the configured source" --dry-run
 ```
 
+Resume an existing Linear plan explicitly by issue id or identifier:
+
+```bash
+npm run dev -- run --config ./intent-poc.yaml --resume-issue ENG-321 --intent "Continue the client-systems verification plan" --dry-run
+```
+
 Baseline run:
 
 ```bash
@@ -133,6 +141,7 @@ The Playwright integration tests validate:
 
 - run bundles are written to `artifacts/runs/<runId>/`
 - per-source evidence is written to `artifacts/runs/<runId>/sources/<sourceId>/`
+- plan lifecycle metadata is written to `artifacts/runs/<runId>/plan-lifecycle.json`
 - screenshot library is maintained at `artifacts/library/<sourceId>/`
 	- `baseline/images/*.png`
 	- `latest/images/*.png`
@@ -149,6 +158,8 @@ To publish artifacts into the source repo as well:
 
 - Artifacts are controller-owned by default. The source repo is not modified unless storage mode is configured to publish back into the source workspace.
 - Multiple source repos are supported through multiple `sources` profiles in one config.
+- Each source can now carry `planning` metadata so the planner can describe repo identity, role, and notes separately from capture/runtime settings.
+- `run.resumeIssue` or `--resume-issue` lets the planner attach to an existing Linear parent issue and update only planner-managed IDD sections.
 - The prompt entrypoint is intentionally unstructured. The runner converts it into a bounded internal plan.
 - The implementation currently uses a rules-based normalizer and deterministic runner logic.
 

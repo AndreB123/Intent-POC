@@ -26,6 +26,24 @@ export interface BusinessLinearPublication {
   errors: string[];
 }
 
+export interface PlanLifecycleRecord {
+  version: AppConfig["version"];
+  runId: string;
+  updatedAt: string;
+  intentId: string;
+  summary: string;
+  mode: AppConfig["run"]["mode"];
+  planning: NormalizedIntent["planning"];
+  linear: BusinessLinearPublication | null;
+  sources: Array<{
+    sourceId: string;
+    status: SourceEvidenceRecord["status"];
+    selectionReason?: string;
+    runMode?: AppConfig["run"]["mode"];
+    linearIssue?: LinearIssueRef | null;
+  }>;
+}
+
 function emptyComparisonCounts(): Record<ComparisonStatus, number> {
   return {
     "baseline-written": 0,
@@ -185,6 +203,9 @@ export async function writeBusinessEvidenceFiles(input: {
     summary: {
       hasDrift: input.hasDrift,
       counts: input.counts
+    },
+    artifacts: {
+      planLifecyclePath: toRelativePath(input.paths.controllerRoot, input.paths.planLifecyclePath)
     }
   };
 
@@ -230,6 +251,38 @@ export async function writeBusinessEvidenceFiles(input: {
   await writeJsonFile(input.paths.manifestPath, manifest);
   await writeJsonFile(input.paths.hashesPath, hashes);
   await writeJsonFile(input.paths.comparisonPath, comparisonJson);
+}
+
+export async function writePlanLifecycleFile(input: {
+  config: AppConfig;
+  paths: RunPaths;
+  normalizedIntent: NormalizedIntent;
+  linearPublication: BusinessLinearPublication | null;
+  sourceRuns: SourceEvidenceRecord[];
+}): Promise<void> {
+  const record: PlanLifecycleRecord = {
+    version: input.config.version,
+    runId: input.paths.runId,
+    updatedAt: new Date().toISOString(),
+    intentId: input.normalizedIntent.intentId,
+    summary: input.normalizedIntent.summary,
+    mode: input.normalizedIntent.execution.runMode,
+    planning: input.normalizedIntent.planning,
+    linear: input.linearPublication,
+    sources: input.sourceRuns.map((sourceRun) => {
+      const sourcePlan = input.normalizedIntent.executionPlan.sources.find((source) => source.sourceId === sourceRun.sourceId);
+
+      return {
+        sourceId: sourceRun.sourceId,
+        status: sourceRun.status,
+        selectionReason: sourcePlan?.selectionReason,
+        runMode: sourcePlan?.runMode,
+        linearIssue: sourceRun.linearIssue ?? input.linearPublication?.sourceIssues[sourceRun.sourceId] ?? null
+      };
+    })
+  };
+
+  await writeJsonFile(input.paths.planLifecyclePath, record);
 }
 
 export async function writeEvidenceFiles(input: {

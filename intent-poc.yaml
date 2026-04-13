@@ -24,6 +24,13 @@ sources:
       - demo
       - demo-app
       - demo-catalog
+    planning:
+      repoId: intent-poc
+      repoLabel: Intent POC
+      role: controller-and-demo-source
+      summary: Current workspace used to bootstrap resumable IDD planning and demo evidence flows.
+      notes:
+        - Use this repo as the first concrete repo-context example while agent access is pending.
     source:
       type: local
       localPath: .
@@ -68,6 +75,11 @@ sources:
       - cs
       - postgres
       - pg
+    planning:
+      repoId: client-systems
+      repoLabel: Client Systems
+      role: external product repo
+      summary: Git-backed product repo used for multi-repo planning and downstream implementation handoff.
     source:
       type: git
       gitUrl: https://github.com/geniusmonkey/client-systems.git
@@ -109,6 +121,11 @@ sources:
     aliases:
       - storybook
       - demo
+    planning:
+      repoId: target-app
+      repoLabel: Example Storybook
+      role: example target app
+      summary: Local example repo kept for storybook-oriented capture and planning experiments.
     source:
       type: local
       localPath: ../target-app
@@ -177,6 +194,7 @@ run:
   sourceId: demo-catalog
   mode: baseline
   intent: Create a baseline screenshot library for the built-in demo catalog.
+  resumeIssue:
   captureIds: []
   continueOnCaptureError: false
   allowBaselinePromotion: false

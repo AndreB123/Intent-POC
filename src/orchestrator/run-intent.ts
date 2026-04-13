@@ -8,6 +8,7 @@ import { publishArtifactsToSourceIfConfigured } from "../evidence/publish-artifa
 import { updateScreenshotLibrary } from "../evidence/screenshot-library";
 import {
   BusinessLinearPublication,
+  writePlanLifecycleFile,
   SourceEvidenceRecord,
   writeBusinessEvidenceFiles,
   writeSourceEvidenceFiles
@@ -16,6 +17,12 @@ import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evi
 import { NormalizedIntent } from "../intent/intent-types";
 import { normalizeIntent } from "../intent/normalize-intent";
 import { LinearClient, LinearIssueRef } from "../linear/linear-client";
+import {
+  BUSINESS_PLAN_SECTION_ID,
+  getPlannerSectionStartMarker,
+  sourceLaneSectionId,
+  upsertPlannerSection
+} from "../linear/planner-sections";
 import { startApp } from "../runtime/start-app";
 import { waitForReady } from "../runtime/wait-for-ready";
 import { writeJsonFile } from "../shared/fs";
@@ -57,6 +64,7 @@ export interface RunIntentOptions {
   intent?: string;
   mode?: RunMode;
   sourceId?: string;
+  resumeIssue?: string;
   dryRun?: boolean;
   onEvent?: (event: RunIntentEvent) => void;
 }
@@ -138,6 +146,36 @@ function buildParentIssueDescription(input: {
         ].join("\n")
     )
     .join("\n");
+  const repoContext = input.normalizedIntent.planning.repoCandidates
+    .map((repo) => {
+      const details = [
+        `- ${repo.label} [${repo.selectionStatus}]`,
+        `  - Repo ID: ${repo.repoId}`,
+        `  - Sources: ${repo.sourceIds.join(", ")}`,
+        `  - Capture count: ${repo.captureCount}`,
+        `  - Reason: ${repo.reason}`
+      ];
+
+      if (repo.role) {
+        details.push(`  - Role: ${repo.role}`);
+      }
+
+      if (repo.summary) {
+        details.push(`  - Summary: ${repo.summary}`);
+      }
+
+      if (repo.locations.length > 0) {
+        details.push(`  - Locations: ${repo.locations.join(", ")}`);
+      }
+
+      if (repo.refs.length > 0) {
+        details.push(`  - Refs: ${repo.refs.join(", ")}`);
+      }
+
+      details.push(...repo.notes.map((note) => `  - Note: ${note}`));
+      return details.join("\n");
+    })
+    .join("\n");
   const sources = input.normalizedIntent.executionPlan.sources
     .map(
       (source) =>
@@ -149,6 +187,18 @@ function buildParentIssueDescription(input: {
     .join("\n");
   const tools = input.normalizedIntent.executionPlan.tools
     .map((tool) => `- ${tool.label} [${tool.enabled ? "enabled" : "planned"}] - ${tool.reason}`)
+    .join("\n");
+  const planningLifecycle = [
+    `- Linear plan mode: ${input.normalizedIntent.planning.linearPlan.mode}`,
+    input.normalizedIntent.planning.linearPlan.issueReference
+      ? `- Resume issue: ${input.normalizedIntent.planning.linearPlan.issueReference}`
+      : undefined,
+    ...input.normalizedIntent.planning.reviewNotes.map((note) => `- ${note}`),
+    ...input.normalizedIntent.planning.plannerSections.map(
+      (section) => `- Managed section: ${section.title} - ${section.summary}`
+    )
+  ]
+    .filter((line): line is string => Boolean(line))
     .join("\n");
 
   return [
@@ -172,6 +222,10 @@ function buildParentIssueDescription(input: {
     "",
     workItems,
     "",
+    `## Repo Context`,
+    "",
+    repoContext,
+    "",
     `## Execution Sources`,
     "",
     sources,
@@ -183,6 +237,10 @@ function buildParentIssueDescription(input: {
     `## Tools`,
     "",
     tools,
+    "",
+    `## Plan Lifecycle`,
+    "",
+    planningLifecycle,
     "",
     `## Raw Intent`,
     "",
@@ -204,6 +262,7 @@ function buildSourceIssueDescription(input: {
   sourceId: string;
 }): string {
   const sourcePlan = input.normalizedIntent.executionPlan.sources.find((source) => source.sourceId === input.sourceId);
+  const repoContext = input.normalizedIntent.planning.repoCandidates.find((repo) => repo.sourceIds.includes(input.sourceId));
   const scenarios = input.normalizedIntent.businessIntent.scenarios
     .filter((scenario) => scenario.applicableSourceIds.includes(input.sourceId))
     .map(
@@ -235,6 +294,7 @@ function buildSourceIssueDescription(input: {
     `- Mode: ${sourcePlan?.runMode ?? input.normalizedIntent.execution.runMode}`,
     `- Capture scope: ${sourcePlan?.captureScope.mode === "subset" ? sourcePlan.captureScope.captureIds.join(", ") : "all configured captures"}`,
     `- Selection reason: ${sourcePlan?.selectionReason ?? "not recorded"}`,
+    repoContext ? `- Repo context: ${repoContext.label} (${repoContext.repoId})` : `- Repo context: not linked`,
     "",
     `## Relevant BDD Scenarios`,
     "",
@@ -247,8 +307,43 @@ function buildSourceIssueDescription(input: {
     `## Planner Warnings`,
     "",
     sourcePlan?.warnings.length ? sourcePlan.warnings.map((warning) => `- ${warning}`).join("\n") : "- None",
+    "",
+    `## Repo Notes`,
+    "",
+    repoContext?.notes.length ? repoContext.notes.map((note) => `- ${note}`).join("\n") : "- None",
     ""
   ].join("\n");
+}
+
+function buildManagedParentIssueDescription(existingDescription: string | undefined, input: {
+  rawPrompt: string;
+  normalizedIntent: NormalizedIntent;
+}): string {
+  return upsertPlannerSection(existingDescription, {
+    id: BUSINESS_PLAN_SECTION_ID,
+    title: "IDD Plan",
+    body: buildParentIssueDescription(input)
+  });
+}
+
+function buildManagedSourceIssueDescription(existingDescription: string | undefined, input: {
+  normalizedIntent: NormalizedIntent;
+  sourceId: string;
+}): string {
+  return upsertPlannerSection(existingDescription, {
+    id: sourceLaneSectionId(input.sourceId),
+    title: `IDD Source Lane: ${input.sourceId}`,
+    body: buildSourceIssueDescription(input)
+  });
+}
+
+function findReusableSourceIssue(existingIssues: LinearIssueRef[], sourceId: string): LinearIssueRef | undefined {
+  const titlePrefix = `IDD Source Lane: ${sourceId} ·`;
+  const sectionMarker = getPlannerSectionStartMarker(sourceLaneSectionId(sourceId));
+
+  return existingIssues.find(
+    (issue) => issue.title?.startsWith(titlePrefix) || issue.description?.includes(sectionMarker)
+  );
 }
 
 function selectCaptureItems(allItems: CaptureItemConfig[], captureIds: string[]): CaptureItemConfig[] {
@@ -704,13 +799,15 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
   const sourceId = options.sourceId ?? config.run.sourceId;
   const mode = options.mode ?? config.run.mode;
   const rawPrompt = options.intent ?? config.run.intent;
+  const resumeIssue = options.resumeIssue ?? config.run.resumeIssue;
   const dryRun = options.dryRun ?? config.run.dryRun;
 
   emitRunEvent(options, "config", "Configuration loaded.", {
     configPath: loadedConfig.configPath,
     defaultSourceId: config.run.sourceId,
     linearEnabled: config.linear.enabled,
-    sourceCount: Object.keys(config.sources).length
+    sourceCount: Object.keys(config.sources).length,
+    resumeIssue
   });
 
   if (!rawPrompt || rawPrompt.trim().length === 0) {
@@ -722,8 +819,10 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
       id,
       {
         aliases: source.aliases,
-        capture: source.capture
-      } satisfies Pick<SourceConfig, "aliases" | "capture">
+        capture: source.capture,
+        planning: source.planning,
+        source: source.source
+      } satisfies Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">
     ])
   );
 
@@ -734,6 +833,7 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
     continueOnCaptureError: config.run.continueOnCaptureError,
     sourceIdOverride,
     modeOverride: options.mode,
+    resumeIssue,
     linearEnabled: config.linear.enabled,
     publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
     availableSources
@@ -763,47 +863,6 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
     }))
   });
 
-  if (dryRun) {
-    const sourceRuns: SourceRunResult[] = sourceIds.map((currentSourceId) => ({
-      sourceId: currentSourceId,
-      status: "planned",
-      paths: paths.sourceRuns[currentSourceId],
-      captures: [],
-      linearIssue: null
-    }));
-
-    emitRunEvent(options, "run", "Dry run complete.", {
-      sourceId: normalizedIntent.executionPlan.primarySourceId,
-      sourceIds,
-      mode: normalizedIntent.execution.runMode,
-      normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath)
-    });
-
-    log.info("Dry run complete.", {
-      sourceId: normalizedIntent.executionPlan.primarySourceId,
-      sourceIds,
-      mode: normalizedIntent.execution.runMode,
-      normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath)
-    });
-
-    await retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
-    return {
-      status: "completed",
-      sourceId: normalizedIntent.executionPlan.primarySourceId,
-      mode: normalizedIntent.execution.runMode,
-      dryRun: true,
-      normalizedIntent,
-      paths,
-      linearIssue: null,
-      linearPublication: null,
-      sourceRuns,
-      captures: [],
-      hasDrift: false,
-      counts: emptyComparisonCounts(),
-      errors: []
-    };
-  }
-
   const linearClient = config.linear.enabled ? new LinearClient(config.linear) : null;
   const linearErrors: string[] = [];
   const linearPublication: BusinessLinearPublication = {
@@ -816,58 +875,136 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
     enabled: config.linear.enabled,
     createIssueOnStart: config.linear.createIssueOnStart,
     commentOnProgress: config.linear.commentOnProgress,
-    commentOnCompletion: config.linear.commentOnCompletion
+    commentOnCompletion: config.linear.commentOnCompletion,
+    resumeIssue
   });
 
-  if (linearClient && config.linear.createIssueOnStart) {
-    emitRunEvent(options, "linear", "Creating Linear parent issue.", {
-      teamId: config.linear.teamId,
-      projectId: config.linear.projectId,
-      title: normalizedIntent.linear.issueTitle
-    });
+  const shouldManageLinearPlan = Boolean(linearClient && (config.linear.createIssueOnStart || resumeIssue));
 
-    linearPublication.parentIssue = await safeLinearTask({
-      enabled: true,
-      options,
-      errors: linearErrors,
-      message: "Failed to create the Linear parent issue",
-      task: async () =>
-        await linearClient.createIssue({
-          title: normalizedIntent.linear.issueTitle,
-          description: buildParentIssueDescription({
+  if (linearClient && shouldManageLinearPlan) {
+    if (resumeIssue) {
+      emitRunEvent(options, "linear", "Resolving existing Linear parent issue.", {
+        issueReference: resumeIssue
+      });
+
+      linearPublication.parentIssue = await safeLinearTask({
+        enabled: true,
+        options,
+        errors: linearErrors,
+        message: `Failed to resolve the Linear resume issue '${resumeIssue}'`,
+        task: async () => {
+          const existingIssue = await linearClient.fetchIssue(resumeIssue);
+          if (!existingIssue) {
+            throw new Error(`Linear issue '${resumeIssue}' was not found.`);
+          }
+
+          const description = buildManagedParentIssueDescription(existingIssue.description, {
             rawPrompt,
             normalizedIntent
-          })
-        })
-    }) ?? null;
+          });
 
-    if (linearPublication.parentIssue) {
-      emitRunEvent(options, "linear", "Linear parent issue created.", {
+          await linearClient.updateIssueDescription(existingIssue.id, description);
+
+          return {
+            ...existingIssue,
+            description
+          };
+        }
+      }) ?? null;
+
+      if (!linearPublication.parentIssue) {
+        throw new Error(`Configured resume issue '${resumeIssue}' could not be resolved in Linear.`);
+      }
+
+      emitRunEvent(options, "linear", "Linear parent issue resumed.", {
+        issueReference: resumeIssue,
         identifier: linearPublication.parentIssue.identifier,
         url: linearPublication.parentIssue.url
       });
+    } else {
+      emitRunEvent(options, "linear", "Creating Linear parent issue.", {
+        teamId: config.linear.teamId,
+        projectId: config.linear.projectId,
+        title: normalizedIntent.linear.issueTitle
+      });
+
+      linearPublication.parentIssue = await safeLinearTask({
+        enabled: true,
+        options,
+        errors: linearErrors,
+        message: "Failed to create the Linear parent issue",
+        task: async () =>
+          await linearClient.createIssue({
+            title: normalizedIntent.linear.issueTitle,
+            description: buildManagedParentIssueDescription(undefined, {
+              rawPrompt,
+              normalizedIntent
+            })
+          })
+      }) ?? null;
+
+      if (linearPublication.parentIssue) {
+        emitRunEvent(options, "linear", "Linear parent issue created.", {
+          identifier: linearPublication.parentIssue.identifier,
+          url: linearPublication.parentIssue.url
+        });
+      }
+    }
+
+    if (linearPublication.parentIssue) {
+      const existingSourceIssues = resumeIssue
+        ? await safeLinearTask({
+            enabled: true,
+            options,
+            errors: linearErrors,
+            message: `Failed to list existing Linear child issues for '${resumeIssue}'`,
+            task: async () => await linearClient.listChildIssues(linearPublication.parentIssue!.id)
+          }) ?? []
+        : [];
 
       for (const sourcePlan of normalizedIntent.executionPlan.sources) {
-        const sourceIssue = await safeLinearTask({
-          enabled: true,
-          options,
-          errors: linearErrors,
-          message: `Failed to create the Linear source issue for ${sourcePlan.sourceId}`,
-          details: { sourceId: sourcePlan.sourceId },
-          task: async () =>
-            await linearClient.createIssue({
-              title: buildSourceIssueTitle(normalizedIntent, sourcePlan.sourceId),
-              description: buildSourceIssueDescription({
-                normalizedIntent,
-                sourceId: sourcePlan.sourceId
-              }),
-              parentId: linearPublication.parentIssue!.id
-            })
+        const issueTitle = buildSourceIssueTitle(normalizedIntent, sourcePlan.sourceId);
+        const existingSourceIssue = findReusableSourceIssue(existingSourceIssues, sourcePlan.sourceId);
+        const issueDescription = buildManagedSourceIssueDescription(existingSourceIssue?.description, {
+          normalizedIntent,
+          sourceId: sourcePlan.sourceId
         });
+
+        const sourceIssue = existingSourceIssue
+          ? await safeLinearTask({
+              enabled: true,
+              options,
+              errors: linearErrors,
+              message: `Failed to update the Linear source issue for ${sourcePlan.sourceId}`,
+              details: { sourceId: sourcePlan.sourceId },
+              task: async () => {
+                await linearClient.updateIssueTitle(existingSourceIssue.id, issueTitle);
+                await linearClient.updateIssueDescription(existingSourceIssue.id, issueDescription);
+
+                return {
+                  ...existingSourceIssue,
+                  title: issueTitle,
+                  description: issueDescription
+                };
+              }
+            })
+          : await safeLinearTask({
+              enabled: true,
+              options,
+              errors: linearErrors,
+              message: `Failed to create the Linear source issue for ${sourcePlan.sourceId}`,
+              details: { sourceId: sourcePlan.sourceId },
+              task: async () =>
+                await linearClient.createIssue({
+                  title: issueTitle,
+                  description: issueDescription,
+                  parentId: linearPublication.parentIssue!.id
+                })
+            });
 
         if (sourceIssue) {
           linearPublication.sourceIssues[sourcePlan.sourceId] = sourceIssue;
-          emitRunEvent(options, "linear", "Linear source issue created.", {
+          emitRunEvent(options, "linear", existingSourceIssue ? "Linear source issue updated." : "Linear source issue created.", {
             sourceId: sourcePlan.sourceId,
             identifier: sourceIssue.identifier,
             url: sourceIssue.url,
@@ -878,6 +1015,57 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
     }
 
     await writeJsonFile(paths.linearPath, linearPublication);
+  }
+
+  if (dryRun) {
+    const sourceRuns: SourceRunResult[] = sourceIds.map((currentSourceId) => ({
+      sourceId: currentSourceId,
+      status: "planned",
+      paths: paths.sourceRuns[currentSourceId],
+      captures: [],
+      linearIssue: linearPublication.sourceIssues[currentSourceId] ?? null
+    }));
+
+    await writePlanLifecycleFile({
+      config,
+      paths,
+      normalizedIntent,
+      linearPublication,
+      sourceRuns
+    });
+
+    emitRunEvent(options, "run", "Dry run complete.", {
+      sourceId: normalizedIntent.executionPlan.primarySourceId,
+      sourceIds,
+      mode: normalizedIntent.execution.runMode,
+      normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
+      planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
+    });
+
+    log.info("Dry run complete.", {
+      sourceId: normalizedIntent.executionPlan.primarySourceId,
+      sourceIds,
+      mode: normalizedIntent.execution.runMode,
+      normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
+      planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
+    });
+
+    await retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
+    return {
+      status: "completed",
+      sourceId: normalizedIntent.executionPlan.primarySourceId,
+      mode: normalizedIntent.execution.runMode,
+      dryRun: true,
+      normalizedIntent,
+      paths,
+      linearIssue: linearPublication.parentIssue,
+      linearPublication,
+      sourceRuns,
+      captures: [],
+      hasDrift: false,
+      counts: emptyComparisonCounts(),
+      errors: linearErrors
+    };
   }
 
   const sourceRuns: SourceRunResult[] = [];
@@ -920,10 +1108,19 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
     errors
   });
 
+  await writePlanLifecycleFile({
+    config,
+    paths,
+    normalizedIntent,
+    linearPublication,
+    sourceRuns
+  });
+
   emitRunEvent(options, "artifacts", "Business evidence files written.", {
     manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
     hashesPath: toRelativePath(paths.controllerRoot, paths.hashesPath),
-    comparisonPath: toRelativePath(paths.controllerRoot, paths.comparisonPath)
+    comparisonPath: toRelativePath(paths.controllerRoot, paths.comparisonPath),
+    planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
   });
 
   const summaryMarkdown = await writeBusinessSummaryMarkdown({

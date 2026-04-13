@@ -3,6 +3,7 @@ import { RunMode } from "../config/schema";
 export type IntentType = RunMode | "refresh-library";
 export type NormalizationSource = "llm" | "rules" | "fallback";
 export type ExecutionStrategy = "single-source" | "multi-source";
+export type RepoContextStatus = "selected" | "candidate";
 export type ExecutionDestinationType =
   | "controller"
   | "linear"
@@ -90,6 +91,41 @@ export interface ExecutionPlan {
   reviewNotes: string[];
 }
 
+export interface RepoContextCandidate {
+  repoId: string;
+  label: string;
+  role?: string;
+  sourceIds: string[];
+  selectionStatus: RepoContextStatus;
+  reason: string;
+  summary?: string;
+  sourceTypes: Array<"local" | "git">;
+  locations: string[];
+  refs: string[];
+  notes: string[];
+  captureCount: number;
+}
+
+export interface PlannerManagedSection {
+  id: string;
+  title: string;
+  scope: "business" | "source";
+  sourceId?: string;
+  summary: string;
+}
+
+export interface PlanningResumeTarget {
+  mode: "new" | "resume-explicit";
+  issueReference?: string;
+}
+
+export interface PlanningContext {
+  repoCandidates: RepoContextCandidate[];
+  plannerSections: PlannerManagedSection[];
+  reviewNotes: string[];
+  linearPlan: PlanningResumeTarget;
+}
+
 export interface NormalizedIntent {
   intentId: string;
   receivedAt: string;
@@ -97,6 +133,7 @@ export interface NormalizedIntent {
   summary: string;
   intentType: IntentType;
   businessIntent: BusinessIntent;
+  planning: PlanningContext;
   executionPlan: ExecutionPlan;
   sourceId: string;
   captureScope: {

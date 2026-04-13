@@ -36,6 +36,7 @@ program
   .option("-i, --intent <text>", "Free-text intent prompt.")
   .option("-m, --mode <mode>", "Override the configured run mode: baseline, compare, approve-baseline.")
   .option("-s, --source <id>", "Override the configured source id.")
+  .option("--resume-issue <id-or-key>", "Attach the run to an existing Linear parent issue by id or identifier.")
   .option("--dry-run", "Validate config and intent normalization without launching the source app.")
   .action(async (options) => {
     try {
@@ -44,6 +45,7 @@ program
         intent: options.intent,
         mode: options.mode,
         sourceId: options.source,
+        resumeIssue: options.resumeIssue,
         dryRun: options.dryRun
       });
     } catch (error) {

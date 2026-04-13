@@ -54,9 +54,18 @@ const captureItemSchema = z.object({
   delayMs: z.number().int().nonnegative().default(0)
 });
 
+const sourcePlanningSchema = z.object({
+  repoId: z.string().min(1).optional(),
+  repoLabel: z.string().min(1).optional(),
+  role: z.string().min(1).optional(),
+  summary: z.string().min(1).optional(),
+  notes: z.array(z.string()).default([])
+});
+
 const sourceSchema = z.object({
   aliases: z.array(z.string()).default([]),
   source: z.discriminatedUnion("type", [localSourceSchema, gitSourceSchema]),
+  planning: sourcePlanningSchema.default({}),
   workspace: z.object({
     checkoutMode: z.enum(["existing", "clone-if-missing", "fresh-clone"]).default("existing"),
     cloneRoot: z.string().default("./.workdirs"),
@@ -100,6 +109,7 @@ const runSchema = z.object({
   sourceId: z.string().min(1),
   mode: z.enum(["baseline", "compare", "approve-baseline"]).default("compare"),
   intent: z.string().optional(),
+  resumeIssue: z.string().min(1).optional(),
   captureIds: z.array(z.string()).default([]),
   continueOnCaptureError: z.boolean().default(false),
   allowBaselinePromotion: z.boolean().default(false),

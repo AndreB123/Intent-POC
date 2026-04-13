@@ -28,6 +28,11 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "  mode: bounded-runner",
       "sources:",
       "  s1:",
+      "    planning:",
+      "      repoId: intent-poc",
+      "      repoLabel: Intent POC",
+      "      notes:",
+      "        - Current workspace bootstrap repo",
       "    source:",
       "      type: local",
       `      localPath: ${JSON.stringify(tmpDir)}`,
@@ -56,6 +61,7 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "  sourceId: s1",
       "  mode: compare",
       "  intent:",
+      "  resumeIssue:",
       "  captureIds: []",
       "  continueOnCaptureError: false",
       "  allowBaselinePromotion: false",
@@ -68,9 +74,12 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   const loaded = await loadConfig(configPath);
   assert.equal(loaded.config.linear.projectId, undefined);
   assert.equal(loaded.config.run.intent, undefined);
+  assert.equal(loaded.config.run.resumeIssue, undefined);
   assert.equal(loaded.config.run.sourceId, "s1");
   assert.ok(loaded.config.sources.s1);
   assert.equal(loaded.config.linear.defaultStateIds.started, undefined);
+  assert.equal(loaded.config.sources.s1.planning.repoId, "intent-poc");
+  assert.deepEqual(loaded.config.sources.s1.planning.notes, ["Current workspace bootstrap repo"]);
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });

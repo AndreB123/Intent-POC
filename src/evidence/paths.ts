@@ -30,6 +30,7 @@ export interface RunPaths {
   logsDir: string;
   normalizedIntentPath: string;
   linearPath: string;
+  planLifecyclePath: string;
   manifestPath: string;
   hashesPath: string;
   comparisonPath: string;
@@ -87,6 +88,7 @@ export async function createRunPaths(
     logsDir: path.join(runDir, "logs"),
     normalizedIntentPath: path.join(runDir, "normalized-intent.json"),
     linearPath: path.join(runDir, "linear.json"),
+    planLifecyclePath: path.join(runDir, "plan-lifecycle.json"),
     manifestPath: path.join(runDir, "manifest.json"),
     hashesPath: path.join(runDir, "hashes.json"),
     comparisonPath: path.join(runDir, "comparison.json"),

@@ -66,6 +66,7 @@ interface StudioRunRecord {
   prompt: string;
   sourceId?: string;
   mode?: RunMode;
+  resumeIssue?: string;
   intentPlan?: NormalizedIntent;
   dryRun: boolean;
   status: "running" | "completed" | "failed";
@@ -91,6 +92,7 @@ interface StudioRunRecord {
   }>;
   artifacts: {
     normalizedIntentPath?: string;
+    planLifecyclePath?: string;
     summaryPath?: string;
     manifestPath?: string;
     comparisonPath?: string;
@@ -289,13 +291,18 @@ function normalizeMode(value: unknown): RunMode | undefined {
 
 function buildPlannerSources(
   sources: Awaited<ReturnType<typeof loadConfig>>["config"]["sources"]
-): Record<string, Pick<Awaited<ReturnType<typeof loadConfig>>["config"]["sources"][string], "aliases" | "capture">> {
+): Record<
+  string,
+  Pick<Awaited<ReturnType<typeof loadConfig>>["config"]["sources"][string], "aliases" | "capture" | "planning" | "source">
+> {
   return Object.fromEntries(
     Object.entries(sources).map(([sourceId, source]) => [
       sourceId,
       {
         aliases: source.aliases,
-        capture: source.capture
+        capture: source.capture,
+        planning: source.planning,
+        source: source.source
       }
     ])
   );
@@ -306,6 +313,7 @@ async function previewNormalizedIntent(input: {
   prompt: string;
   sourceId?: string;
   mode?: RunMode;
+  resumeIssue?: string;
 }): Promise<NormalizedIntent> {
   const loaded = await loadConfig(input.configPath);
   const sourceId = input.sourceId ?? loaded.config.run.sourceId;
@@ -316,6 +324,7 @@ async function previewNormalizedIntent(input: {
     runMode: mode,
     defaultSourceId: sourceId,
     continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    resumeIssue: input.resumeIssue ?? loaded.config.run.resumeIssue,
     availableSources: buildPlannerSources(loaded.config.sources),
     sourceIdOverride: input.sourceId,
     modeOverride: input.mode,
@@ -378,6 +387,7 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
   }));
   run.artifacts = {
     normalizedIntentPath: toRelativePath(result.paths.controllerRoot, result.paths.normalizedIntentPath),
+    planLifecyclePath: toRelativePath(result.paths.controllerRoot, result.paths.planLifecyclePath),
     summaryPath: result.paths.summaryPath ? toRelativePath(result.paths.controllerRoot, result.paths.summaryPath) : undefined,
     manifestPath: result.paths.manifestPath ? toRelativePath(result.paths.controllerRoot, result.paths.manifestPath) : undefined,
     comparisonPath: result.paths.comparisonPath ? toRelativePath(result.paths.controllerRoot, result.paths.comparisonPath) : undefined,
@@ -493,7 +503,7 @@ export async function startIntentStudioServer(
     }
   }
 
-  function startRun(input: { prompt: string; sourceId?: string; mode?: RunMode; dryRun: boolean }): void {
+  function startRun(input: { prompt: string; sourceId?: string; mode?: RunMode; resumeIssue?: string; dryRun: boolean }): void {
     archiveCurrentRun();
 
     const run: StudioRunRecord = {
@@ -501,6 +511,7 @@ export async function startIntentStudioServer(
       prompt: input.prompt,
       sourceId: input.sourceId,
       mode: input.mode,
+      resumeIssue: input.resumeIssue,
       dryRun: input.dryRun,
       status: "running",
       startedAt: new Date().toISOString(),
@@ -519,6 +530,7 @@ export async function startIntentStudioServer(
       details: {
         sourceId: input.sourceId,
         mode: input.mode,
+        resumeIssue: input.resumeIssue,
         dryRun: input.dryRun
       }
     });
@@ -531,6 +543,7 @@ export async function startIntentStudioServer(
           intent: input.prompt,
           sourceId: input.sourceId,
           mode: input.mode,
+          resumeIssue: input.resumeIssue,
           dryRun: input.dryRun,
           onEvent: (event) => {
             appendEvent(run, event);
@@ -623,11 +636,15 @@ export async function startIntentStudioServer(
           ? body.sourceId.trim()
           : undefined;
         const mode = normalizeMode(body.mode);
+        const resumeIssue = typeof body.resumeIssue === "string" && body.resumeIssue.trim().length > 0
+          ? body.resumeIssue.trim()
+          : undefined;
         const plan = await previewNormalizedIntent({
           configPath,
           prompt,
           sourceId,
-          mode
+          mode,
+          resumeIssue
         });
 
         sendJson(res, 200, { plan });
@@ -672,9 +689,12 @@ export async function startIntentStudioServer(
           ? body.sourceId.trim()
           : undefined;
         const mode = normalizeMode(body.mode);
+        const resumeIssue = typeof body.resumeIssue === "string" && body.resumeIssue.trim().length > 0
+          ? body.resumeIssue.trim()
+          : undefined;
         const dryRun = body.dryRun === true;
 
-        startRun({ prompt, sourceId, mode, dryRun });
+        startRun({ prompt, sourceId, mode, resumeIssue, dryRun });
         sendJson(res, 202, { ok: true });
       } catch (error) {
         sendJson(res, 400, { error: error instanceof Error ? error.message : String(error) });
