@@ -5,7 +5,7 @@ import path from "node:path";
 import { loadConfig } from "../../config/load-config";
 import { RunMode } from "../../config/schema";
 import { toRelativePath } from "../../evidence/paths";
-import { normalizeIntent } from "../../intent/normalize-intent";
+import { normalizeIntentWithAgent } from "../../intent/normalize-intent";
 import { NormalizedIntent } from "../../intent/intent-types";
 import { RunIntentEvent, RunIntentResult, runIntent } from "../../orchestrator/run-intent";
 import { pathExists } from "../../shared/fs";
@@ -319,11 +319,12 @@ async function previewNormalizedIntent(input: {
   const sourceId = input.sourceId ?? loaded.config.run.sourceId;
   const mode = input.mode ?? loaded.config.run.mode;
 
-  return normalizeIntent({
+  return await normalizeIntentWithAgent({
     rawPrompt: input.prompt,
     runMode: mode,
     defaultSourceId: sourceId,
     continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    agent: loaded.config.agent,
     resumeIssue: input.resumeIssue ?? loaded.config.run.resumeIssue,
     availableSources: buildPlannerSources(loaded.config.sources),
     sourceIdOverride: input.sourceId,

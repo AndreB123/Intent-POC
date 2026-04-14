@@ -33,6 +33,10 @@ npm run install:browsers
 cp .env.example .env
 ```
 
+To enable live prompt normalization with the Gemini Developer API, set `GEMINI_KEY`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` in `.env` or the process environment and configure the `agent` block with `provider: gemini` plus a Gemini model such as `gemini-2.5-flash`. The checked-in `intent-poc.yaml` intentionally stays rules-backed by default so dry runs, tests, and canonical snapshots remain deterministic. `intent-poc.local-no-linear.yaml` is the live Gemini example config in this repo, and it is scoped to the built-in Intent Driven Development POC demo sources rather than `client-systems`.
+
+This path uses the Gemini API key directly. A Google Cloud service account is not used for Gemini Developer API authentication.
+
 The default config now includes an interim concrete source profile for:
 - `client-systems-roach-admin` (git clone of `https://github.com/geniusmonkey/client-systems`)
 - startup command: `docker compose up -d roach`
@@ -46,6 +50,12 @@ Start the built-in Intent Studio UI:
 
 ```bash
 npm run demo:serve
+```
+
+To run Studio with the live Gemini example config:
+
+```bash
+npm run demo:serve -- --config ./intent-poc.local-no-linear.yaml
 ```
 
 Then open:
@@ -87,6 +97,12 @@ Dry run:
 
 ```bash
 npm run dev -- run --config ./intent-poc.yaml --intent "Create and maintain a screenshot library for the configured source" --dry-run
+```
+
+Live Gemini dry run using the example local config:
+
+```bash
+npm run dev -- run --config ./intent-poc.local-no-linear.yaml --source demo-catalog --intent "Prepare a lightweight visual evidence review for the demo-catalog source in the Intent Driven Development POC so the current built-in demo experience is easy to inspect." --dry-run
 ```
 
 Resume an existing Linear plan explicitly by issue id or identifier:

@@ -162,6 +162,7 @@ export const configSchema = z
       temperature: z.number().min(0).max(1).default(0.1),
       maxTokens: z.number().int().positive().optional(),
       apiKeyEnv: z.string().optional(),
+      apiVersion: z.string().optional(),
       allowPromptNormalization: z.boolean().default(true),
       fallbackToRules: z.boolean().default(true)
     }),
@@ -209,6 +210,7 @@ export const configSchema = z
   });
 
 export type AppConfig = z.infer<typeof configSchema>;
+export type AgentConfig = AppConfig["agent"];
 export type SourceConfig = AppConfig["sources"][string];
 export type TargetConfig = SourceConfig;
 export type CaptureItemConfig = SourceConfig["capture"]["items"][number];

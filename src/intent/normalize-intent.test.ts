@@ -1,7 +1,18 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { normalizeIntent } from "./normalize-intent";
+import { normalizeIntent, normalizeIntentWithAgent } from "./normalize-intent";
 import { SourceConfig } from "../config/schema";
+
+const geminiAgent = {
+  mode: "bounded-runner" as const,
+  provider: "gemini",
+  model: "gemini-2.5-flash",
+  apiKeyEnv: "GEMINI_API_KEY",
+  apiVersion: "v1alpha",
+  temperature: 0.1,
+  allowPromptNormalization: true,
+  fallbackToRules: true
+};
 
 const availableSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
   "client-systems-roach-admin": {
@@ -190,4 +201,66 @@ test("normalizeIntent prefers exact source tokens over overlapping aliases", () 
     ["demo-catalog"]
   );
   assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source demo-catalog was referenced directly in the prompt.");
+});
+
+test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid bounded ids", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Refresh the documentation screenshots so the docs site is reviewable.",
+      runMode: "compare",
+      defaultSourceId: "client-systems-roach-admin",
+      continueOnCaptureError: false,
+      availableSources,
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        intentType: "baseline",
+        desiredOutcome: "The documentation screenshots are reviewable by stakeholders.",
+        sourceIds: ["docs-portal"],
+        captureIdsBySource: {
+          "docs-portal": ["docs-home"]
+        },
+        warnings: ["Gemini selected the documentation source."]
+      })
+    }
+  );
+
+  assert.equal(normalized.intentType, "baseline");
+  assert.equal(normalized.execution.runMode, "baseline");
+  assert.equal(normalized.sourceId, "docs-portal");
+  assert.deepEqual(normalized.captureScope, {
+    mode: "subset",
+    captureIds: ["docs-home"]
+  });
+  assert.equal(normalized.normalizationMeta.source, "llm");
+  assert.ok(
+    normalized.normalizationMeta.warnings.some((warning) => warning.includes("Gemini selected the documentation source"))
+  );
+});
+
+test("normalizeIntentWithAgent falls back to rules when Gemini normalization fails", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Compare drift only for cockroach statements on client-systems",
+      runMode: "compare",
+      defaultSourceId: "client-systems-roach-admin",
+      continueOnCaptureError: false,
+      availableSources,
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () => {
+        throw new Error("quota exceeded");
+      }
+    }
+  );
+
+  assert.equal(normalized.normalizationMeta.source, "fallback");
+  assert.equal(normalized.sourceId, "client-systems-roach-admin");
+  assert.equal(normalized.captureScope.mode, "subset");
+  assert.deepEqual(normalized.captureScope.captureIds, ["roach-statements"]);
+  assert.ok(
+    normalized.normalizationMeta.warnings.some((warning) => warning.includes("quota exceeded"))
+  );
 });

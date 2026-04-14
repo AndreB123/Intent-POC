@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { ComparisonSummary } from "../compare/run-comparison";
+import { normalizeIntent } from "../intent/normalize-intent";
 import { readJsonFile } from "../shared/fs";
 import {
   buildBehaviorTestLoadedConfig,
@@ -236,6 +237,46 @@ test("runIntent Given tracked baseline output When the mode is not baseline Then
         }),
       /Tracked baseline runs currently require baseline mode\./
     );
+  } finally {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  }
+});
+
+test("runIntent Given Gemini agent config When dry run executes Then the agent settings are passed into normalization", async () => {
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-agent-"));
+  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
+  let capturedProvider: string | undefined;
+  let capturedApiKeyEnv: string | undefined;
+
+  loadedConfig.config.agent = {
+    ...loadedConfig.config.agent,
+    provider: "gemini",
+    model: "gemini-2.5-flash",
+    apiKeyEnv: "GEMINI_API_KEY",
+    apiVersion: "v1alpha",
+    allowPromptNormalization: true,
+    fallbackToRules: true
+  };
+
+  try {
+    const runIntent = createRunIntentRunner({
+      loadConfig: async () => loadedConfig,
+      normalizeIntent: async (input) => {
+        capturedProvider = input.agent?.provider;
+        capturedApiKeyEnv = input.agent?.apiKeyEnv;
+        return normalizeIntent(input);
+      }
+    });
+
+    const result = await runIntent({
+      configPath: loadedConfig.configPath,
+      intent: "Compare drift only for cockroach statements on client-systems",
+      dryRun: true
+    });
+
+    assert.equal(result.status, "completed");
+    assert.equal(capturedProvider, "gemini");
+    assert.equal(capturedApiKeyEnv, "GEMINI_API_KEY");
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }

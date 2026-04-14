@@ -13,8 +13,6 @@ linear:
     failed:
 agent:
   mode: bounded-runner
-  provider: openai
-  model: gpt-5.4
   temperature: 0.1
   allowPromptNormalization: true
   fallbackToRules: true

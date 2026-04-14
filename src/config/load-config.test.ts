@@ -26,6 +26,10 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "    failed:",
       "agent:",
       "  mode: bounded-runner",
+      "  provider: gemini",
+      "  model: gemini-2.5-flash",
+      "  apiKeyEnv: GEMINI_API_KEY",
+      "  apiVersion: v1alpha",
       "sources:",
       "  s1:",
       "    planning:",
@@ -77,6 +81,10 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.run.resumeIssue, undefined);
   assert.equal(loaded.config.run.sourceId, "s1");
   assert.ok(loaded.config.sources.s1);
+  assert.equal(loaded.config.agent.provider, "gemini");
+  assert.equal(loaded.config.agent.model, "gemini-2.5-flash");
+  assert.equal(loaded.config.agent.apiKeyEnv, "GEMINI_API_KEY");
+  assert.equal(loaded.config.agent.apiVersion, "v1alpha");
   assert.equal(loaded.config.linear.defaultStateIds.started, undefined);
   assert.equal(loaded.config.sources.s1.planning.repoId, "intent-poc");
   assert.deepEqual(loaded.config.sources.s1.planning.notes, ["Current workspace bootstrap repo"]);

@@ -15,7 +15,7 @@ import {
 } from "../evidence/write-manifest";
 import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evidence/write-summary";
 import { NormalizedIntent } from "../intent/intent-types";
-import { normalizeIntent } from "../intent/normalize-intent";
+import { normalizeIntentWithAgent } from "../intent/normalize-intent";
 import { LinearClient, LinearIssueRef } from "../linear/linear-client";
 import {
   BUSINESS_PLAN_SECTION_ID,
@@ -103,7 +103,7 @@ export interface ExecuteSourceRunInput {
 
 export interface RunIntentDependencies {
   loadConfig: (configPathInput: string) => Promise<LoadedConfig>;
-  normalizeIntent: typeof normalizeIntent;
+  normalizeIntent: typeof normalizeIntentWithAgent;
   createRunPaths: typeof createRunPaths;
   createLinearClient: (config: AppConfig["linear"]) => LinearClientLike;
   executeSourceRun: (input: ExecuteSourceRunInput) => Promise<SourceRunResult>;
@@ -935,7 +935,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 function createDefaultRunIntentDependencies(): RunIntentDependencies {
   return {
     loadConfig,
-    normalizeIntent,
+    normalizeIntent: normalizeIntentWithAgent,
     createRunPaths,
     createLinearClient: (config) => new LinearClient(config),
     executeSourceRun,
@@ -993,11 +993,12 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       ])
     );
 
-    const normalizedIntent = dependencies.normalizeIntent({
+    const normalizedIntent = await dependencies.normalizeIntent({
       rawPrompt,
       runMode: mode,
       defaultSourceId: config.run.sourceId,
       continueOnCaptureError: config.run.continueOnCaptureError,
+      agent: config.agent,
       sourceIdOverride,
       modeOverride: options.mode,
       resumeIssue,

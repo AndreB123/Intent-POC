@@ -13,96 +13,103 @@ linear:
     failed: null
 agent:
   mode: bounded-runner
-  provider: openai
-  model: gpt-5.4
+  provider: gemini
+  model: gemini-2.5-flash
+  apiKeyEnv: GEMINI_KEY
+  apiVersion: v1alpha
   temperature: 0.1
   allowPromptNormalization: true
   fallbackToRules: true
 sources:
-  client-systems-postgres:
+  demo-catalog:
     aliases:
-      - client-systems
-      - cs
-      - postgres
-      - pg
-    source:
-      type: git
-      gitUrl: https://github.com/geniusmonkey/client-systems.git
-      ref: master
-      authTokenEnv: CLIENT_SYSTEMS_GIT_TOKEN
-    workspace:
-      checkoutMode: clone-if-missing
-      cloneRoot: ./.workdirs
-      installTimeoutMs: 600000
-      env: {}
-    app:
-      workdir: .
-      startCommand: docker compose up -d postgres
-      stopCommand: docker compose stop postgres
-      baseUrl: http://127.0.0.1:6006
-      startTimeoutMs: 120000
-      env: {}
-      readiness:
-        type: http
-        url: http://127.0.0.1:6006
-        expectedStatus: 200
-        timeoutMs: 180000
-        intervalMs: 2000
-    capture:
-      waitAfterLoadMs: 700
-      injectCss:
-        - "*, *::before, *::after { animation: none !important; transition: none
-          !important; caret-color: transparent !important; }"
-      defaultFullPage: true
-      items:
-        - id: ui-overview
-          name: UI Overview
-          path: /
-          fullPage: true
-        - id: ui-primary-surface
-          name: UI Primary Surface
-          path: /iframe.html?id=button--primary
-          fullPage: true
-  example-storybook:
-    aliases:
-      - storybook
       - demo
+      - demo-app
+      - demo-catalog
+    planning:
+      repoId: intent-poc
+      repoLabel: Intent Driven Development POC
+      role: controller-and-demo-source
+      summary: Current workspace used to exercise low-risk prompt normalization and demo evidence flows.
+      notes:
+        - Use this source for prompt-planning and dry-run validation inside the Intent Driven Development POC.
     source:
       type: local
-      localPath: ../target-app
+      localPath: .
     workspace:
       checkoutMode: existing
-      installCommand: npm ci
       installTimeoutMs: 600000
       env: {}
     app:
       workdir: .
-      startCommand: npm run storybook -- --port 6006 --ci
+      startCommand: npm run demo:serve -- --port 6006
       baseUrl: http://127.0.0.1:6006
       startTimeoutMs: 120000
       env: {}
       readiness:
         type: http
-        url: http://127.0.0.1:6006
+        url: http://127.0.0.1:6006/health
         expectedStatus: 200
         timeoutMs: 120000
-        intervalMs: 2000
+        intervalMs: 500
     capture:
-      waitAfterLoadMs: 700
+      waitAfterLoadMs: 300
       injectCss:
-        - "*, *::before, *::after { animation: none !important; transition: none
-          !important; caret-color: transparent !important; }"
-      defaultFullPage: false
+        - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
+      defaultFullPage: true
       items:
-        - id: button-primary
-          name: Primary Button
-          path: /iframe.html?id=button--primary
-          locator: "[data-testid='button-root']"
-          waitForSelector: "[data-testid='button-root']"
-        - id: card-default
-          name: Default Card
-          path: /iframe.html?id=card--default
-          locator: "[data-testid='card-root']"
+        - id: library-index
+          name: Demo Catalog Index
+          path: /library
+          fullPage: true
+        - id: component-button-primary
+          name: Demo Primary Button
+          path: /library/component-button-primary
+          locator: "[data-testid='component-button-primary']"
+          waitForSelector: "[data-testid='component-button-primary']"
+        - id: page-analytics-overview
+          name: Demo Analytics Overview
+          path: /library/page-analytics-overview
+          fullPage: true
+  demo-components:
+    aliases:
+      - demo-components
+      - components
+      - surface-catalog
+    planning:
+      repoId: intent-poc
+      repoLabel: Intent Driven Development POC Demo Components
+      role: tracked demo screenshot source
+      summary: Built-in demo surface catalog used for low-risk screenshot regeneration through the shared runner path.
+      notes:
+        - Keep this source scoped to the built-in demo surfaces for the POC.
+    source:
+      type: local
+      localPath: .
+    workspace:
+      checkoutMode: existing
+      installTimeoutMs: 600000
+      env: {}
+    app:
+      workdir: .
+      startCommand: npm run demo:serve -- --port 6006
+      baseUrl: http://127.0.0.1:6006
+      startTimeoutMs: 120000
+      env: {}
+      readiness:
+        type: http
+        url: http://127.0.0.1:6006/health
+        expectedStatus: 200
+        timeoutMs: 120000
+        intervalMs: 500
+    capture:
+      catalog: demo-surface-catalog
+      trackedRoot: ./evidence/baselines/demo-components
+      waitAfterLoadMs: 300
+      injectCss:
+        - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
+      defaultFullPage: false
+      items: []
 playwright:
   browser: chromium
   headless: true
@@ -133,7 +140,7 @@ comparison:
   onMissingBaseline: error
   writeDiffImages: true
 run:
-  sourceId: example-storybook
+  sourceId: demo-catalog
   mode: compare
   intent: null
   captureIds: []

@@ -1,15 +1,21 @@
-import { CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
+import { AgentConfig, CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
 import { sanitizeFileSegment } from "../shared/fs";
-import { NormalizedIntent } from "./intent-types";
+import {
+  normalizePromptWithGemini,
+  PromptNormalizationHints,
+  PromptNormalizerSourceDescriptor
+} from "./gemini-prompt-normalizer";
+import { NormalizedIntent, NormalizationSource } from "./intent-types";
 
-type AvailableSourceDescriptor = Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">;
+export type AvailableSourceDescriptor = PromptNormalizerSourceDescriptor;
 
-interface NormalizeIntentOptions {
+export interface NormalizeIntentOptions {
   rawPrompt: string;
   runMode: RunMode;
   defaultSourceId: string;
   continueOnCaptureError: boolean;
   availableSources: Record<string, AvailableSourceDescriptor>;
+  agent?: AgentConfig;
   linearEnabled?: boolean;
   publishToSourceWorkspace?: boolean;
   resumeIssue?: string;
@@ -17,9 +23,34 @@ interface NormalizeIntentOptions {
   modeOverride?: RunMode;
 }
 
+type SourceSelectionReason = "operator-override" | "prompt-match" | "business-wide" | "default" | "llm";
+
 interface SourceSelection {
   sourceIds: string[];
-  selectionReason: "operator-override" | "prompt-match" | "business-wide" | "default";
+  selectionReason: SourceSelectionReason;
+}
+
+interface NormalizationResolution {
+  intentType: NormalizedIntent["intentType"];
+  sourceIds: string[];
+  selectionReason: SourceSelectionReason;
+  desiredOutcome: string;
+  captureIdsBySource: Record<string, string[] | undefined>;
+  normalizationSource: NormalizationSource;
+  normalizationWarnings: string[];
+}
+
+export interface NormalizeIntentDependencies {
+  normalizePromptWithGemini: typeof normalizePromptWithGemini;
+}
+
+const defaultNormalizeIntentDependencies: NormalizeIntentDependencies = {
+  normalizePromptWithGemini
+};
+
+interface SanitizedIdSelection {
+  validIds: string[];
+  invalidIds: string[];
 }
 
 const businessWideIntentPattern =
@@ -466,6 +497,8 @@ function buildToolPlans(input: {
 
 function describeSelectionReason(reason: SourceSelection["selectionReason"], sourceId: string): string {
   switch (reason) {
+    case "llm":
+      return `Source ${sourceId} was selected by Gemini prompt normalization.`;
     case "operator-override":
       return `Source ${sourceId} was selected explicitly by the operator override.`;
     case "prompt-match":
@@ -484,6 +517,8 @@ function describeRepoSelectionReason(reason: SourceSelection["selectionReason"],
   }
 
   switch (reason) {
+    case "llm":
+      return `Repo ${repoId} is in scope because Gemini selected sources ${sourceIds.join(", ")}.`;
     case "operator-override":
       return `Repo ${repoId} is in scope because the operator explicitly selected sources ${sourceIds.join(", ")}.`;
     case "prompt-match":
@@ -634,38 +669,152 @@ function buildPlanningReviewNotes(input: {
   return notes;
 }
 
-export function normalizeIntent(options: NormalizeIntentOptions): NormalizedIntent {
-  const trimmedPrompt = options.rawPrompt.trim();
-  const sourceSelection = pickApplicableSourceIds(trimmedPrompt, options);
-  const intentType = inferIntentType(trimmedPrompt, options.runMode);
-  const effectiveRunMode = mapIntentTypeToRunMode(intentType, options.runMode);
-  const primarySourceId = sourceSelection.sourceIds[0] ?? options.defaultSourceId;
-  const primarySource = options.availableSources[primarySourceId];
-  const captureScope = pickCaptureIds(trimmedPrompt, primarySource.capture.items);
-  const sourcePlans = sourceSelection.sourceIds.map((sourceId) => {
-    const source = options.availableSources[sourceId];
+function ensurePrompt(trimmedPrompt: string): void {
+  if (trimmedPrompt.length === 0) {
+    throw new Error("A free-text intent is required. Pass --intent or set run.intent in the config.");
+  }
+}
 
-    return {
-      sourceId,
-      selectionReason: describeSelectionReason(sourceSelection.selectionReason, sourceId),
-      runMode: effectiveRunMode,
-      captureScope: pickCaptureIds(trimmedPrompt, source.capture.items),
-      warnings: []
-    };
+function buildRulesResolution(trimmedPrompt: string, options: NormalizeIntentOptions): NormalizationResolution {
+  const sourceSelection = pickApplicableSourceIds(trimmedPrompt, options);
+
+  return {
+    intentType: inferIntentType(trimmedPrompt, options.runMode),
+    sourceIds: sourceSelection.sourceIds,
+    selectionReason: sourceSelection.selectionReason,
+    desiredOutcome: extractDesiredOutcome(trimmedPrompt),
+    captureIdsBySource: {},
+    normalizationSource: "rules",
+    normalizationWarnings: []
+  };
+}
+
+function sanitizeText(value: string | undefined): string | undefined {
+  const trimmedValue = value?.trim();
+  return trimmedValue ? trimmedValue : undefined;
+}
+
+function sanitizeHintIds(candidateIds: string[] | undefined, validIds: Set<string>): SanitizedIdSelection {
+  const uniqueIds = dedupeValues(candidateIds ?? []);
+
+  return {
+    validIds: uniqueIds.filter((candidateId) => validIds.has(candidateId)),
+    invalidIds: uniqueIds.filter((candidateId) => !validIds.has(candidateId))
+  };
+}
+
+function sanitizeHintWarnings(warnings: string[] | undefined): string[] {
+  return dedupeValues(
+    (warnings ?? [])
+      .map((warning) => warning.trim())
+      .filter((warning) => warning.length > 0)
+  );
+}
+
+function buildAgentResolution(
+  options: NormalizeIntentOptions,
+  rulesResolution: NormalizationResolution,
+  hints: PromptNormalizationHints
+): NormalizationResolution {
+  const validSourceIds = new Set(Object.keys(options.availableSources));
+  const sanitizedSourceIds = sanitizeHintIds(hints.sourceIds, validSourceIds);
+  const sourceIds = options.sourceIdOverride
+    ? [options.sourceIdOverride]
+    : sanitizedSourceIds.validIds.length > 0
+      ? sanitizedSourceIds.validIds
+      : rulesResolution.sourceIds;
+  const selectionReason: SourceSelectionReason = options.sourceIdOverride
+    ? "operator-override"
+    : sanitizedSourceIds.validIds.length > 0
+      ? "llm"
+      : rulesResolution.selectionReason;
+  const captureIdsBySource = Object.fromEntries(
+    sourceIds.map((sourceId) => {
+      const validCaptureIds = new Set(options.availableSources[sourceId]?.capture.items.map((item) => item.id) ?? []);
+      const sanitizedCaptureIds = sanitizeHintIds(hints.captureIdsBySource?.[sourceId], validCaptureIds);
+
+      return [sourceId, sanitizedCaptureIds.validIds.length > 0 ? sanitizedCaptureIds.validIds : undefined];
+    })
+  ) as Record<string, string[] | undefined>;
+  const invalidCaptureWarnings = sourceIds.flatMap((sourceId) => {
+    const validCaptureIds = new Set(options.availableSources[sourceId]?.capture.items.map((item) => item.id) ?? []);
+    const sanitizedCaptureIds = sanitizeHintIds(hints.captureIdsBySource?.[sourceId], validCaptureIds);
+
+    return sanitizedCaptureIds.invalidIds.length > 0
+      ? [`Gemini returned unknown capture ids for ${sourceId} and they were ignored: ${sanitizedCaptureIds.invalidIds.join(", ")}.`]
+      : [];
   });
-  const desiredOutcome = extractDesiredOutcome(trimmedPrompt);
-  const acceptanceCriteria = buildAcceptanceCriteria(trimmedPrompt, desiredOutcome, sourceSelection.sourceIds, intentType);
+  const normalizationWarnings = [
+    ...sanitizeHintWarnings(hints.warnings),
+    ...(sanitizedSourceIds.invalidIds.length > 0
+      ? [`Gemini returned unknown source ids and they were ignored: ${sanitizedSourceIds.invalidIds.join(", ")}.`]
+      : []),
+    ...(hints.sourceIds && sanitizedSourceIds.validIds.length === 0
+      ? ["Gemini did not return any valid source ids, so rules-based source selection was preserved."]
+      : []),
+    ...invalidCaptureWarnings
+  ];
+
+  return {
+    intentType: hints.intentType ?? rulesResolution.intentType,
+    sourceIds,
+    selectionReason,
+    desiredOutcome: sanitizeText(hints.desiredOutcome) ?? rulesResolution.desiredOutcome,
+    captureIdsBySource,
+    normalizationSource: "llm",
+    normalizationWarnings
+  };
+}
+
+function pickCaptureScopeForSource(
+  prompt: string,
+  sourceId: string,
+  options: NormalizeIntentOptions,
+  resolution: NormalizationResolution
+): { mode: "all" | "subset"; captureIds: string[] } {
+  const hintedCaptureIds = resolution.captureIdsBySource[sourceId];
+  if (hintedCaptureIds && hintedCaptureIds.length > 0) {
+    return {
+      mode: "subset",
+      captureIds: hintedCaptureIds
+    };
+  }
+
+  return pickCaptureIds(prompt, options.availableSources[sourceId].capture.items);
+}
+
+function buildNormalizedIntent(
+  trimmedPrompt: string,
+  options: NormalizeIntentOptions,
+  resolution: NormalizationResolution
+): NormalizedIntent {
+  const effectiveRunMode = mapIntentTypeToRunMode(resolution.intentType, options.runMode);
+  const primarySourceId = resolution.sourceIds[0] ?? options.defaultSourceId;
+  const sourcePlans = resolution.sourceIds.map((sourceId) => ({
+    sourceId,
+    selectionReason: describeSelectionReason(resolution.selectionReason, sourceId),
+    runMode: effectiveRunMode,
+    captureScope: pickCaptureScopeForSource(trimmedPrompt, sourceId, options, resolution),
+    warnings: []
+  }));
+  const primaryCaptureScope = sourcePlans[0]?.captureScope ?? pickCaptureIds(trimmedPrompt, options.availableSources[primarySourceId].capture.items);
+  const acceptanceCriteria = buildAcceptanceCriteria(
+    trimmedPrompt,
+    resolution.desiredOutcome,
+    resolution.sourceIds,
+    resolution.intentType
+  );
   const scenarios = buildScenarios({
     statement: trimmedPrompt,
-    desiredOutcome,
-    sourceIds: sourceSelection.sourceIds,
+    desiredOutcome: resolution.desiredOutcome,
+    sourceIds: resolution.sourceIds,
     acceptanceCriteria,
     runMode: effectiveRunMode
   });
   const workItems = buildWorkItems({
     scenarios,
-    sourceIds: sourceSelection.sourceIds,
-    desiredOutcome
+    sourceIds: resolution.sourceIds,
+    desiredOutcome: resolution.desiredOutcome
   });
   const destinations = buildDestinationPlans({
     prompt: trimmedPrompt,
@@ -673,22 +822,25 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
     publishToSourceWorkspace: options.publishToSourceWorkspace ?? false
   });
   const tools = buildToolPlans({
-    intentType,
+    intentType: resolution.intentType,
     linearEnabled: options.linearEnabled ?? false,
-    sourceIds: sourceSelection.sourceIds
+    sourceIds: resolution.sourceIds
   });
   const repoCandidates = buildRepoCandidates({
     availableSources: options.availableSources,
-    sourceSelection
+    sourceSelection: {
+      sourceIds: resolution.sourceIds,
+      selectionReason: resolution.selectionReason
+    }
   });
   const planningReviewNotes = buildPlanningReviewNotes({
     repoCandidates,
-    sourceIds: sourceSelection.sourceIds,
+    sourceIds: resolution.sourceIds,
     resumeIssue: options.resumeIssue
   });
   const reviewNotes: string[] = [];
 
-  if (sourceSelection.sourceIds.length > 1) {
+  if (resolution.sourceIds.length > 1) {
     reviewNotes.push("This intent will execute as one business run with a separate evidence lane for each applicable source.");
   }
 
@@ -696,7 +848,7 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
     reviewNotes.push("Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on.");
   }
 
-  const summary = summarizeIntent(intentType, sourceSelection.sourceIds);
+  const summary = summarizeIntent(resolution.intentType, resolution.sourceIds);
   const intentId = `${new Date().toISOString().replace(/[.:]/g, "-")}-${sanitizeFileSegment(summary)}`;
 
   return {
@@ -704,17 +856,17 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
     receivedAt: new Date().toISOString(),
     rawPrompt: trimmedPrompt,
     summary,
-    intentType,
+    intentType: resolution.intentType,
     businessIntent: {
       statement: trimmedPrompt,
-      desiredOutcome,
+      desiredOutcome: resolution.desiredOutcome,
       acceptanceCriteria,
       scenarios,
       workItems
     },
     planning: {
       repoCandidates,
-      plannerSections: buildPlannerSections(sourceSelection.sourceIds),
+      plannerSections: buildPlannerSections(resolution.sourceIds),
       reviewNotes: planningReviewNotes,
       linearPlan: options.resumeIssue
         ? {
@@ -734,7 +886,7 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
       reviewNotes
     },
     sourceId: primarySourceId,
-    captureScope,
+    captureScope: primaryCaptureScope,
     artifacts: {
       requireScreenshots: true,
       requireManifest: true,
@@ -750,8 +902,64 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
       continueOnCaptureError: options.continueOnCaptureError
     },
     normalizationMeta: {
-      source: "rules",
-      warnings: [...reviewNotes, ...planningReviewNotes]
+      source: resolution.normalizationSource,
+      warnings: dedupeValues([...reviewNotes, ...planningReviewNotes, ...resolution.normalizationWarnings])
     }
   };
+}
+
+function buildFallbackResolution(rulesResolution: NormalizationResolution, message: string): NormalizationResolution {
+  return {
+    ...rulesResolution,
+    normalizationSource: "fallback",
+    normalizationWarnings: dedupeValues([...rulesResolution.normalizationWarnings, message])
+  };
+}
+
+export function normalizeIntent(options: NormalizeIntentOptions): NormalizedIntent {
+  const trimmedPrompt = options.rawPrompt.trim();
+  ensurePrompt(trimmedPrompt);
+
+  return buildNormalizedIntent(trimmedPrompt, options, buildRulesResolution(trimmedPrompt, options));
+}
+
+export async function normalizeIntentWithAgent(
+  options: NormalizeIntentOptions,
+  dependencies: NormalizeIntentDependencies = defaultNormalizeIntentDependencies
+): Promise<NormalizedIntent> {
+  const trimmedPrompt = options.rawPrompt.trim();
+  ensurePrompt(trimmedPrompt);
+
+  const rulesResolution = buildRulesResolution(trimmedPrompt, options);
+  if (!options.agent?.provider || !options.agent.allowPromptNormalization) {
+    return buildNormalizedIntent(trimmedPrompt, options, rulesResolution);
+  }
+
+  if (options.agent.provider !== "gemini") {
+    const message = `Agent provider '${options.agent.provider}' is not supported. Supported providers: gemini.`;
+    if (options.agent.fallbackToRules) {
+      return buildNormalizedIntent(trimmedPrompt, options, buildFallbackResolution(rulesResolution, message));
+    }
+
+    throw new Error(message);
+  }
+
+  try {
+    const hints = await dependencies.normalizePromptWithGemini({
+      rawPrompt: trimmedPrompt,
+      runMode: options.runMode,
+      defaultSourceId: options.defaultSourceId,
+      availableSources: options.availableSources,
+      agent: options.agent
+    });
+
+    return buildNormalizedIntent(trimmedPrompt, options, buildAgentResolution(options, rulesResolution, hints));
+  } catch (error) {
+    const message = `Gemini prompt normalization failed: ${error instanceof Error ? error.message : String(error)}`;
+    if (options.agent.fallbackToRules) {
+      return buildNormalizedIntent(trimmedPrompt, options, buildFallbackResolution(rulesResolution, message));
+    }
+
+    throw new Error(message);
+  }
 }
