@@ -83,3 +83,70 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
+
+test("loadConfig expands the built-in demo surface catalog and resolves tracked roots", async () => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-config-catalog-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await fs.writeFile(
+    configPath,
+    [
+      "version: 1",
+      "linear:",
+      "  enabled: false",
+      "  apiKeyEnv: LINEAR_API_KEY",
+      "  teamId: ENG",
+      "  createIssueOnStart: false",
+      "  commentOnProgress: false",
+      "  commentOnCompletion: false",
+      "agent:",
+      "  mode: bounded-runner",
+      "sources:",
+      "  demo-components:",
+      "    source:",
+      "      type: local",
+      `      localPath: ${JSON.stringify(tmpDir)}`,
+      "    workspace:",
+      "      checkoutMode: existing",
+      "    app:",
+      "      workdir: .",
+      "      startCommand: echo start",
+      "      baseUrl: http://127.0.0.1:3000",
+      "      readiness:",
+      "        type: http",
+      "        url: http://127.0.0.1:3000",
+      "    capture:",
+      "      catalog: demo-surface-catalog",
+      "      trackedRoot: ./tracked/demo-components",
+      "playwright:",
+      "  browser: chromium",
+      "artifacts:",
+      "  storageMode: controller",
+      "  runRoot: ./artifacts/runs",
+      "  baselineRoot: ./evidence/baselines",
+      "comparison:",
+      "  hashAlgorithm: sha256",
+      "run:",
+      "  sourceId: demo-components",
+      "  mode: baseline",
+      "  trackedBaseline: true",
+      "  captureIds: []",
+      "  continueOnCaptureError: false",
+      "  allowBaselinePromotion: false",
+      "  metadata: {}",
+      "  dryRun: true"
+    ].join("\n"),
+    "utf8"
+  );
+
+  const loaded = await loadConfig(configPath);
+  assert.equal(loaded.config.sources["demo-components"].capture.catalog, "demo-surface-catalog");
+  assert.equal(loaded.config.sources["demo-components"].capture.items.length, 46);
+  assert.equal(
+    loaded.config.sources["demo-components"].capture.trackedRoot,
+    path.join(tmpDir, "tracked", "demo-components")
+  );
+  assert.equal(loaded.config.run.trackedBaseline, true);
+
+  await fs.rm(tmpDir, { recursive: true, force: true });
+});

@@ -121,10 +121,28 @@ npm run dev -- run --config ./intent-poc.yaml --source client-systems-roach-admi
 
 ## Tests
 
-Run all tests (unit + Playwright integration):
+Run the full test workflow. This now runs the code test suite and then refreshes the tracked demo screenshot library:
 
 ```bash
 npm test
+```
+
+Run only the code tests without refreshing tracked screenshots:
+
+```bash
+npm run test:code
+```
+
+Run the conservative local smart selector. It inspects Git-changed files and chooses between `npm run test:code` and the full `npm test` workflow. Theme, demo surface, capture, comparison, evidence, orchestrator, and tracked baseline changes escalate to the full run:
+
+```bash
+npm run test:changed
+```
+
+Print the decision without running the selected command:
+
+```bash
+npm run test:changed -- --print
 ```
 
 If Playwright browsers are not installed yet:
@@ -137,6 +155,25 @@ The Playwright integration tests validate:
 - baseline screenshot library creation for component-like pages
 - drift detection between baseline and comparison runs
 
+The tracked demo screenshot workflow is also part of the default test command, so `npm test` can leave pending PNG diffs under `evidence/baselines/demo-components/` when rendered output changes.
+
+`npm test` remains the authoritative full-coverage command. `npm run test:changed` is only a conservative local shortcut and defaults unknown paths to the full workflow.
+
+## IDD Testing Standard
+
+The IDD pipeline is developed in slices, and each slice starts with a failing test before the runner or helpers change.
+
+- Behavior tests cover the user-visible orchestration path through `runIntent` and, over time, `executeSourceRun`; use Given/When/Then names, assert emitted event order, and verify the written business or source artifacts.
+- Unit tests cover deterministic planning and runner helpers such as intent normalization, capture selection, source reuse matching, and count aggregation.
+- Integration tests stay thin and real. Keep Playwright-backed coverage focused on the demo pipeline and screenshot behavior instead of rebuilding the full orchestration matrix in the browser.
+
+For each IDD slice:
+1. Add or update the failing scenario first.
+2. Make the smallest production change that satisfies that scenario.
+3. Run `npm run typecheck` and `npm test`.
+4. If the slice changes tracked-baseline behavior or demo surface catalog output, run `npm test`; use `npm run demo:library` only when you want to force a direct refresh outside the normal test workflow.
+5. Use `npm run test:changed` only as a local convenience when you want the repo to pick between deterministic code tests and the full screenshot-aware workflow for you.
+
 ## Output
 
 - run bundles are written to `artifacts/runs/<runId>/`
@@ -148,11 +185,13 @@ The Playwright integration tests validate:
 	- `latest/diffs/*.png` (for changed captures)
 	- manifests and hash indexes under both baseline/latest folders
 - approved baselines are written to `evidence/baselines/<sourceId>/`
-- `npm run demo:library` is a tracked demo-specific workflow and rewrites screenshots directly under `evidence/baselines/demo-components/`
+- `npm test` now includes the tracked demo refresh workflow, and `npm run demo:library` remains the direct command that rewrites screenshots under `evidence/baselines/demo-components/`
 	- `primitives/*.png`
 	- `components/*.png`
 	- `views/*.png`
 	- `pages/*.png`
+	- run manifests and hashes stay in `artifacts/runs/<runId>/` rather than cluttering the tracked screenshot tree
+	- the workflow stages captures in the run artifacts and upserts tracked screenshots only after validation succeeds; it does not clear the tracked screenshot tree up front
 	- the command does not generate demo diff PNGs; review image changes through Git
 - summaries are written as markdown and JSON artifacts
 
@@ -165,7 +204,10 @@ To publish artifacts into the source repo as well:
 - Artifacts are controller-owned by default. The source repo is not modified unless storage mode is configured to publish back into the source workspace.
 - Multiple source repos are supported through multiple `sources` profiles in one config.
 - Each source can now carry `planning` metadata so the planner can describe repo identity, role, and notes separately from capture/runtime settings.
+- `demo:library` now routes through the shared `runIntent` pipeline using the `demo-components` source profile plus tracked baseline output, instead of maintaining a separate capture implementation.
+- `demo:library` runs `npm run typecheck` and `npm run test:code` before it upserts tracked screenshots, and `npm test` runs the code tests before invoking the tracked refresh directly.
 - `run.resumeIssue` or `--resume-issue` lets the planner attach to an existing Linear parent issue and update only planner-managed IDD sections.
+- `run.trackedBaseline` or `--tracked-baseline` stages captures under the run artifacts and upserts them into a configured source `capture.trackedRoot`; this is currently used by the built-in `demo-components` source.
 - The prompt entrypoint is intentionally unstructured. The runner converts it into a bounded internal plan.
 - The implementation currently uses a rules-based normalizer and deterministic runner logic.
 

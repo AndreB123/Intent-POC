@@ -55,6 +55,28 @@ const captureItemSchema = z.object({
   delayMs: z.number().int().nonnegative().default(0)
 });
 
+const captureCatalogSchema = z.enum(["demo-surface-catalog"]);
+
+const captureSchema = z
+  .object({
+    catalog: captureCatalogSchema.optional(),
+    trackedRoot: z.string().min(1).optional(),
+    basePathPrefix: z.string().default(""),
+    waitAfterLoadMs: z.number().int().nonnegative().default(500),
+    injectCss: z.array(z.string()).default([]),
+    defaultFullPage: z.boolean().default(false),
+    items: z.array(captureItemSchema).default([])
+  })
+  .superRefine((capture, context) => {
+    if (!capture.catalog && capture.items.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one capture item or a built-in catalog is required.",
+        path: ["items"]
+      });
+    }
+  });
+
 const sourcePlanningSchema = z.object({
   repoId: z.string().min(1).optional(),
   repoLabel: z.string().min(1).optional(),
@@ -83,13 +105,7 @@ const sourceSchema = z.object({
     env: z.record(z.string()).default({}),
     readiness: readinessSchema
   }),
-  capture: z.object({
-    basePathPrefix: z.string().default(""),
-    waitAfterLoadMs: z.number().int().nonnegative().default(500),
-    injectCss: z.array(z.string()).default([]),
-    defaultFullPage: z.boolean().default(false),
-    items: z.array(captureItemSchema).min(1)
-  })
+  capture: captureSchema
 });
 
 const sourceRecordSchema = z.record(z.string().min(1), sourceSchema);
@@ -111,6 +127,7 @@ const runSchema = z.object({
   mode: z.enum(["baseline", "compare", "approve-baseline"]).default("compare"),
   intent: z.string().optional(),
   resumeIssue: z.string().min(1).optional(),
+  trackedBaseline: z.boolean().default(false),
   captureIds: z.array(z.string()).default([]),
   continueOnCaptureError: z.boolean().default(false),
   allowBaselinePromotion: z.boolean().default(false),
@@ -195,4 +212,5 @@ export type AppConfig = z.infer<typeof configSchema>;
 export type SourceConfig = AppConfig["sources"][string];
 export type TargetConfig = SourceConfig;
 export type CaptureItemConfig = SourceConfig["capture"]["items"][number];
+export type CaptureCatalogName = z.infer<typeof captureCatalogSchema>;
 export type RunMode = AppConfig["run"]["mode"];

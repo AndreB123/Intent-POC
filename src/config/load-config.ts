@@ -3,6 +3,8 @@ import path from "node:path";
 import dotenv from "dotenv";
 import YAML from "yaml";
 import { ZodError } from "zod";
+import { buildCaptureItemsFromCatalog } from "../demo-app/capture/build-capture-items";
+import { SURFACE_CATALOG } from "../demo-app/model/catalog";
 import { AppConfig, configSchema } from "./schema";
 
 export interface LoadedConfig {
@@ -71,6 +73,12 @@ function resolveControllerRelativePaths(config: AppConfig, configDir: string): A
         {
           ...configuredSource,
           source: resolvedSource,
+          capture: {
+            ...configuredSource.capture,
+            trackedRoot: configuredSource.capture.trackedRoot
+              ? path.resolve(configDir, configuredSource.capture.trackedRoot)
+              : undefined
+          },
           workspace: {
             ...configuredSource.workspace,
             cloneRoot: path.resolve(configDir, configuredSource.workspace.cloneRoot)
@@ -92,6 +100,39 @@ function resolveControllerRelativePaths(config: AppConfig, configDir: string): A
   };
 }
 
+function buildBuiltInCaptureItems(config: AppConfig): AppConfig {
+  const sources = Object.fromEntries(
+    Object.entries(config.sources).map(([sourceId, configuredSource]) => {
+      const generatedItems = configuredSource.capture.catalog === "demo-surface-catalog"
+        ? buildCaptureItemsFromCatalog(SURFACE_CATALOG)
+        : [];
+      const explicitItemsById = new Map(configuredSource.capture.items.map((item) => [item.id, item]));
+      const mergedGeneratedItems = generatedItems.map((item) => ({
+        ...item,
+        ...explicitItemsById.get(item.id)
+      }));
+      const generatedIds = new Set(generatedItems.map((item) => item.id));
+      const extraExplicitItems = configuredSource.capture.items.filter((item) => !generatedIds.has(item.id));
+
+      return [
+        sourceId,
+        {
+          ...configuredSource,
+          capture: {
+            ...configuredSource.capture,
+            items: [...mergedGeneratedItems, ...extraExplicitItems]
+          }
+        }
+      ];
+    })
+  ) as AppConfig["sources"];
+
+  return {
+    ...config,
+    sources
+  };
+}
+
 function formatZodError(error: ZodError): string {
   return error.issues
     .map((issue) => {
@@ -110,7 +151,7 @@ export async function loadConfig(configPathInput: string): Promise<LoadedConfig>
 
   try {
     const parsed = configSchema.parse(expanded);
-    const config = resolveControllerRelativePaths(parsed, configDir);
+    const config = buildBuiltInCaptureItems(resolveControllerRelativePaths(parsed, configDir));
     return { config, configPath, configDir };
   } catch (error) {
     if (error instanceof ZodError) {

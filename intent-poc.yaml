@@ -69,6 +69,46 @@ sources:
           name: Demo Analytics Overview
           path: /library/page-analytics-overview
           fullPage: true
+  demo-components:
+    aliases:
+      - demo-components
+      - components
+      - surface-catalog
+    planning:
+      repoId: intent-poc
+      repoLabel: Intent POC Demo Components
+      role: tracked demo screenshot source
+      summary: Built-in demo surface catalog used to regenerate tracked screenshots through the shared runner path.
+      notes:
+        - Use this source for tracked screenshot refreshes under evidence/baselines/demo-components.
+        - Keep demo screenshot regeneration on runIntent rather than adding a parallel capture implementation.
+    source:
+      type: local
+      localPath: .
+    workspace:
+      checkoutMode: existing
+      installTimeoutMs: 600000
+      env: {}
+    app:
+      workdir: .
+      startCommand: npm run demo:serve -- --port 6006
+      baseUrl: http://127.0.0.1:6006
+      startTimeoutMs: 120000
+      env: {}
+      readiness:
+        type: http
+        url: http://127.0.0.1:6006/health
+        expectedStatus: 200
+        timeoutMs: 120000
+        intervalMs: 500
+    capture:
+      catalog: demo-surface-catalog
+      trackedRoot: ./evidence/baselines/demo-components
+      waitAfterLoadMs: 300
+      injectCss:
+        - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
+      defaultFullPage: false
+      items: []
   client-systems-postgres:
     aliases:
       - client-systems
@@ -195,6 +235,7 @@ run:
   mode: baseline
   intent: Create a baseline screenshot library for the built-in demo catalog.
   resumeIssue:
+  trackedBaseline: false
   captureIds: []
   continueOnCaptureError: false
   allowBaselinePromotion: false

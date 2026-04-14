@@ -1,5 +1,5 @@
-import { loadConfig } from "../config/load-config";
-import { CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
+import { LoadedConfig, loadConfig } from "../config/load-config";
+import { AppConfig, CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
 import { runCapture } from "../capture/run-capture";
 import { ComparisonStatus, ComparisonSummary, runComparison } from "../compare/run-comparison";
@@ -29,6 +29,7 @@ import { writeJsonFile } from "../shared/fs";
 import { log } from "../shared/log";
 import { prepareSourceWorkspace } from "../target/prepare-workspace";
 import { ResolvedSourceWorkspace, resolveSourceWorkspace } from "../target/resolve-target";
+import { upsertTrackedScreenshots } from "../demo-app/capture/upsert-tracked-screenshots";
 
 export interface RunIntentEvent {
   timestamp: string;
@@ -64,9 +65,86 @@ export interface RunIntentOptions {
   intent?: string;
   mode?: RunMode;
   sourceId?: string;
+  trackedBaseline?: boolean;
   resumeIssue?: string;
   dryRun?: boolean;
   onEvent?: (event: RunIntentEvent) => void;
+}
+
+export interface LinearClientLike {
+  createIssue(issue: {
+    title: string;
+    description: string;
+    parentId?: string;
+  }): Promise<LinearIssueRef>;
+  fetchIssue(issueReference: string): Promise<LinearIssueRef | null>;
+  listChildIssues(parentId: string): Promise<LinearIssueRef[]>;
+  updateIssueDescription(issueId: string, description: string): Promise<void>;
+  updateIssueTitle(issueId: string, title: string): Promise<void>;
+  createComment(issueId: string, body: string): Promise<void>;
+  updateIssueState(issueId: string, stateId?: string): Promise<void>;
+}
+
+type ExecutionSourcePlan = NormalizedIntent["executionPlan"]["sources"][number];
+
+export interface ExecuteSourceRunInput {
+  config: AppConfig;
+  normalizedIntent: NormalizedIntent;
+  sourcePlan: ExecutionSourcePlan;
+  runPaths: RunPaths;
+  sourcePaths: SourceRunPaths;
+  trackedBaseline: boolean;
+  options: RunIntentOptions;
+  linearClient: LinearClientLike | null;
+  parentIssue: LinearIssueRef | null;
+  sourceIssue: LinearIssueRef | null;
+  linearErrors: string[];
+}
+
+export interface RunIntentDependencies {
+  loadConfig: (configPathInput: string) => Promise<LoadedConfig>;
+  normalizeIntent: typeof normalizeIntent;
+  createRunPaths: typeof createRunPaths;
+  createLinearClient: (config: AppConfig["linear"]) => LinearClientLike;
+  executeSourceRun: (input: ExecuteSourceRunInput) => Promise<SourceRunResult>;
+  writeJsonFile: typeof writeJsonFile;
+  writePlanLifecycleFile: typeof writePlanLifecycleFile;
+  writeBusinessEvidenceFiles: typeof writeBusinessEvidenceFiles;
+  writeBusinessSummaryMarkdown: typeof writeBusinessSummaryMarkdown;
+  retainRecentRuns: typeof retainRecentRuns;
+}
+
+function buildTrackedBaselineSummary(mode: RunMode, captures: CaptureOutcome[]): ComparisonSummary {
+  const counts = emptyComparisonCounts();
+  const items = captures.map((capture) => {
+    if (capture.status !== "captured") {
+      counts["capture-failed"] += 1;
+      return {
+        captureId: capture.captureId,
+        status: "capture-failed" as const,
+        currentPath: capture.outputPath,
+        note: capture.error
+      };
+    }
+
+    counts["baseline-written"] += 1;
+    return {
+      captureId: capture.captureId,
+      status: "baseline-written" as const,
+      baselinePath: capture.outputPath,
+      currentPath: capture.outputPath,
+      baselineHash: capture.hash,
+      currentHash: capture.hash,
+      note: "Capture staged for tracked screenshot upsert."
+    };
+  });
+
+  return {
+    mode,
+    hasDrift: false,
+    counts,
+    items
+  };
 }
 
 function emitRunEvent(
@@ -381,24 +459,14 @@ async function safeLinearTask<T>(input: {
   }
 }
 
-async function executeSourceRun(input: {
-  config: Awaited<ReturnType<typeof loadConfig>>["config"];
-  normalizedIntent: NormalizedIntent;
-  sourcePlan: NormalizedIntent["executionPlan"]["sources"][number];
-  runPaths: RunPaths;
-  sourcePaths: SourceRunPaths;
-  options: RunIntentOptions;
-  linearClient: LinearClient | null;
-  parentIssue: LinearIssueRef | null;
-  sourceIssue: LinearIssueRef | null;
-  linearErrors: string[];
-}): Promise<SourceRunResult> {
+async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRunResult> {
   let workspace: ResolvedSourceWorkspace | undefined;
   let captures: CaptureOutcome[] = [];
   let comparison: ComparisonSummary | undefined;
   let summaryMarkdown: string | undefined;
   let publishedSourcePath: string | undefined;
   let appHandle: Awaited<ReturnType<typeof startApp>> | null = null;
+  let trackedScreenshotRoot: string | undefined;
 
   try {
     emitRunEvent(input.options, "workspace", "Resolving source workspace.", {
@@ -480,6 +548,25 @@ async function executeSourceRun(input: {
         : input.config.run.captureIds
     );
 
+    if (input.trackedBaseline) {
+      trackedScreenshotRoot = workspace.source.capture.trackedRoot;
+
+      if (input.sourcePlan.runMode !== "baseline") {
+        throw new Error("Tracked baseline runs currently require baseline mode.");
+      }
+
+      if (!trackedScreenshotRoot) {
+        throw new Error(
+          `Source '${input.sourcePlan.sourceId}' does not define capture.trackedRoot for tracked baseline output.`
+        );
+      }
+
+      emitRunEvent(input.options, "artifacts", "Tracked baseline output enabled.", {
+        sourceId: input.sourcePlan.sourceId,
+        trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot)
+      });
+    }
+
     const captureResult = await runCapture(
       input.config,
       workspace,
@@ -525,75 +612,127 @@ async function executeSourceRun(input: {
 
     captures = captureResult.outcomes;
 
-    emitRunEvent(input.options, "comparison", "Running comparison.", {
-      sourceId: input.sourcePlan.sourceId,
-      mode: input.sourcePlan.runMode,
-      captureCount: captures.length
-    });
+    if (input.trackedBaseline) {
+      comparison = buildTrackedBaselineSummary(input.sourcePlan.runMode, captures);
 
-    comparison = await runComparison(
-      input.config,
-      input.sourcePlan.runMode,
-      captures,
-      input.sourcePaths.baselineSourceDir,
-      input.sourcePaths.diffsDir
-    );
+      emitRunEvent(input.options, "comparison", "Tracked baseline capture complete.", {
+        sourceId: input.sourcePlan.sourceId,
+        trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot),
+        counts: comparison.counts
+      });
+    } else {
+      emitRunEvent(input.options, "comparison", "Running comparison.", {
+        sourceId: input.sourcePlan.sourceId,
+        mode: input.sourcePlan.runMode,
+        captureCount: captures.length
+      });
 
-    emitRunEvent(input.options, "comparison", "Comparison complete.", {
-      sourceId: input.sourcePlan.sourceId,
-      hasDrift: comparison.hasDrift,
-      counts: comparison.counts
-    });
+      comparison = await runComparison(
+        input.config,
+        input.sourcePlan.runMode,
+        captures,
+        input.sourcePaths.baselineSourceDir,
+        input.sourcePaths.diffsDir
+      );
+
+      emitRunEvent(input.options, "comparison", "Comparison complete.", {
+        sourceId: input.sourcePlan.sourceId,
+        hasDrift: comparison.hasDrift,
+        counts: comparison.counts
+      });
+    }
 
     const sourceErrors: string[] = [];
     if (captureResult.abortedDueToError) {
       sourceErrors.push("Capture run stopped early because continueOnCaptureError is disabled.");
     }
 
-    if (comparison.counts["missing-baseline"] > 0 && input.config.comparison.onMissingBaseline === "error") {
+    const failedCaptureCount = captures.filter((capture) => capture.status === "failed").length;
+    if (input.trackedBaseline && failedCaptureCount > 0) {
+      sourceErrors.push(
+        `${failedCaptureCount} tracked screenshot capture${failedCaptureCount === 1 ? "" : "s"} failed; existing tracked screenshots were left untouched.`
+      );
+    }
+
+    if (!input.trackedBaseline && comparison.counts["missing-baseline"] > 0 && input.config.comparison.onMissingBaseline === "error") {
       sourceErrors.push("One or more captures are missing a baseline image.");
     }
 
-    if (comparison.hasDrift && input.config.comparison.failOnChange) {
+    if (!input.trackedBaseline && comparison.hasDrift && input.config.comparison.failOnChange) {
       sourceErrors.push("Visual drift detected and comparison.failOnChange is enabled.");
     }
 
-    try {
-      const libraryResult = await updateScreenshotLibrary({
-        config: input.config,
-        sourceId: input.sourcePlan.sourceId,
-        runId: input.runPaths.runId,
-        mode: input.sourcePlan.runMode,
-        captures,
-        comparison,
-        normalizedIntent: input.normalizedIntent
-      });
+    if (input.trackedBaseline) {
+      if (sourceErrors.length === 0) {
+        try {
+          const updatedFiles = await upsertTrackedScreenshots({
+            captures,
+            captureItems: selectedCaptureItems,
+            trackedRoot: trackedScreenshotRoot!
+          });
 
-      emitRunEvent(input.options, "artifacts", "Screenshot library updated.", {
-        sourceId: input.sourcePlan.sourceId,
-        screenshotLibrary: toRelativePath(input.runPaths.controllerRoot, libraryResult.sourceLibraryRoot)
-      });
-    } catch (error) {
-      sourceErrors.push(`Failed to update the screenshot library: ${captureErrorMessage(error)}`);
-    }
+          publishedSourcePath = toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot);
 
-    try {
-      const publishResult = await publishArtifactsToSourceIfConfigured({
-        config: input.config,
-        workspace,
-        paths: input.runPaths,
-        sourcePaths: input.sourcePaths
-      });
-
-      if (publishResult) {
-        publishedSourcePath = toRelativePath(input.runPaths.controllerRoot, publishResult.sourceOutputDir);
-        emitRunEvent(input.options, "artifacts", "Artifacts published to source workspace.", {
-          sourceId: input.sourcePlan.sourceId,
-          sourceOutputDir: publishedSourcePath
-        });
+          emitRunEvent(input.options, "artifacts", "Tracked screenshots upserted from staged captures.", {
+            sourceId: input.sourcePlan.sourceId,
+            trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot),
+            stagedCapturesDir: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.capturesDir),
+            updatedCount: updatedFiles.length
+          });
+        } catch (error) {
+          sourceErrors.push(`Failed to upsert tracked screenshots: ${captureErrorMessage(error)}`);
+        }
+      } else {
+        emitRunEvent(
+          input.options,
+          "artifacts",
+          "Tracked screenshots were not upserted because validation or capture failed.",
+          {
+            sourceId: input.sourcePlan.sourceId,
+            trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot),
+            errors: sourceErrors
+          },
+          "warn"
+        );
       }
-    } catch (error) {
-      sourceErrors.push(`Failed to publish artifacts to the source workspace: ${captureErrorMessage(error)}`);
+    } else {
+      try {
+        const libraryResult = await updateScreenshotLibrary({
+          config: input.config,
+          sourceId: input.sourcePlan.sourceId,
+          runId: input.runPaths.runId,
+          mode: input.sourcePlan.runMode,
+          captures,
+          comparison,
+          normalizedIntent: input.normalizedIntent
+        });
+
+        emitRunEvent(input.options, "artifacts", "Screenshot library updated.", {
+          sourceId: input.sourcePlan.sourceId,
+          screenshotLibrary: toRelativePath(input.runPaths.controllerRoot, libraryResult.sourceLibraryRoot)
+        });
+      } catch (error) {
+        sourceErrors.push(`Failed to update the screenshot library: ${captureErrorMessage(error)}`);
+      }
+
+      try {
+        const publishResult = await publishArtifactsToSourceIfConfigured({
+          config: input.config,
+          workspace,
+          paths: input.runPaths,
+          sourcePaths: input.sourcePaths
+        });
+
+        if (publishResult) {
+          publishedSourcePath = toRelativePath(input.runPaths.controllerRoot, publishResult.sourceOutputDir);
+          emitRunEvent(input.options, "artifacts", "Artifacts published to source workspace.", {
+            sourceId: input.sourcePlan.sourceId,
+            sourceOutputDir: publishedSourcePath
+          });
+        }
+      } catch (error) {
+        sourceErrors.push(`Failed to publish artifacts to the source workspace: ${captureErrorMessage(error)}`);
+      }
     }
 
     const status = sourceErrors.length > 0 ? "failed" : "completed";
@@ -609,6 +748,7 @@ async function executeSourceRun(input: {
       linearIssue: input.sourceIssue,
       captures,
       comparison,
+      writeBaselineRecords: !input.trackedBaseline,
       status,
       error,
       publishedSourcePath
@@ -792,241 +932,352 @@ async function executeSourceRun(input: {
   }
 }
 
-export async function runIntent(options: RunIntentOptions): Promise<RunIntentResult> {
-  const loadedConfig = await loadConfig(options.configPath);
-  const config = loadedConfig.config;
-  const sourceIdOverride = options.sourceId;
-  const sourceId = options.sourceId ?? config.run.sourceId;
-  const mode = options.mode ?? config.run.mode;
-  const rawPrompt = options.intent ?? config.run.intent;
-  const resumeIssue = options.resumeIssue ?? config.run.resumeIssue;
-  const dryRun = options.dryRun ?? config.run.dryRun;
+function createDefaultRunIntentDependencies(): RunIntentDependencies {
+  return {
+    loadConfig,
+    normalizeIntent,
+    createRunPaths,
+    createLinearClient: (config) => new LinearClient(config),
+    executeSourceRun,
+    writeJsonFile,
+    writePlanLifecycleFile,
+    writeBusinessEvidenceFiles,
+    writeBusinessSummaryMarkdown,
+    retainRecentRuns
+  };
+}
 
-  emitRunEvent(options, "config", "Configuration loaded.", {
-    configPath: loadedConfig.configPath,
-    defaultSourceId: config.run.sourceId,
-    linearEnabled: config.linear.enabled,
-    sourceCount: Object.keys(config.sources).length,
-    resumeIssue
-  });
-
-  if (!rawPrompt || rawPrompt.trim().length === 0) {
-    throw new Error("A free-text intent is required. Pass --intent or set run.intent in the config.");
-  }
-
-  const availableSources = Object.fromEntries(
-    Object.entries(config.sources).map(([id, source]) => [
-      id,
-      {
-        aliases: source.aliases,
-        capture: source.capture,
-        planning: source.planning,
-        source: source.source
-      } satisfies Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">
-    ])
-  );
-
-  const normalizedIntent = normalizeIntent({
-    rawPrompt,
-    runMode: mode,
-    defaultSourceId: config.run.sourceId,
-    continueOnCaptureError: config.run.continueOnCaptureError,
-    sourceIdOverride,
-    modeOverride: options.mode,
-    resumeIssue,
-    linearEnabled: config.linear.enabled,
-    publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
-    availableSources
-  });
-
-  const sourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
-  const paths = await createRunPaths(loadedConfig, sourceIds, normalizedIntent.execution.runMode);
-  await writeJsonFile(paths.normalizedIntentPath, normalizedIntent);
-
-  emitRunEvent(options, "intent", "Intent normalized.", {
-    rawPrompt,
-    summary: normalizedIntent.summary,
-    sourceId: normalizedIntent.executionPlan.primarySourceId,
-    sourceIds,
-    runMode: normalizedIntent.execution.runMode,
-    normalizedIntent,
-    businessIntent: normalizedIntent.businessIntent,
-    executionPlan: normalizedIntent.executionPlan
-  });
-
-  emitRunEvent(options, "artifacts", "Business run workspace prepared.", {
-    runId: paths.runId,
-    normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
-    sourceDirs: sourceIds.map((currentSourceId) => ({
-      sourceId: currentSourceId,
-      sourceDir: toRelativePath(paths.controllerRoot, paths.sourceRuns[currentSourceId]?.sourceDir)
-    }))
-  });
-
-  const linearClient = config.linear.enabled ? new LinearClient(config.linear) : null;
-  const linearErrors: string[] = [];
-  const linearPublication: BusinessLinearPublication = {
-    parentIssue: null,
-    sourceIssues: {},
-    errors: linearErrors
+export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> = {}) {
+  const dependencies: RunIntentDependencies = {
+    ...createDefaultRunIntentDependencies(),
+    ...overrides
   };
 
-  emitRunEvent(options, "linear", config.linear.enabled ? "Linear integration enabled." : "Linear integration disabled.", {
-    enabled: config.linear.enabled,
-    createIssueOnStart: config.linear.createIssueOnStart,
-    commentOnProgress: config.linear.commentOnProgress,
-    commentOnCompletion: config.linear.commentOnCompletion,
-    resumeIssue
-  });
+  return async function runIntent(options: RunIntentOptions): Promise<RunIntentResult> {
+    const loadedConfig = await dependencies.loadConfig(options.configPath);
+    const config = loadedConfig.config;
+    const sourceIdOverride = options.sourceId;
+    const sourceId = options.sourceId ?? config.run.sourceId;
+    const mode = options.mode ?? config.run.mode;
+    const rawPrompt = options.intent ?? config.run.intent;
+    const trackedBaseline = options.trackedBaseline ?? config.run.trackedBaseline;
+    const resumeIssue = options.resumeIssue ?? config.run.resumeIssue;
+    const dryRun = options.dryRun ?? config.run.dryRun;
 
-  const shouldManageLinearPlan = Boolean(linearClient && (config.linear.createIssueOnStart || resumeIssue));
+    emitRunEvent(options, "config", "Configuration loaded.", {
+      configPath: loadedConfig.configPath,
+      defaultSourceId: config.run.sourceId,
+      linearEnabled: config.linear.enabled,
+      sourceCount: Object.keys(config.sources).length,
+      trackedBaseline,
+      resumeIssue
+    });
 
-  if (linearClient && shouldManageLinearPlan) {
-    if (resumeIssue) {
-      emitRunEvent(options, "linear", "Resolving existing Linear parent issue.", {
-        issueReference: resumeIssue
-      });
+    if (trackedBaseline && mode !== "baseline") {
+      throw new Error("Tracked baseline runs currently require baseline mode.");
+    }
 
-      linearPublication.parentIssue = await safeLinearTask({
-        enabled: true,
-        options,
-        errors: linearErrors,
-        message: `Failed to resolve the Linear resume issue '${resumeIssue}'`,
-        task: async () => {
-          const existingIssue = await linearClient.fetchIssue(resumeIssue);
-          if (!existingIssue) {
-            throw new Error(`Linear issue '${resumeIssue}' was not found.`);
-          }
+    if (!rawPrompt || rawPrompt.trim().length === 0) {
+      throw new Error("A free-text intent is required. Pass --intent or set run.intent in the config.");
+    }
 
-          const description = buildManagedParentIssueDescription(existingIssue.description, {
-            rawPrompt,
-            normalizedIntent
-          });
+    const availableSources = Object.fromEntries(
+      Object.entries(config.sources).map(([id, source]) => [
+        id,
+        {
+          aliases: source.aliases,
+          capture: source.capture,
+          planning: source.planning,
+          source: source.source
+        } satisfies Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">
+      ])
+    );
 
-          await linearClient.updateIssueDescription(existingIssue.id, description);
+    const normalizedIntent = dependencies.normalizeIntent({
+      rawPrompt,
+      runMode: mode,
+      defaultSourceId: config.run.sourceId,
+      continueOnCaptureError: config.run.continueOnCaptureError,
+      sourceIdOverride,
+      modeOverride: options.mode,
+      resumeIssue,
+      linearEnabled: config.linear.enabled,
+      publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
+      availableSources
+    });
 
-          return {
-            ...existingIssue,
-            description
-          };
-        }
-      }) ?? null;
+    const sourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
+    const paths = await dependencies.createRunPaths(loadedConfig, sourceIds, normalizedIntent.execution.runMode);
+    await dependencies.writeJsonFile(paths.normalizedIntentPath, normalizedIntent);
 
-      if (!linearPublication.parentIssue) {
-        throw new Error(`Configured resume issue '${resumeIssue}' could not be resolved in Linear.`);
-      }
+    emitRunEvent(options, "intent", "Intent normalized.", {
+      rawPrompt,
+      summary: normalizedIntent.summary,
+      sourceId: normalizedIntent.executionPlan.primarySourceId,
+      sourceIds,
+      runMode: normalizedIntent.execution.runMode,
+      normalizedIntent,
+      businessIntent: normalizedIntent.businessIntent,
+      executionPlan: normalizedIntent.executionPlan
+    });
 
-      emitRunEvent(options, "linear", "Linear parent issue resumed.", {
-        issueReference: resumeIssue,
-        identifier: linearPublication.parentIssue.identifier,
-        url: linearPublication.parentIssue.url
-      });
-    } else {
-      emitRunEvent(options, "linear", "Creating Linear parent issue.", {
-        teamId: config.linear.teamId,
-        projectId: config.linear.projectId,
-        title: normalizedIntent.linear.issueTitle
-      });
+    emitRunEvent(options, "artifacts", "Business run workspace prepared.", {
+      runId: paths.runId,
+      normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
+      sourceDirs: sourceIds.map((currentSourceId) => ({
+        sourceId: currentSourceId,
+        sourceDir: toRelativePath(paths.controllerRoot, paths.sourceRuns[currentSourceId]?.sourceDir)
+      }))
+    });
 
-      linearPublication.parentIssue = await safeLinearTask({
-        enabled: true,
-        options,
-        errors: linearErrors,
-        message: "Failed to create the Linear parent issue",
-        task: async () =>
-          await linearClient.createIssue({
-            title: normalizedIntent.linear.issueTitle,
-            description: buildManagedParentIssueDescription(undefined, {
+    const linearClient = config.linear.enabled ? dependencies.createLinearClient(config.linear) : null;
+    const linearErrors: string[] = [];
+    const linearPublication: BusinessLinearPublication = {
+      parentIssue: null,
+      sourceIssues: {},
+      errors: linearErrors
+    };
+
+    emitRunEvent(options, "linear", config.linear.enabled ? "Linear integration enabled." : "Linear integration disabled.", {
+      enabled: config.linear.enabled,
+      createIssueOnStart: config.linear.createIssueOnStart,
+      commentOnProgress: config.linear.commentOnProgress,
+      commentOnCompletion: config.linear.commentOnCompletion,
+      trackedBaseline,
+      resumeIssue
+    });
+
+    const shouldManageLinearPlan = Boolean(!trackedBaseline && linearClient && (config.linear.createIssueOnStart || resumeIssue));
+
+    if (linearClient && shouldManageLinearPlan) {
+      if (resumeIssue) {
+        emitRunEvent(options, "linear", "Resolving existing Linear parent issue.", {
+          issueReference: resumeIssue
+        });
+
+        linearPublication.parentIssue = await safeLinearTask({
+          enabled: true,
+          options,
+          errors: linearErrors,
+          message: `Failed to resolve the Linear resume issue '${resumeIssue}'`,
+          task: async () => {
+            const existingIssue = await linearClient.fetchIssue(resumeIssue);
+            if (!existingIssue) {
+              throw new Error(`Linear issue '${resumeIssue}' was not found.`);
+            }
+
+            const description = buildManagedParentIssueDescription(existingIssue.description, {
               rawPrompt,
               normalizedIntent
-            })
-          })
-      }) ?? null;
+            });
 
-      if (linearPublication.parentIssue) {
-        emitRunEvent(options, "linear", "Linear parent issue created.", {
+            await linearClient.updateIssueDescription(existingIssue.id, description);
+
+            return {
+              ...existingIssue,
+              description
+            };
+          }
+        }) ?? null;
+
+        if (!linearPublication.parentIssue) {
+          throw new Error(`Configured resume issue '${resumeIssue}' could not be resolved in Linear.`);
+        }
+
+        emitRunEvent(options, "linear", "Linear parent issue resumed.", {
+          issueReference: resumeIssue,
           identifier: linearPublication.parentIssue.identifier,
           url: linearPublication.parentIssue.url
         });
-      }
-    }
-
-    if (linearPublication.parentIssue) {
-      const existingSourceIssues = resumeIssue
-        ? await safeLinearTask({
-            enabled: true,
-            options,
-            errors: linearErrors,
-            message: `Failed to list existing Linear child issues for '${resumeIssue}'`,
-            task: async () => await linearClient.listChildIssues(linearPublication.parentIssue!.id)
-          }) ?? []
-        : [];
-
-      for (const sourcePlan of normalizedIntent.executionPlan.sources) {
-        const issueTitle = buildSourceIssueTitle(normalizedIntent, sourcePlan.sourceId);
-        const existingSourceIssue = findReusableSourceIssue(existingSourceIssues, sourcePlan.sourceId);
-        const issueDescription = buildManagedSourceIssueDescription(existingSourceIssue?.description, {
-          normalizedIntent,
-          sourceId: sourcePlan.sourceId
+      } else {
+        emitRunEvent(options, "linear", "Creating Linear parent issue.", {
+          teamId: config.linear.teamId,
+          projectId: config.linear.projectId,
+          title: normalizedIntent.linear.issueTitle
         });
 
-        const sourceIssue = existingSourceIssue
+        linearPublication.parentIssue = await safeLinearTask({
+          enabled: true,
+          options,
+          errors: linearErrors,
+          message: "Failed to create the Linear parent issue",
+          task: async () =>
+            await linearClient.createIssue({
+              title: normalizedIntent.linear.issueTitle,
+              description: buildManagedParentIssueDescription(undefined, {
+                rawPrompt,
+                normalizedIntent
+              })
+            })
+        }) ?? null;
+
+        if (linearPublication.parentIssue) {
+          emitRunEvent(options, "linear", "Linear parent issue created.", {
+            identifier: linearPublication.parentIssue.identifier,
+            url: linearPublication.parentIssue.url
+          });
+        }
+      }
+
+      if (linearPublication.parentIssue) {
+        const existingSourceIssues = resumeIssue
           ? await safeLinearTask({
               enabled: true,
               options,
               errors: linearErrors,
-              message: `Failed to update the Linear source issue for ${sourcePlan.sourceId}`,
-              details: { sourceId: sourcePlan.sourceId },
-              task: async () => {
-                await linearClient.updateIssueTitle(existingSourceIssue.id, issueTitle);
-                await linearClient.updateIssueDescription(existingSourceIssue.id, issueDescription);
+              message: `Failed to list existing Linear child issues for '${resumeIssue}'`,
+              task: async () => await linearClient.listChildIssues(linearPublication.parentIssue!.id)
+            }) ?? []
+          : [];
 
-                return {
-                  ...existingSourceIssue,
-                  title: issueTitle,
-                  description: issueDescription
-                };
-              }
-            })
-          : await safeLinearTask({
-              enabled: true,
-              options,
-              errors: linearErrors,
-              message: `Failed to create the Linear source issue for ${sourcePlan.sourceId}`,
-              details: { sourceId: sourcePlan.sourceId },
-              task: async () =>
-                await linearClient.createIssue({
-                  title: issueTitle,
-                  description: issueDescription,
-                  parentId: linearPublication.parentIssue!.id
-                })
-            });
-
-        if (sourceIssue) {
-          linearPublication.sourceIssues[sourcePlan.sourceId] = sourceIssue;
-          emitRunEvent(options, "linear", existingSourceIssue ? "Linear source issue updated." : "Linear source issue created.", {
-            sourceId: sourcePlan.sourceId,
-            identifier: sourceIssue.identifier,
-            url: sourceIssue.url,
-            parentId: linearPublication.parentIssue.id
+        for (const sourcePlan of normalizedIntent.executionPlan.sources) {
+          const issueTitle = buildSourceIssueTitle(normalizedIntent, sourcePlan.sourceId);
+          const existingSourceIssue = findReusableSourceIssue(existingSourceIssues, sourcePlan.sourceId);
+          const issueDescription = buildManagedSourceIssueDescription(existingSourceIssue?.description, {
+            normalizedIntent,
+            sourceId: sourcePlan.sourceId
           });
+
+          const sourceIssue = existingSourceIssue
+            ? await safeLinearTask({
+                enabled: true,
+                options,
+                errors: linearErrors,
+                message: `Failed to update the Linear source issue for ${sourcePlan.sourceId}`,
+                details: { sourceId: sourcePlan.sourceId },
+                task: async () => {
+                  await linearClient.updateIssueTitle(existingSourceIssue.id, issueTitle);
+                  await linearClient.updateIssueDescription(existingSourceIssue.id, issueDescription);
+
+                  return {
+                    ...existingSourceIssue,
+                    title: issueTitle,
+                    description: issueDescription
+                  };
+                }
+              })
+            : await safeLinearTask({
+                enabled: true,
+                options,
+                errors: linearErrors,
+                message: `Failed to create the Linear source issue for ${sourcePlan.sourceId}`,
+                details: { sourceId: sourcePlan.sourceId },
+                task: async () =>
+                  await linearClient.createIssue({
+                    title: issueTitle,
+                    description: issueDescription,
+                    parentId: linearPublication.parentIssue!.id
+                  })
+              });
+
+          if (sourceIssue) {
+            linearPublication.sourceIssues[sourcePlan.sourceId] = sourceIssue;
+            emitRunEvent(options, "linear", existingSourceIssue ? "Linear source issue updated." : "Linear source issue created.", {
+              sourceId: sourcePlan.sourceId,
+              identifier: sourceIssue.identifier,
+              url: sourceIssue.url,
+              parentId: linearPublication.parentIssue.id
+            });
+          }
         }
       }
+
+      await dependencies.writeJsonFile(paths.linearPath, linearPublication);
     }
 
-    await writeJsonFile(paths.linearPath, linearPublication);
-  }
+    if (dryRun) {
+      const sourceRuns: SourceRunResult[] = sourceIds.map((currentSourceId) => ({
+        sourceId: currentSourceId,
+        status: "planned",
+        paths: paths.sourceRuns[currentSourceId],
+        captures: [],
+        linearIssue: linearPublication.sourceIssues[currentSourceId] ?? null
+      }));
 
-  if (dryRun) {
-    const sourceRuns: SourceRunResult[] = sourceIds.map((currentSourceId) => ({
-      sourceId: currentSourceId,
-      status: "planned",
-      paths: paths.sourceRuns[currentSourceId],
-      captures: [],
-      linearIssue: linearPublication.sourceIssues[currentSourceId] ?? null
-    }));
+      await dependencies.writePlanLifecycleFile({
+        config,
+        paths,
+        normalizedIntent,
+        linearPublication,
+        sourceRuns
+      });
 
-    await writePlanLifecycleFile({
+      emitRunEvent(options, "run", "Dry run complete.", {
+        sourceId: normalizedIntent.executionPlan.primarySourceId,
+        sourceIds,
+        mode: normalizedIntent.execution.runMode,
+        normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
+        planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
+      });
+
+      log.info("Dry run complete.", {
+        sourceId: normalizedIntent.executionPlan.primarySourceId,
+        sourceIds,
+        mode: normalizedIntent.execution.runMode,
+        normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
+        planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
+      });
+
+      await dependencies.retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
+      return {
+        status: "completed",
+        sourceId: normalizedIntent.executionPlan.primarySourceId,
+        mode: normalizedIntent.execution.runMode,
+        dryRun: true,
+        normalizedIntent,
+        paths,
+        linearIssue: linearPublication.parentIssue,
+        linearPublication,
+        sourceRuns,
+        captures: [],
+        hasDrift: false,
+        counts: emptyComparisonCounts(),
+        errors: linearErrors
+      };
+    }
+
+    const sourceRuns: SourceRunResult[] = [];
+    for (const sourcePlan of normalizedIntent.executionPlan.sources) {
+      const sourceRun = await dependencies.executeSourceRun({
+        config,
+        normalizedIntent,
+        sourcePlan,
+        runPaths: paths,
+        sourcePaths: paths.sourceRuns[sourcePlan.sourceId],
+        trackedBaseline,
+        options,
+        linearClient,
+        parentIssue: linearPublication.parentIssue,
+        sourceIssue: linearPublication.sourceIssues[sourcePlan.sourceId] ?? null,
+        linearErrors
+      });
+      sourceRuns.push(sourceRun);
+    }
+
+    const counts = aggregateCounts(sourceRuns);
+    const hasDrift = sourceRuns.some((sourceRun) => sourceRun.comparison?.hasDrift ?? false);
+    const errors = [
+      ...sourceRuns.filter((sourceRun) => sourceRun.error).map((sourceRun) => sourceRun.error as string),
+      ...linearErrors
+    ];
+    const status: RunIntentResult["status"] = errors.length > 0 || sourceRuns.some((sourceRun) => sourceRun.status === "failed")
+      ? "failed"
+      : "completed";
+
+    await dependencies.writeBusinessEvidenceFiles({
+      loadedConfig,
+      config,
+      paths,
+      normalizedIntent,
+      sourceRuns,
+      linearPublication,
+      status,
+      hasDrift,
+      counts,
+      errors
+    });
+
+    await dependencies.writePlanLifecycleFile({
       config,
       paths,
       normalizedIntent,
@@ -1034,188 +1285,109 @@ export async function runIntent(options: RunIntentOptions): Promise<RunIntentRes
       sourceRuns
     });
 
-    emitRunEvent(options, "run", "Dry run complete.", {
-      sourceId: normalizedIntent.executionPlan.primarySourceId,
-      sourceIds,
-      mode: normalizedIntent.execution.runMode,
-      normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
+    emitRunEvent(options, "artifacts", "Business evidence files written.", {
+      manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
+      hashesPath: toRelativePath(paths.controllerRoot, paths.hashesPath),
+      comparisonPath: toRelativePath(paths.controllerRoot, paths.comparisonPath),
       planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
     });
 
-    log.info("Dry run complete.", {
+    const summaryMarkdown = await dependencies.writeBusinessSummaryMarkdown({
+      config,
+      paths,
+      normalizedIntent,
+      sourceRuns,
+      linearPublication,
+      status,
+      hasDrift,
+      counts,
+      errors
+    });
+
+    emitRunEvent(options, "artifacts", "Business summary written.", {
+      summaryPath: toRelativePath(paths.controllerRoot, paths.summaryPath)
+    });
+
+    if (linearClient && linearPublication.parentIssue) {
+      await safeLinearTask({
+        enabled: true,
+        options,
+        errors: linearErrors,
+        message: "Failed to finalize the Linear parent issue",
+        task: async () => {
+          if (config.linear.commentOnCompletion) {
+            await linearClient.createComment(
+              linearPublication.parentIssue!.id,
+              [
+                `Business run ${status}.`,
+                `Completed sources: ${sourceRuns.filter((sourceRun) => sourceRun.status === "completed").map((sourceRun) => sourceRun.sourceId).join(", ") || "none"}`,
+                `Failed sources: ${sourceRuns.filter((sourceRun) => sourceRun.status === "failed").map((sourceRun) => sourceRun.sourceId).join(", ") || "none"}`,
+                `Changed: ${counts.changed}`,
+                `Unchanged: ${counts.unchanged}`,
+                `Missing baseline: ${counts["missing-baseline"]}`,
+                `Summary: ${toRelativePath(paths.controllerRoot, paths.summaryPath)}`,
+                errors.length > 0 ? `Errors: ${errors.join(" | ")}` : "Errors: none"
+              ].join("\n")
+            );
+          }
+
+          await linearClient.updateIssueState(
+            linearPublication.parentIssue!.id,
+            status === "completed" ? config.linear.defaultStateIds.completed : config.linear.defaultStateIds.failed
+          );
+        }
+      });
+
+      await dependencies.writeJsonFile(paths.linearPath, linearPublication);
+    }
+
+    log.info(status === "completed" ? "Run complete." : "Run complete with failures.", {
+      runId: paths.runId,
+      summaryPath: toRelativePath(paths.controllerRoot, paths.summaryPath),
+      manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
+      sourceRuns: sourceRuns.map((sourceRun) => ({
+        sourceId: sourceRun.sourceId,
+        status: sourceRun.status,
+        summaryPath: toRelativePath(paths.controllerRoot, sourceRun.paths.summaryPath),
+        publishedSourcePath: sourceRun.publishedSourcePath
+      })),
+      hasDrift,
+      counts,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+    emitRunEvent(options, "run", status === "completed" ? "Business run complete." : "Business run complete with failures.", {
+      runId: paths.runId,
       sourceId: normalizedIntent.executionPlan.primarySourceId,
       sourceIds,
       mode: normalizedIntent.execution.runMode,
-      normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
-      planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
-    });
+      summaryPath: toRelativePath(paths.controllerRoot, paths.summaryPath),
+      manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
+      hasDrift,
+      counts,
+      errors,
+      linearIssueUrl: linearPublication.parentIssue?.url
+    }, status === "completed" ? "info" : "error");
 
-    await retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
+    await dependencies.retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
+
     return {
-      status: "completed",
+      status,
       sourceId: normalizedIntent.executionPlan.primarySourceId,
       mode: normalizedIntent.execution.runMode,
-      dryRun: true,
+      dryRun: false,
       normalizedIntent,
       paths,
       linearIssue: linearPublication.parentIssue,
       linearPublication,
       sourceRuns,
-      captures: [],
-      hasDrift: false,
-      counts: emptyComparisonCounts(),
-      errors: linearErrors
+      captures: sourceRuns.flatMap((sourceRun) => sourceRun.captures),
+      hasDrift,
+      counts,
+      summaryMarkdown,
+      errors
     };
-  }
-
-  const sourceRuns: SourceRunResult[] = [];
-  for (const sourcePlan of normalizedIntent.executionPlan.sources) {
-    const sourceRun = await executeSourceRun({
-      config,
-      normalizedIntent,
-      sourcePlan,
-      runPaths: paths,
-      sourcePaths: paths.sourceRuns[sourcePlan.sourceId],
-      options,
-      linearClient,
-      parentIssue: linearPublication.parentIssue,
-      sourceIssue: linearPublication.sourceIssues[sourcePlan.sourceId] ?? null,
-      linearErrors
-    });
-    sourceRuns.push(sourceRun);
-  }
-
-  const counts = aggregateCounts(sourceRuns);
-  const hasDrift = sourceRuns.some((sourceRun) => sourceRun.comparison?.hasDrift ?? false);
-  const errors = [
-    ...sourceRuns.filter((sourceRun) => sourceRun.error).map((sourceRun) => sourceRun.error as string),
-    ...linearErrors
-  ];
-  const status: RunIntentResult["status"] = errors.length > 0 || sourceRuns.some((sourceRun) => sourceRun.status === "failed")
-    ? "failed"
-    : "completed";
-
-  await writeBusinessEvidenceFiles({
-    loadedConfig,
-    config,
-    paths,
-    normalizedIntent,
-    sourceRuns,
-    linearPublication,
-    status,
-    hasDrift,
-    counts,
-    errors
-  });
-
-  await writePlanLifecycleFile({
-    config,
-    paths,
-    normalizedIntent,
-    linearPublication,
-    sourceRuns
-  });
-
-  emitRunEvent(options, "artifacts", "Business evidence files written.", {
-    manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
-    hashesPath: toRelativePath(paths.controllerRoot, paths.hashesPath),
-    comparisonPath: toRelativePath(paths.controllerRoot, paths.comparisonPath),
-    planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
-  });
-
-  const summaryMarkdown = await writeBusinessSummaryMarkdown({
-    config,
-    paths,
-    normalizedIntent,
-    sourceRuns,
-    linearPublication,
-    status,
-    hasDrift,
-    counts,
-    errors
-  });
-
-  emitRunEvent(options, "artifacts", "Business summary written.", {
-    summaryPath: toRelativePath(paths.controllerRoot, paths.summaryPath)
-  });
-
-  if (linearClient && linearPublication.parentIssue) {
-    await safeLinearTask({
-      enabled: true,
-      options,
-      errors: linearErrors,
-      message: "Failed to finalize the Linear parent issue",
-      task: async () => {
-        if (config.linear.commentOnCompletion) {
-          await linearClient.createComment(
-            linearPublication.parentIssue!.id,
-            [
-              `Business run ${status}.`,
-              `Completed sources: ${sourceRuns.filter((sourceRun) => sourceRun.status === "completed").map((sourceRun) => sourceRun.sourceId).join(", ") || "none"}`,
-              `Failed sources: ${sourceRuns.filter((sourceRun) => sourceRun.status === "failed").map((sourceRun) => sourceRun.sourceId).join(", ") || "none"}`,
-              `Changed: ${counts.changed}`,
-              `Unchanged: ${counts.unchanged}`,
-              `Missing baseline: ${counts["missing-baseline"]}`,
-              `Summary: ${toRelativePath(paths.controllerRoot, paths.summaryPath)}`,
-              errors.length > 0 ? `Errors: ${errors.join(" | ")}` : "Errors: none"
-            ].join("\n")
-          );
-        }
-
-        await linearClient.updateIssueState(
-          linearPublication.parentIssue!.id,
-          status === "completed" ? config.linear.defaultStateIds.completed : config.linear.defaultStateIds.failed
-        );
-      }
-    });
-
-    await writeJsonFile(paths.linearPath, linearPublication);
-  }
-
-  log.info(status === "completed" ? "Run complete." : "Run complete with failures.", {
-    runId: paths.runId,
-    summaryPath: toRelativePath(paths.controllerRoot, paths.summaryPath),
-    manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
-    sourceRuns: sourceRuns.map((sourceRun) => ({
-      sourceId: sourceRun.sourceId,
-      status: sourceRun.status,
-      summaryPath: toRelativePath(paths.controllerRoot, sourceRun.paths.summaryPath),
-      publishedSourcePath: sourceRun.publishedSourcePath
-    })),
-    hasDrift,
-    counts,
-    errors: errors.length > 0 ? errors : undefined
-  });
-
-  emitRunEvent(options, "run", status === "completed" ? "Business run complete." : "Business run complete with failures.", {
-    runId: paths.runId,
-    sourceId: normalizedIntent.executionPlan.primarySourceId,
-    sourceIds,
-    mode: normalizedIntent.execution.runMode,
-    summaryPath: toRelativePath(paths.controllerRoot, paths.summaryPath),
-    manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
-    hasDrift,
-    counts,
-    errors,
-    linearIssueUrl: linearPublication.parentIssue?.url
-  }, status === "completed" ? "info" : "error");
-
-  await retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
-
-  return {
-    status,
-    sourceId: normalizedIntent.executionPlan.primarySourceId,
-    mode: normalizedIntent.execution.runMode,
-    dryRun: false,
-    normalizedIntent,
-    paths,
-    linearIssue: linearPublication.parentIssue,
-    linearPublication,
-    sourceRuns,
-    captures: sourceRuns.flatMap((sourceRun) => sourceRun.captures),
-    hasDrift,
-    counts,
-    summaryMarkdown,
-    errors
   };
 }
+
+export const runIntent = createRunIntentRunner();

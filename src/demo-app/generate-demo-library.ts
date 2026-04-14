@@ -1,112 +1,13 @@
+import { promises as fs } from "node:fs";
 import path from "node:path";
-import { runCapture } from "../capture/run-capture";
-import { configSchema } from "../config/schema";
+import { runIntent } from "../orchestrator/run-intent";
 import { log } from "../shared/log";
 import { removeDirectory } from "../shared/fs";
-import { ResolvedSourceWorkspace } from "../target/resolve-target";
-import { buildCaptureItemsFromCatalog } from "./capture/build-capture-items";
+import { runCommand } from "../shared/process";
 import { getDemoScreenshotRoot } from "./capture/screenshot-paths";
-import { SURFACE_CATALOG } from "./model/catalog";
-import { startSurfaceCatalogServer } from "./server/start-surface-catalog-server";
 
-function buildConfig(baseUrl: string) {
-  return configSchema.parse({
-    version: 1,
-    linear: {
-      enabled: false,
-      apiKeyEnv: "LINEAR_API_KEY",
-      teamId: "ENG",
-      createIssueOnStart: false,
-      commentOnProgress: false,
-      commentOnCompletion: false
-    },
-    agent: {
-      mode: "bounded-runner"
-    },
-    sources: {
-      "demo-components": {
-        aliases: ["components"],
-        source: {
-          type: "local",
-          localPath: process.cwd()
-        },
-        workspace: {
-          checkoutMode: "existing"
-        },
-        app: {
-          workdir: ".",
-          startCommand: "echo no-op",
-          baseUrl,
-          readiness: {
-            type: "http",
-            url: baseUrl,
-            expectedStatus: 200,
-            timeoutMs: 30_000,
-            intervalMs: 250
-          }
-        },
-        capture: {
-          waitAfterLoadMs: 0,
-          injectCss: [],
-          defaultFullPage: false,
-          items: buildCaptureItemsFromCatalog(SURFACE_CATALOG)
-        }
-      }
-    },
-    playwright: {
-      browser: "chromium",
-      headless: true,
-      viewport: {
-        width: 1280,
-        height: 720
-      },
-      deviceScaleFactor: 1,
-      locale: "en-US",
-      timezoneId: "UTC",
-      colorScheme: "light",
-      disableAnimations: true,
-      extraHTTPHeaders: {}
-    },
-    artifacts: {
-      storageMode: "controller",
-      runRoot: path.join(process.cwd(), "artifacts", "runs"),
-      libraryRoot: path.join(process.cwd(), "artifacts", "library"),
-      baselineRoot: path.join(process.cwd(), "evidence", "baselines"),
-      writeMarkdownSummary: true,
-      writeJsonSummary: true,
-      retainRuns: 20,
-      cleanBeforeRun: false
-    },
-    comparison: {
-      enabled: true,
-      hashAlgorithm: "sha256",
-      diffMethod: "pixelmatch",
-      pixelThreshold: 0.01,
-      failOnChange: false,
-      onMissingBaseline: "error",
-      writeDiffImages: true
-    },
-    run: {
-      sourceId: "demo-components",
-      mode: "compare",
-      captureIds: [],
-      continueOnCaptureError: false,
-      allowBaselinePromotion: false,
-      metadata: {},
-      dryRun: false
-    }
-  });
-}
-
-function buildWorkspace(config: ReturnType<typeof buildConfig>): ResolvedSourceWorkspace {
-  return {
-    sourceId: "demo-components",
-    source: config.sources["demo-components"],
-    rootDir: process.cwd(),
-    appDir: process.cwd(),
-    baseUrl: config.sources["demo-components"].app.baseUrl,
-    sourceType: "local"
-  };
+function shouldSkipPreflightChecks(): boolean {
+  return process.argv.includes("--skip-preflight");
 }
 
 function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
@@ -119,54 +20,82 @@ function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
   ];
 }
 
+async function runPreflightChecks(workspaceRoot: string): Promise<void> {
+  log.info("Running preflight validation before tracked screenshot regeneration.", {
+    commands: ["npm run typecheck", "npm run test:code"]
+  });
+
+  await runCommand("npm run typecheck", {
+    cwd: workspaceRoot,
+    timeoutMs: 180_000
+  });
+
+  await runCommand("npm run test:code", {
+    cwd: workspaceRoot,
+    timeoutMs: 240_000
+  });
+
+  log.info("Preflight validation passed.", {
+    commands: ["npm run typecheck", "npm run test:code"]
+  });
+}
+
+async function listTrackedScreenshotFiles(rootPath: string): Promise<string[]> {
+  const directoryEntries = await fs.readdir(rootPath, { withFileTypes: true });
+  const files = await Promise.all(
+    directoryEntries.map(async (entry) => {
+      const entryPath = path.join(rootPath, entry.name);
+      if (entry.isDirectory()) {
+        return listTrackedScreenshotFiles(entryPath);
+      }
+
+      return entry.name.endsWith(".png") ? [entryPath] : [];
+    })
+  );
+
+  return files.flat().sort();
+}
+
 async function runDemoLibrary(): Promise<void> {
-  const server = await startSurfaceCatalogServer(SURFACE_CATALOG);
-  const config = buildConfig(server.baseUrl);
-  const workspace = buildWorkspace(config);
   const workspaceRoot = process.cwd();
   const screenshotRoot = getDemoScreenshotRoot(workspaceRoot);
+  const configPath = path.join(workspaceRoot, "intent-poc.yaml");
 
-  try {
-    await Promise.all(getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));
-    await removeDirectory(screenshotRoot);
-
-    const captureResult = await runCapture(
-      config,
-      workspace,
-      workspace.source.capture.items,
-      screenshotRoot,
-      workspaceRoot,
-      false
-    );
-
-    if (captureResult.abortedDueToError) {
-      throw new Error("Demo screenshot generation aborted because at least one capture failed.");
-    }
-
-    const capturedFiles = captureResult.outcomes
-      .filter((outcome) => outcome.status === "captured")
-      .map((outcome) => path.relative(workspaceRoot, outcome.outputPath))
-      .sort();
-
-    log.info("Demo screenshot library generated.", {
-      sourceId: workspace.sourceId,
-      screenshotRoot: path.relative(workspaceRoot, screenshotRoot),
-      surfaceCount: SURFACE_CATALOG.length,
-      layerBreakdown: {
-        primitive: SURFACE_CATALOG.filter((item) => item.layer === "primitive").length,
-        component: SURFACE_CATALOG.filter((item) => item.layer === "component").length,
-        view: SURFACE_CATALOG.filter((item) => item.layer === "view").length,
-        page: SURFACE_CATALOG.filter((item) => item.layer === "page").length
-      },
-      imageCount: capturedFiles.length,
-      legacyArtifactPathsCleared: getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) =>
-        path.relative(workspaceRoot, targetPath)
-      ),
-      files: capturedFiles
+  if (shouldSkipPreflightChecks()) {
+    log.info("Skipping preflight validation before tracked screenshot regeneration.", {
+      reason: "--skip-preflight"
     });
-  } finally {
-    await server.close();
+  } else {
+    await runPreflightChecks(workspaceRoot);
   }
+
+  const result = await runIntent({
+    configPath,
+    sourceId: "demo-components",
+    mode: "baseline",
+    trackedBaseline: true,
+    intent: "Regenerate the tracked screenshot library for the built-in demo surface catalog."
+  });
+
+  await Promise.all(getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));
+
+  const capturedFiles = (await listTrackedScreenshotFiles(screenshotRoot)).map((filePath) =>
+    path.relative(workspaceRoot, filePath)
+  );
+
+  log.info("Demo screenshot library generated through runIntent.", {
+    runId: result.paths.runId,
+    sourceId: result.sourceId,
+    screenshotRoot: path.relative(workspaceRoot, screenshotRoot),
+    imageCount: capturedFiles.length,
+    summaryPath: path.relative(workspaceRoot, result.paths.summaryPath),
+    manifestPath: path.relative(workspaceRoot, result.paths.manifestPath),
+    preflightChecks: shouldSkipPreflightChecks() ? [] : ["npm run typecheck", "npm run test:code"],
+    legacyArtifactPathsCleared: getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) =>
+      path.relative(workspaceRoot, targetPath)
+    ),
+    files: capturedFiles
+  });
 }
 
 void runDemoLibrary().catch((error) => {

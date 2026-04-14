@@ -36,6 +36,7 @@ program
   .option("-i, --intent <text>", "Free-text intent prompt.")
   .option("-m, --mode <mode>", "Override the configured run mode: baseline, compare, approve-baseline.")
   .option("-s, --source <id>", "Override the configured source id.")
+  .option("--tracked-baseline", "Stage captures for upsert into the configured tracked screenshot root for the selected source.")
   .option("--resume-issue <id-or-key>", "Attach the run to an existing Linear parent issue by id or identifier.")
   .option("--dry-run", "Validate config and intent normalization without launching the source app.")
   .action(async (options) => {
@@ -45,6 +46,7 @@ program
         intent: options.intent,
         mode: options.mode,
         sourceId: options.source,
+        trackedBaseline: options.trackedBaseline,
         resumeIssue: options.resumeIssue,
         dryRun: options.dryRun
       });
