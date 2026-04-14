@@ -4,228 +4,21 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { ComparisonSummary } from "../compare/run-comparison";
-import { LoadedConfig } from "../config/load-config";
-import { AppConfig, RunMode, configSchema } from "../config/schema";
 import { readJsonFile } from "../shared/fs";
 import {
-  ExecuteSourceRunInput,
+  buildBehaviorTestLoadedConfig,
+  buildCapturedOutcome,
+  buildComparisonSummary,
+  buildSourceRunResult
+} from "./run-intent.test-support";
+import {
   RunIntentEvent,
-  SourceRunResult,
   createRunIntentRunner
 } from "./run-intent";
 
-function buildConfig(rootDir: string): AppConfig {
-  return configSchema.parse({
-    version: 1,
-    linear: {
-      enabled: false,
-      apiKeyEnv: "LINEAR_API_KEY",
-      teamId: "ENG",
-      createIssueOnStart: false,
-      commentOnProgress: false,
-      commentOnCompletion: false,
-      defaultStateIds: {}
-    },
-    agent: {
-      mode: "bounded-runner"
-    },
-    sources: {
-      "client-systems-roach-admin": {
-        aliases: ["client-systems", "roach"],
-        planning: {
-          repoId: "client-systems",
-          repoLabel: "Client Systems",
-          role: "primary product repo",
-          notes: ["Primary IDD source lane."]
-        },
-        source: {
-          type: "local",
-          localPath: rootDir
-        },
-        workspace: {
-          checkoutMode: "existing"
-        },
-        app: {
-          workdir: ".",
-          startCommand: "echo start",
-          baseUrl: "http://127.0.0.1:3000",
-          readiness: {
-            type: "http",
-            url: "http://127.0.0.1:3000",
-            expectedStatus: 200,
-            timeoutMs: 1_000,
-            intervalMs: 50
-          }
-        },
-        capture: {
-          waitAfterLoadMs: 0,
-          injectCss: [],
-          defaultFullPage: false,
-          items: [
-            { id: "roach-overview", path: "/", maskSelectors: [], delayMs: 0 },
-            { id: "roach-statements", path: "/sql-activity", maskSelectors: [], delayMs: 0 }
-          ]
-        }
-      },
-      "docs-portal": {
-        aliases: ["docs", "documentation"],
-        planning: {
-          repoId: "docs-portal",
-          repoLabel: "Docs Portal",
-          role: "documentation",
-          notes: ["Secondary IDD source lane."]
-        },
-        source: {
-          type: "local",
-          localPath: rootDir
-        },
-        workspace: {
-          checkoutMode: "existing"
-        },
-        app: {
-          workdir: ".",
-          startCommand: "echo start",
-          baseUrl: "http://127.0.0.1:3001",
-          readiness: {
-            type: "http",
-            url: "http://127.0.0.1:3001",
-            expectedStatus: 200,
-            timeoutMs: 1_000,
-            intervalMs: 50
-          }
-        },
-        capture: {
-          waitAfterLoadMs: 0,
-          injectCss: [],
-          defaultFullPage: false,
-          items: [{ id: "docs-home", path: "/", maskSelectors: [], delayMs: 0 }]
-        }
-      }
-    },
-    playwright: {
-      browser: "chromium",
-      headless: true,
-      viewport: {
-        width: 1280,
-        height: 720
-      },
-      deviceScaleFactor: 1,
-      locale: "en-US",
-      timezoneId: "UTC",
-      colorScheme: "light",
-      disableAnimations: true,
-      extraHTTPHeaders: {}
-    },
-    artifacts: {
-      storageMode: "controller",
-      runRoot: path.join(rootDir, "artifacts", "runs"),
-      libraryRoot: path.join(rootDir, "artifacts", "library"),
-      baselineRoot: path.join(rootDir, "evidence", "baselines"),
-      writeMarkdownSummary: true,
-      writeJsonSummary: true,
-      retainRuns: 20,
-      cleanBeforeRun: false
-    },
-    comparison: {
-      enabled: true,
-      hashAlgorithm: "sha256",
-      diffMethod: "pixelmatch",
-      pixelThreshold: 0.01,
-      failOnChange: false,
-      onMissingBaseline: "error",
-      writeDiffImages: true
-    },
-    run: {
-      sourceId: "client-systems-roach-admin",
-      mode: "compare",
-      captureIds: [],
-      continueOnCaptureError: false,
-      allowBaselinePromotion: false,
-      metadata: {},
-      dryRun: false,
-      trackedBaseline: false
-    }
-  });
-}
-
-function buildLoadedConfig(rootDir: string): LoadedConfig {
-  return {
-    config: buildConfig(rootDir),
-    configDir: rootDir,
-    configPath: path.join(rootDir, "intent-poc.yaml")
-  };
-}
-
-function buildCounts(overrides: Partial<ComparisonSummary["counts"]> = {}): ComparisonSummary["counts"] {
-  return {
-    "baseline-written": 0,
-    unchanged: 0,
-    changed: 0,
-    "missing-baseline": 0,
-    "capture-failed": 0,
-    "diff-error": 0,
-    ...overrides
-  };
-}
-
-function buildComparisonSummary(input: {
-  mode?: RunMode;
-  hasDrift?: boolean;
-  counts?: Partial<ComparisonSummary["counts"]>;
-  items?: ComparisonSummary["items"];
-} = {}): ComparisonSummary {
-  return {
-    mode: input.mode ?? "compare",
-    hasDrift: input.hasDrift ?? false,
-    counts: buildCounts(input.counts),
-    items: input.items ?? []
-  };
-}
-
-function buildCapturedOutcome(rootDir: string, captureId: string) {
-  const outputPath = path.join(rootDir, "captures", `${captureId}.png`);
-
-  return {
-    captureId,
-    path: `/${captureId}`,
-    url: `http://127.0.0.1:3000/${captureId}`,
-    kind: "page" as const,
-    outputPath,
-    relativeOutputPath: path.relative(rootDir, outputPath),
-    durationMs: 10,
-    viewport: { width: 1280, height: 720 },
-    status: "captured" as const,
-    hash: `${captureId}-hash`,
-    width: 1280,
-    height: 720,
-    warnings: []
-  };
-}
-
-function buildSourceRunResult(
-  input: ExecuteSourceRunInput,
-  overrides: {
-    status?: SourceRunResult["status"];
-    captures?: SourceRunResult["captures"];
-    comparison?: SourceRunResult["comparison"];
-    error?: string;
-  } = {}
-): SourceRunResult {
-  return {
-    sourceId: input.sourcePlan.sourceId,
-    status: overrides.status ?? "completed",
-    paths: input.sourcePaths,
-    captures: overrides.captures ?? [],
-    comparison: overrides.comparison,
-    error: overrides.error,
-    linearIssue: input.sourceIssue,
-    summaryMarkdown: `# ${input.sourcePlan.sourceId}`
-  };
-}
-
 test("runIntent Given a dry run When the plan is valid Then it writes plan lifecycle metadata and skips source execution", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-dry-"));
-  const loadedConfig = buildLoadedConfig(tmpRoot);
+  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
   let executeSourceRunCalls = 0;
   const events: RunIntentEvent[] = [];
 
@@ -267,7 +60,7 @@ test("runIntent Given a dry run When the plan is valid Then it writes plan lifec
 
 test("runIntent Given a successful source lane When compare execution finishes Then it aggregates counts and writes business artifacts", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-success-"));
-  const loadedConfig = buildLoadedConfig(tmpRoot);
+  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
   const executedSources: string[] = [];
   const events: RunIntentEvent[] = [];
 
@@ -336,7 +129,7 @@ test("runIntent Given a successful source lane When compare execution finishes T
 
 test("runIntent Given a multi-source plan When one source lane fails Then it continues later lanes and returns a failed run", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-multi-"));
-  const loadedConfig = buildLoadedConfig(tmpRoot);
+  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
   const executedSources: string[] = [];
   const events: RunIntentEvent[] = [];
 
@@ -423,7 +216,7 @@ test("runIntent Given a multi-source plan When one source lane fails Then it con
 
 test("runIntent Given tracked baseline output When the mode is not baseline Then it rejects the run before execution", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-tracked-"));
-  const loadedConfig = buildLoadedConfig(tmpRoot);
+  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
 
   try {
     const runIntent = createRunIntentRunner({

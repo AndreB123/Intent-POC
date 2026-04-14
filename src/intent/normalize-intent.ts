@@ -49,17 +49,35 @@ function dedupeValues(values: string[]): string[] {
   return Array.from(new Set(values));
 }
 
+function tokenizePrompt(prompt: string): Set<string> {
+  return new Set(prompt.toLowerCase().match(/[a-z0-9]+(?:[-_][a-z0-9]+)*/g) ?? []);
+}
+
+function matchesPromptValue(normalizedPrompt: string, promptTokens: Set<string>, value: string): boolean {
+  const normalizedValue = value.trim().toLowerCase();
+  if (normalizedValue.length === 0) {
+    return false;
+  }
+
+  if (/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/.test(normalizedValue)) {
+    return promptTokens.has(normalizedValue);
+  }
+
+  return normalizedPrompt.includes(normalizedValue);
+}
+
 function pickMentionedSourceIds(prompt: string, options: NormalizeIntentOptions): string[] {
   const loweredPrompt = prompt.toLowerCase();
+  const promptTokens = tokenizePrompt(prompt);
   const matches: string[] = [];
 
   for (const [sourceId, source] of Object.entries(options.availableSources)) {
-    if (loweredPrompt.includes(sourceId.toLowerCase())) {
+    if (matchesPromptValue(loweredPrompt, promptTokens, sourceId)) {
       matches.push(sourceId);
       continue;
     }
 
-    if (source.aliases.some((alias) => loweredPrompt.includes(alias.toLowerCase()))) {
+    if (source.aliases.some((alias) => matchesPromptValue(loweredPrompt, promptTokens, alias))) {
       matches.push(sourceId);
     }
   }

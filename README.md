@@ -174,6 +174,16 @@ For each IDD slice:
 4. If the slice changes tracked-baseline behavior or demo surface catalog output, run `npm test`; use `npm run demo:library` only when you want to force a direct refresh outside the normal test workflow.
 5. Use `npm run test:changed` only as a local convenience when you want the repo to pick between deterministic code tests and the full screenshot-aware workflow for you.
 
+## Canonical BDD Sample
+
+The repo now includes a checked-in canonical BDD sample artifact set under `samples/intent-poc-canonical-bdd/`.
+
+- `normalized-intent.json` is the machine-readable dry-run snapshot for the canonical `demo-catalog` intent.
+- `plan-lifecycle.json` is the corresponding dry-run lifecycle snapshot.
+- `README.md` explains the sample prompt, why `artifacts/runs/` is not the right persistent home, and how the sample is verified.
+
+These files are intentionally checked in because `artifacts/runs/` is gitignored. The executable sample suite in `src/orchestrator/run-intent.bdd-sample.behavior.test.ts` verifies that fresh dry-run outputs still match the checked-in snapshots.
+
 ## Output
 
 - run bundles are written to `artifacts/runs/<runId>/`
