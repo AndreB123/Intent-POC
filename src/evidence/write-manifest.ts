@@ -34,6 +34,7 @@ export interface PlanLifecycleRecord {
   summary: string;
   mode: AppConfig["run"]["mode"];
   planning: NormalizedIntent["planning"];
+  normalizationMeta: NormalizedIntent["normalizationMeta"];
   linear: BusinessLinearPublication | null;
   sources: Array<{
     sourceId: string;
@@ -269,6 +270,7 @@ export async function writePlanLifecycleFile(input: {
     summary: input.normalizedIntent.summary,
     mode: input.normalizedIntent.execution.runMode,
     planning: input.normalizedIntent.planning,
+    normalizationMeta: input.normalizedIntent.normalizationMeta,
     linear: input.linearPublication,
     sources: input.sourceRuns.map((sourceRun) => {
       const sourcePlan = input.normalizedIntent.executionPlan.sources.find((source) => source.sourceId === sourceRun.sourceId);

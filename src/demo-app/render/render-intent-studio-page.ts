@@ -1,3 +1,5 @@
+import { AGENT_STAGE_DEFINITIONS, AGENT_STAGE_SEQUENCE, GEMINI_MODEL_OPTIONS } from "../../intent/agent-stage-config";
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -7,8 +9,30 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function renderAgentStageFields(): string {
+  const modelOptions = GEMINI_MODEL_OPTIONS.map(
+    (option) => `<option value="${escapeHtml(option.id)}">${escapeHtml(option.label)}</option>`
+  ).join("");
+
+  return AGENT_STAGE_SEQUENCE.map((stageId) => {
+    const stage = AGENT_STAGE_DEFINITIONS[stageId];
+    return `
+                <div class="field">
+                  <label for="${stage.id}-model-select">${escapeHtml(stage.label)} model</label>
+                  <select id="${stage.id}-model-select">
+                    <option value="">Use config default</option>
+                    ${modelOptions}
+                  </select>
+                  <input id="${stage.id}-model-custom" placeholder="Optional custom Gemini model id" />
+                  <div class="field-note" id="${stage.id}-model-note">${escapeHtml(stage.description)}</div>
+                </div>`;
+  }).join("");
+}
+
 export function renderIntentStudioPage(input: { configPath: string }): string {
   const configPath = escapeHtml(input.configPath);
+  const agentStageFields = renderAgentStageFields();
+  const stageIdsJson = JSON.stringify(AGENT_STAGE_SEQUENCE);
 
   return `<!doctype html>
 <html lang="en">
@@ -247,6 +271,20 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
       .field-wide {
         grid-column: 1 / -1;
+      }
+
+      .field-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .field-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
       }
 
       label {
@@ -498,6 +536,68 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         gap: 10px;
       }
 
+      .scope-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .scope-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 14px;
+        align-items: flex-start;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--panel-strong);
+        cursor: pointer;
+        transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }
+
+      .scope-card:hover {
+        border-color: rgba(15, 118, 110, 0.28);
+        transform: translateY(-1px);
+      }
+
+      .scope-card-selected {
+        border-color: rgba(15, 118, 110, 0.38);
+        box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.16);
+      }
+
+      .scope-checkbox {
+        width: 18px;
+        height: 18px;
+        margin-top: 4px;
+        accent-color: var(--accent);
+      }
+
+      .scope-card-body,
+      .scope-card-copy {
+        display: grid;
+        gap: 8px;
+      }
+
+      .scope-card-head,
+      .scope-card-title-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .scope-card-title {
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .scope-card-subtitle,
+      .scope-card-summary,
+      .scope-card-meta {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
       .selection-title,
       .target-status-row {
         display: flex;
@@ -618,7 +718,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         }
 
         .form-actions,
-        .timeline-head {
+        .timeline-head,
+        .field-head,
+        .scope-card,
+        .scope-card-head,
+        .scope-card-title-row {
           flex-direction: column;
           align-items: stretch;
         }
@@ -635,7 +739,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         <section class="hero">
           <div class="workspace">Config: <span id="config-path">${configPath}</span></div>
           <h1>Intent Studio</h1>
-          <p>Prompt-driven control surface for the intent runner. Start a run, watch the orchestration timeline, and inspect captures, diffs, summaries, and Linear activity as the workflow progresses.</p>
+          <p>Prompt-driven control surface for the intent runner. Start a run, watch the orchestration timeline, and inspect captures, diffs, summaries, and Linear activity as the workflow progresses. Work scope cards come from the active YAML config so the Studio stays aligned with the repos you actually want to work on.</p>
           <div class="hero-actions">
             <a class="hero-link" href="/library">Browse Asset Library</a>
             <a class="hero-link" href="/health">Health Check</a>
@@ -655,7 +759,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               <span class="meta-value" id="linear-state">Checking config…</span>
             </div>
             <div class="meta-card">
-              <span class="meta-label">Active source</span>
+              <span class="meta-label">Work scope</span>
               <span class="meta-value" id="selected-source">—</span>
             </div>
             <div class="meta-card">
@@ -672,7 +776,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             <div class="panel-head">
               <div>
                 <h2>Prompt Run</h2>
-                <div class="panel-copy">Define the business intent first. The system will turn it into BDD, TDD, execution sources, and run behavior before anything launches. Use overrides only when you need to pin the target source or the evidence workflow.</div>
+                <div class="panel-copy">Define the business intent first. The system will turn it into BDD, TDD, execution sources, and run behavior before anything launches. Use work scope when you need to keep the run inside the current app or a specific set of configured repos.</div>
               </div>
               <span class="status-pill status-ready" id="current-status-pill">Ready</span>
             </div>
@@ -682,43 +786,41 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 <div class="field-wide">
                   <label for="prompt-input">Intent prompt</label>
                   <textarea id="prompt-input" placeholder="Describe the business intent, what sources or tools it should touch, and what outcome should be verified."></textarea>
-                  <div class="field-note">Source and mode overrides are optional. Blank source: the planner tries to match source ids or aliases in your prompt, then falls back to <code>run.sourceId</code> from config. Blank mode: the planner infers the run type from phrases like &quot;create baseline&quot; or &quot;approve baseline&quot;, then falls back to <code>run.mode</code>.</div>
+                  <div class="field-note">Work scope is config-backed. Leave every checkbox clear when the planner should infer sources from your prompt, or keep the default scope checked when the run should stay inside the current app. Run behavior is inferred from prompt phrases such as &quot;create baseline&quot; or &quot;approve baseline&quot;, then falls back to <code>run.mode</code>.</div>
                 </div>
                 <div class="field">
-                  <label for="source-select">Source override</label>
-                  <select id="source-select"></select>
-                  <div class="field-note">A source is one configured target under <code>sources</code>, such as a local app or a cloned repo. Pick one when you want to pin the run to that target instead of letting the prompt choose.</div>
+                  <div class="field-head">
+                    <label>Work scope</label>
+                    <div class="field-actions">
+                      <a class="ghost-link" id="config-editor-link" href="#">Open config in editor</a>
+                      <a class="ghost-link" id="config-file-link" href="#">View YAML</a>
+                    </div>
+                  </div>
+                  <div class="field-note">These cards come from the <code>sources</code> block in the active YAML config. Start with Current app, then add more repos there when you need broader scope.</div>
+                  <div class="scope-list" id="source-scope"></div>
+                  <div class="field-note" id="source-visibility-note">Scope changes appear after the config reloads.</div>
                 </div>
-                <div class="field">
-                  <label for="mode-select">Mode override</label>
-                  <select id="mode-select">
-                    <option value="">Infer from prompt or config</option>
-                    <option value="baseline">baseline</option>
-                    <option value="compare">compare</option>
-                    <option value="approve-baseline">approve-baseline</option>
-                  </select>
-                  <div class="field-note">Mode controls what the run does with captured evidence. <code>baseline</code> writes current captures as the baseline, <code>compare</code> diffs current captures against the baseline, and <code>approve-baseline</code> captures current state and writes it into the approved baseline set. Use it when your prompt is generic and you need to tell the runner which evidence workflow to use.</div>
-                </div>
+${agentStageFields}
                 <div class="field-wide">
                   <div class="selection-card">
                     <div class="selection-title">
-                      <strong>How Overrides Work</strong>
+                      <strong>How Work Scope Works</strong>
                       <span class="target-badge target-ready">guide</span>
                     </div>
-                    <div class="selection-summary"><strong>Source override</strong> changes which configured source runs. It does not change how screenshots are handled after capture.</div>
-                    <div class="selection-summary"><strong>Mode override</strong> sets the expected evidence workflow for the run. It is most useful when your prompt is generic; explicit prompt phrases like create baseline, approve baseline, or report drift can still steer the planner.</div>
-                    <div class="selection-summary">Leave both blank when your prompt already says what to do. The planner will still try to infer source and mode from the prompt before using config defaults.</div>
+                    <div class="selection-summary"><strong>Work scope</strong> constrains which configured repos or apps can participate in the run. It does not change how screenshots are handled after capture.</div>
+                    <div class="selection-summary">Rename cards, hide automation-only sources, or add more repos by editing the YAML config. The Studio reloads those definitions into the next state update.</div>
+                    <div class="selection-summary">When multiple sources are checked, the planner creates one evidence lane per selected source inside the same business run.</div>
                   </div>
                 </div>
                 <div class="field-wide">
                   <div class="selection-card">
                     <div class="selection-title">
-                      <strong id="selection-title">No source override selected</strong>
+                      <strong id="selection-title">Default work scope</strong>
                       <span class="target-badge target-ready" id="selection-status">optional</span>
                     </div>
                     <div class="selection-summary" id="selection-summary">The runner can choose sources from your prompt, then fall back to the config default if needed.</div>
-                    <div class="selection-summary" id="selection-defaults">Blank source falls back to config default. Blank mode falls back to prompt inference, then config mode.</div>
-                    <div class="selection-summary" id="selection-details">Use the Sources panel on the right to understand what each source actually does before you pick one.</div>
+                    <div class="selection-summary" id="selection-defaults">Blank work scope falls back to prompt matching, business-wide expansion, then config default.</div>
+                    <div class="selection-summary" id="selection-details">Use the Scope Sources panel on the right to understand what each source actually does before you constrain the run.</div>
                   </div>
                 </div>
               </div>
@@ -774,6 +876,10 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                   <div class="plan-list" id="plan-destinations"></div>
                 </div>
                 <div class="plan-card">
+                  <span class="artifact-label">AI stages</span>
+                  <div class="plan-list" id="plan-ai-stages"></div>
+                </div>
+                <div class="plan-card">
                   <span class="artifact-label">Tools</span>
                   <div class="plan-list" id="plan-tools"></div>
                 </div>
@@ -819,8 +925,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h2>Sources</h2>
-                <div class="panel-copy">Configured evidence sources available to the runner right now, with startup, readiness, and any obvious setup problems.</div>
+                <h2>Scope Sources</h2>
+                <div class="panel-copy">Visible repo and workspace sources loaded from YAML, with readiness details and setup notes.</div>
               </div>
             </div>
             <div class="target-list" id="sources"></div>
@@ -842,8 +948,10 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
     <script>
       (function () {
         const promptInput = document.getElementById("prompt-input");
-        const sourceSelect = document.getElementById("source-select");
-        const modeSelect = document.getElementById("mode-select");
+        const sourceScope = document.getElementById("source-scope");
+        const sourceVisibilityNote = document.getElementById("source-visibility-note");
+        const configEditorLink = document.getElementById("config-editor-link");
+        const configFileLink = document.getElementById("config-file-link");
         const dryRunInput = document.getElementById("dry-run-input");
         const submitButton = document.getElementById("submit-button");
         const formNote = document.getElementById("form-note");
@@ -875,8 +983,20 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         const planWorkItems = document.getElementById("plan-work-items");
         const planSources = document.getElementById("plan-sources");
         const planDestinations = document.getElementById("plan-destinations");
+        const planAiStages = document.getElementById("plan-ai-stages");
         const planTools = document.getElementById("plan-tools");
         const form = document.getElementById("run-form");
+        const stageIds = ${stageIdsJson};
+        const stageControls = Object.fromEntries(stageIds.map(function (stageId) {
+          return [
+            stageId,
+            {
+              select: document.getElementById(stageId + "-model-select"),
+              custom: document.getElementById(stageId + "-model-custom"),
+              note: document.getElementById(stageId + "-model-note")
+            }
+          ];
+        }));
 
         let promptTouched = false;
         let lastState = null;
@@ -942,67 +1062,251 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           return relativePath ? "/files/" + encodeURIComponent(relativePath) : "#";
         }
 
-        function ensureOptions(options, selectedValue) {
-          clear(sourceSelect);
-
-          const blankOption = document.createElement("option");
-          blankOption.value = "";
-          blankOption.textContent = "Use prompt or config";
-          if (!selectedValue) {
-            blankOption.selected = true;
-          }
-          sourceSelect.appendChild(blankOption);
-
-          options.forEach(function (source) {
-            const option = document.createElement("option");
-            option.value = source.id;
-            option.textContent = source.label + " (" + source.id + ")";
-            if (source.id === selectedValue) {
-              option.selected = true;
-            }
-            sourceSelect.appendChild(option);
-          });
-        }
-
-        function selectedSourceRecord(state) {
-          if (!state || !state.sources) {
-            return null;
-          }
-
-          if (!sourceSelect.value) {
+        function findSource(state, sourceId) {
+          if (!state || !state.sources || !sourceId) {
             return null;
           }
 
           return state.sources.find(function (source) {
-            return source.id === sourceSelect.value;
+            return source.id === sourceId;
           }) || null;
         }
 
-        function updateSelectionGuidance(state) {
-          const source = selectedSourceRecord(state);
-          const defaultSourceText = state.defaultSourceId ? state.defaultSourceId : "none";
-          const defaultModeText = state.defaultMode ? state.defaultMode : "none";
+        function formatSourceLabel(state, sourceId) {
+          const source = findSource(state, sourceId);
+          return source ? source.label : sourceId;
+        }
 
-          if (!source) {
-            selectionTitle.textContent = "No source override selected";
-            selectionStatus.textContent = "optional";
-            selectionStatus.className = "target-badge target-ready";
-            selectionSummary.textContent = "The runner can infer sources from your prompt by matching configured source ids or aliases, then fall back to the config default source if needed.";
-            selectionDefaults.textContent = "Blank source falls back to config default: " + defaultSourceText + ". Blank mode falls back to prompt inference based on phrases like create baseline or approve baseline, then config mode: " + defaultModeText + ".";
-            selectionDetails.textContent = "Pick a source when you need to pin the run to one target. Pick a mode when your prompt is generic and you need to tell the runner whether this should write a baseline or compare against one.";
+        function formatSourceReference(state, sourceId) {
+          const source = findSource(state, sourceId);
+          return source ? source.label + " (" + source.id + ")" : sourceId;
+        }
+
+        function selectedSourceIds() {
+          return Array.from(sourceScope.querySelectorAll("input[type='checkbox']:checked"))
+            .map(function (input) { return input.value; })
+            .filter(function (value) { return Boolean(value); });
+        }
+
+        function buildAgentOverrides() {
+          const stages = {};
+
+          stageIds.forEach(function (stageId) {
+            const controls = stageControls[stageId];
+            if (!controls) {
+              return;
+            }
+
+            const customModel = controls.custom.value.trim();
+            const selectedModel = controls.select.value || undefined;
+            const model = customModel || selectedModel;
+
+            if (model) {
+              stages[stageId] = { model: model };
+            }
+          });
+
+          return Object.keys(stages).length > 0 ? { stages: stages } : undefined;
+        }
+
+        function syncScopeCardSelection() {
+          Array.from(sourceScope.querySelectorAll(".scope-card")).forEach(function (card) {
+            const checkbox = card.querySelector("input[type='checkbox']");
+            card.classList.toggle("scope-card-selected", Boolean(checkbox && checkbox.checked));
+          });
+        }
+
+        function ensureScopeCards(options, selectedValues, defaultSourceId, applyDefaultSelection) {
+          const selectedValueSet = new Set(selectedValues || []);
+
+          if (applyDefaultSelection && selectedValueSet.size === 0 && defaultSourceId) {
+            selectedValueSet.add(defaultSourceId);
+          }
+
+          clear(sourceScope);
+
+          if (!options || options.length === 0) {
+            sourceScope.appendChild(
+              create(
+                "div",
+                "empty-card",
+                "No work-scope sources are visible. Open the config and mark at least one source visible in Studio."
+              )
+            );
             return;
           }
 
-          selectionTitle.textContent = source.label + " (" + source.id + ")";
-          selectionStatus.textContent = source.status === "attention" ? "attention" : "ready";
-          selectionStatus.className = "target-badge " + (source.status === "attention" ? "target-attention" : "target-ready");
-          selectionSummary.textContent = source.summary;
-          selectionDefaults.textContent = "Source: " + source.sourceLocation + " • Readiness: " + source.readiness + " • Base URL: " + source.baseUrl;
-          selectionDetails.textContent = source.issues && source.issues.length > 0
-            ? source.issues.join(" ")
-            : source.notes && source.notes.length > 0
-              ? source.notes.join(" ")
-              : "No obvious setup issues detected from config alone.";
+          options.forEach(function (source) {
+            const card = create("label", "scope-card");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "scope-checkbox";
+            checkbox.value = source.id;
+            checkbox.checked = selectedValueSet.has(source.id);
+
+            const body = create("div", "scope-card-body");
+            const head = create("div", "scope-card-head");
+            const copy = create("div", "scope-card-copy");
+            const titleRow = create("div", "scope-card-title-row");
+            const title = create("div", "scope-card-title", source.label);
+            const titleBadges = create("div", "field-actions");
+            const statusBadge = create(
+              "span",
+              "target-badge " + (source.status === "attention" ? "target-attention" : "target-ready"),
+              source.status
+            );
+
+            titleRow.appendChild(title);
+            if (source.defaultScope) {
+              titleBadges.appendChild(create("span", "target-badge target-ready", "default"));
+            }
+
+            titleBadges.appendChild(statusBadge);
+            titleRow.appendChild(titleBadges);
+
+            const subtitleBits = [source.repoLabel || source.repoId || source.id, source.sourceLocation];
+            if (source.role) {
+              subtitleBits.push(source.role);
+            }
+
+            copy.appendChild(titleRow);
+            copy.appendChild(create("div", "scope-card-subtitle", subtitleBits.join(" • ")));
+            head.appendChild(copy);
+            body.appendChild(head);
+            body.appendChild(create("div", "scope-card-summary", source.summary));
+            body.appendChild(
+              create(
+                "div",
+                "scope-card-meta",
+                "Configured id: " + source.id + " • " + source.captureCount + " capture" + (source.captureCount === 1 ? "" : "s")
+              )
+            );
+
+            if (source.notes && source.notes.length > 0) {
+              body.appendChild(create("div", "scope-card-meta", source.notes[0]));
+            }
+
+            if (source.issues && source.issues.length > 0) {
+              body.appendChild(create("div", "scope-card-meta", source.issues[0]));
+            }
+
+            card.appendChild(checkbox);
+            card.appendChild(body);
+            sourceScope.appendChild(card);
+          });
+
+          syncScopeCardSelection();
+        }
+
+        function selectedSourceRecords(state) {
+          if (!state || !state.sources) {
+            return [];
+          }
+
+          const selectedIds = new Set(selectedSourceIds());
+          if (selectedIds.size === 0) {
+            return [];
+          }
+
+          return state.sources.filter(function (source) {
+            return selectedIds.has(source.id);
+          });
+        }
+
+        function updateConfigLinks(state) {
+          if (state.configEditorUrl) {
+            configEditorLink.href = state.configEditorUrl;
+            configEditorLink.style.display = "inline-flex";
+          } else {
+            configEditorLink.removeAttribute("href");
+            configEditorLink.style.display = "none";
+          }
+
+          if (state.configFileUrl) {
+            configFileLink.href = state.configFileUrl;
+            configFileLink.style.display = "inline-flex";
+          } else {
+            configFileLink.removeAttribute("href");
+            configFileLink.style.display = "none";
+          }
+
+          if (state.hiddenSourceCount > 0) {
+            sourceVisibilityNote.textContent =
+              state.hiddenSourceCount +
+              " internal automation source" +
+              (state.hiddenSourceCount === 1 ? " is" : "s are") +
+              " hidden from this scope list. Edit " +
+              state.configPath +
+              " to expose more repos.";
+            return;
+          }
+
+          sourceVisibilityNote.textContent =
+            "Scope cards come from the sources block in " +
+            state.configPath +
+            ". Edit that file to rename Current app or add more repos.";
+        }
+
+        function updateSelectionGuidance(state) {
+          const selectedSources = selectedSourceRecords(state);
+          const defaultSourceText = state.defaultSourceId ? formatSourceReference(state, state.defaultSourceId) : "none";
+          const defaultModeText = state.defaultMode ? state.defaultMode : "none";
+
+          if (selectedSources.length === 0) {
+            selectionTitle.textContent = "No work scope selected";
+            selectionStatus.textContent = "optional";
+            selectionStatus.className = "target-badge target-ready";
+            selectionSummary.textContent = "The runner can infer sources from your prompt by matching configured source ids or aliases, then fall back to the config default source if needed.";
+            selectionDefaults.textContent = "Blank work scope falls back to prompt matching and business-wide expansion, then config default: " + defaultSourceText + ". Run behavior still falls back to config mode: " + defaultModeText + ".";
+            selectionDetails.textContent = state.hiddenSourceCount > 0
+              ? "Edit the active YAML config to expose more repos or rename the visible scope cards."
+              : "Leave every card clear when the prompt should decide. Check cards only when you want to constrain the run.";
+            return;
+          }
+
+          const hasAttention = selectedSources.some(function (source) { return source.status === "attention"; });
+          const selectedIds = selectedSources.map(function (source) { return formatSourceReference(state, source.id); });
+          const source = selectedSources[0];
+          const issues = selectedSources.flatMap(function (entry) { return entry.issues || []; });
+          const notes = selectedSources.flatMap(function (entry) { return entry.notes || []; });
+
+          selectionTitle.textContent = selectedSources.length === 1
+            ? source.label
+            : selectedSources.length + " sources selected";
+          selectionStatus.textContent = hasAttention ? "attention" : "scoped";
+          selectionStatus.className = "target-badge " + (hasAttention ? "target-attention" : "target-ready");
+          selectionSummary.textContent = selectedSources.length === 1
+            ? source.summary
+            : "The planner will stay inside the selected source scope and create one evidence lane per selected source.";
+          selectionDefaults.textContent = "In scope: " + selectedIds.join(", ") + ". Clear the list to fall back to prompt matching and config default: " + defaultSourceText + ".";
+          selectionDetails.textContent = issues.length > 0
+            ? issues.join(" ")
+            : notes.length > 0 && selectedSources.length === 1
+              ? notes.join(" ")
+              : selectedSources.map(function (entry) {
+                  const context = [entry.repoLabel || entry.repoId || entry.id, entry.sourceLocation];
+                  if (entry.role) {
+                    context.push(entry.role);
+                  }
+                  return context.join(" • ");
+                }).join(" | ");
+        }
+
+        function updateAgentStageNotes(state) {
+          if (!state || !state.agentStages) {
+            return;
+          }
+
+          state.agentStages.forEach(function (stage) {
+            const controls = stageControls[stage.id];
+            if (!controls) {
+              return;
+            }
+
+            controls.note.textContent = stage.provider
+              ? stage.description + " Config default: " + stage.provider + " / " + stage.model + ". " + (stage.enabled ? "Enabled." : "Disabled.")
+              : stage.description + " No provider is configured in the current YAML, so this stage stays deterministic until Gemini is enabled.";
+          });
         }
 
         function renderMetrics(run) {
@@ -1014,9 +1318,20 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             return;
           }
 
+          const requestedScope = run.requestedSourceIds && run.requestedSourceIds.length > 0
+            ? run.requestedSourceIds.map(function (sourceId) {
+                return formatSourceReference(lastState, sourceId);
+              }).join(", ")
+            : "Prompt/config decides";
+          const primarySource = run.sourceId ? formatSourceReference(lastState, run.sourceId) : "—";
+
           const items = [
-            ["Source", run.sourceId || "—"],
+            ["Requested scope", requestedScope],
+            ["Primary source", primarySource],
             ["Mode", run.mode || "—"],
+            ["AI stages", run.intentPlan ? run.intentPlan.normalizationMeta.stages.map(function (stage) {
+              return stage.label + ": " + stage.status + (stage.model ? " (" + stage.model + ")" : "");
+            }).join(" | ") : "Waiting for planning…"],
             ["Prompt", run.prompt || "—"],
             ["Normalized summary", run.normalizedSummary || "Waiting for normalization…"],
             ["Run ID", run.runId || "Pending"],
@@ -1082,6 +1397,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             renderPlanList(planWorkItems, [], function () { return create("div", "empty-card", ""); }, "TDD work items will appear once the planner has a prompt.");
             renderPlanList(planSources, [], function () { return create("div", "empty-card", ""); }, "Execution sources will appear once the planner has a prompt.");
             renderPlanList(planDestinations, [], function () { return create("div", "empty-card", ""); }, "Destinations will appear once the planner has a prompt.");
+            renderPlanList(planAiStages, [], function () { return create("div", "empty-card", ""); }, "AI stage details will appear once the planner has a prompt.");
             renderPlanList(planTools, [], function () { return create("div", "empty-card", ""); }, "Tools will appear once the planner has a prompt.");
             return;
           }
@@ -1135,12 +1451,16 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             planSources,
             activePlan.executionPlan.sources,
             function (source) {
+              const sourceRecord = findSource(state, source.sourceId);
               const captureDescription = source.captureScope.mode === "subset"
                 ? "Captures: " + source.captureScope.captureIds.join(", ")
                 : "Captures: all configured captures";
               return renderPlanItem(
-                source.sourceId,
-                ["Run mode: " + source.runMode],
+                formatSourceLabel(state, source.sourceId),
+                [
+                  "Configured id: " + source.sourceId,
+                  "Run mode: " + source.runMode
+                ].concat(sourceRecord && sourceRecord.role ? ["Role: " + sourceRecord.role] : []),
                 [source.selectionReason, captureDescription].concat(source.warnings || []),
                 source.sourceId === activePlan.executionPlan.primarySourceId ? ["primary"] : []
               );
@@ -1155,6 +1475,21 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               return renderPlanItem(destination.label, ["Status: " + destination.status, "Type: " + destination.type], [destination.reason].concat(destination.details || []), []);
             },
             "Destinations will appear once the planner has a prompt."
+          );
+
+          renderPlanList(
+            planAiStages,
+            activePlan.normalizationMeta.stages,
+            function (stage) {
+              const executionSource = stage.provider ? stage.provider + " / " + (stage.model || "default-model") : "deterministic";
+              return renderPlanItem(
+                stage.label,
+                ["Status: " + stage.status, "Execution: " + executionSource],
+                [stage.description].concat(stage.warnings || []),
+                []
+              );
+            },
+            "AI stage details will appear once the planner has a prompt."
           );
 
           renderPlanList(
@@ -1289,17 +1624,40 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           clear(sources);
 
           if (!state.sources || state.sources.length === 0) {
-            sources.appendChild(create("div", "empty-card", "No sources are available because the current config could not be loaded."));
+            sources.appendChild(create("div", "empty-card", "No visible work-scope sources are available. Open the config and expose at least one source."));
             return;
+          }
+
+          if (state.hiddenSourceCount > 0) {
+            sources.appendChild(
+              create(
+                "div",
+                "empty-card",
+                state.hiddenSourceCount +
+                  " internal automation source" +
+                  (state.hiddenSourceCount === 1 ? " is" : "s are") +
+                  " hidden from this panel. Edit the config when you want them available as work scope."
+              )
+            );
           }
 
           state.sources.forEach(function (source) {
             const card = create("div", "target-card");
             const statusRow = create("div", "target-status-row");
-            statusRow.appendChild(create("div", "target-title", source.label + " (" + source.id + ")"));
+            statusRow.appendChild(create("div", "target-title", source.label));
             statusRow.appendChild(create("span", "target-badge " + (source.status === "attention" ? "target-attention" : "target-ready"), source.status));
             card.appendChild(statusRow);
+            if (source.defaultScope) {
+              card.appendChild(create("div", "target-note", "Default Studio scope from the current config."));
+            }
             card.appendChild(create("div", "target-summary", source.summary));
+            card.appendChild(create("div", "target-detail", "Configured id: " + source.id));
+            if (source.repoLabel || source.repoId) {
+              card.appendChild(create("div", "target-detail", "Repo: " + (source.repoLabel || source.repoId)));
+            }
+            if (source.role) {
+              card.appendChild(create("div", "target-detail", "Role: " + source.role));
+            }
             card.appendChild(create("div", "target-detail", "Source: " + source.sourceLocation));
             card.appendChild(create("div", "target-detail", "Startup: " + source.startCommand));
             card.appendChild(create("div", "target-detail", "Readiness: " + source.readiness));
@@ -1331,8 +1689,13 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
           state.recentRuns.forEach(function (run) {
             const card = create("div", "recent-card");
+            const scopeText = run.requestedSourceIds && run.requestedSourceIds.length > 0
+              ? run.requestedSourceIds.map(function (sourceId) {
+                  return formatSourceReference(state, sourceId);
+                }).join(", ")
+              : "prompt/config decides";
             card.appendChild(create("div", "recent-title", run.prompt));
-            card.appendChild(create("div", "recent-meta", "Source: " + run.sourceId + " • " + run.mode + " • " + run.status));
+            card.appendChild(create("div", "recent-meta", "Scope: " + scopeText + " • Primary source: " + (run.sourceId ? formatSourceReference(state, run.sourceId) : "—") + " • " + run.mode + " • " + run.status));
             card.appendChild(create("div", "recent-meta", "Finished: " + formatTime(run.finishedAt)));
 
             if (run.artifacts && run.artifacts.summaryPath) {
@@ -1348,22 +1711,30 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         function updateTopLine(state) {
           const run = state.currentRun;
           const running = run && run.status === "running";
-          const source = selectedSourceRecord(state);
+          const selectedSources = selectedSourceRecords(state);
+          const scopedSourceIds = run && run.requestedSourceIds && run.requestedSourceIds.length > 0
+            ? run.requestedSourceIds
+            : selectedSources.map(function (source) { return source.id; });
+          const hasVisibleSources = Boolean(state.sources && state.sources.length);
 
           runnerStatus.textContent = run ? run.status : "ready";
           linearState.textContent = state.linearEnabled ? "enabled" : "disabled";
-          selectedSource.textContent = run && run.sourceId
-            ? run.sourceId
-            : source
-              ? source.label + " (" + source.id + ")"
+          selectedSource.textContent = scopedSourceIds.length > 0
+            ? scopedSourceIds.map(function (sourceId) {
+                return formatSourceLabel(state, sourceId);
+              }).join(", ")
+            : run && run.sourceId
+              ? "prompt/config -> " + formatSourceLabel(state, run.sourceId)
               : "prompt/config decides";
           lastUpdate.textContent = formatTime(state.serverTime);
           currentStatusPill.textContent = run ? run.status : "ready";
           currentStatusPill.className = "status-pill " + formatStatusClass(run ? run.status : "ready");
           runIdNode.textContent = run && run.runId ? run.runId : run ? "Run queued" : "No active run";
-          submitButton.disabled = Boolean(running || state.configError || !(state.sources && state.sources.length));
+          submitButton.disabled = Boolean(running || state.configError || !hasVisibleSources);
           formNote.textContent = state.configError
             ? "Fix the config before starting a run."
+            : !hasVisibleSources
+              ? "Open the config and expose at least one work-scope source."
             : running
               ? "Run in progress. The timeline will continue updating live."
               : "Ready for the next prompt.";
@@ -1382,12 +1753,10 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             configError.textContent = "";
           }
 
-          ensureOptions(state.sources || [], sourceSelect.value || "");
-
-          if (!hadPreviousState) {
-            sourceSelect.value = "";
-            modeSelect.value = "";
-          }
+          const currentSelectedIds = hadPreviousState ? selectedSourceIds() : [];
+          ensureScopeCards(state.sources || [], currentSelectedIds, state.defaultSourceId, !hadPreviousState);
+          updateConfigLinks(state);
+          updateAgentStageNotes(state);
 
           updateTopLine(state);
           updateSelectionGuidance(state);
@@ -1427,8 +1796,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             },
             body: JSON.stringify({
               prompt,
-              sourceId: sourceSelect.value || undefined,
-              mode: modeSelect.value || undefined
+              sourceIds: selectedSourceIds().length > 0 ? selectedSourceIds() : undefined,
+              agentOverrides: buildAgentOverrides()
             })
           });
 
@@ -1465,10 +1834,12 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         async function submitRun(event) {
           event.preventDefault();
 
+          const scopedSourceIds = selectedSourceIds();
+
           const payload = {
             prompt: promptInput.value,
-            sourceId: sourceSelect.value || undefined,
-            mode: modeSelect.value || undefined,
+            sourceIds: scopedSourceIds.length > 0 ? scopedSourceIds : undefined,
+            agentOverrides: buildAgentOverrides(),
             dryRun: dryRunInput.checked
           };
 
@@ -1498,7 +1869,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           });
         });
 
-        sourceSelect.addEventListener("change", function () {
+        sourceScope.addEventListener("change", function () {
+          syncScopeCardSelection();
           if (lastState) {
             updateTopLine(lastState);
             updateSelectionGuidance(lastState);
@@ -1506,11 +1878,19 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           schedulePlanPreview();
         });
 
-        modeSelect.addEventListener("change", function () {
-          if (lastState) {
-            updateSelectionGuidance(lastState);
+        stageIds.forEach(function (stageId) {
+          const controls = stageControls[stageId];
+          if (!controls) {
+            return;
           }
-          schedulePlanPreview();
+
+          controls.select.addEventListener("change", function () {
+            schedulePlanPreview();
+          });
+
+          controls.custom.addEventListener("input", function () {
+            schedulePlanPreview();
+          });
         });
 
         fetchState()

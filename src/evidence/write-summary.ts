@@ -19,6 +19,20 @@ function emptyComparisonCounts(): Record<ComparisonStatus, number> {
   };
 }
 
+function buildAgentStageMarkdown(stages: NormalizedIntent["normalizationMeta"]["stages"]): string {
+  if (stages.length === 0) {
+    return "- None";
+  }
+
+  return stages
+    .map((stage) => {
+      const executionSource = stage.provider ? `${stage.provider} / ${stage.model ?? "default-model"}` : "deterministic";
+      const warnings = stage.warnings.length > 0 ? ` — ${stage.warnings.join(" ")}` : "";
+      return `- ${stage.label}: ${stage.status} [${executionSource}]${warnings}`;
+    })
+    .join("\n");
+}
+
 export function buildSourceSummaryMarkdown(input: {
   config: AppConfig;
   paths: SourceRunPaths;
@@ -51,6 +65,10 @@ export function buildSourceSummaryMarkdown(input: {
     `- Has drift: ${comparison?.hasDrift ? "yes" : "no"}`,
     `- Desired outcome: ${input.normalizedIntent.businessIntent.desiredOutcome}`,
     input.error ? `- Error: ${input.error}` : `- Error: none`,
+    "",
+    `## AI Stages`,
+    "",
+    buildAgentStageMarkdown(input.normalizedIntent.normalizationMeta.stages),
     "",
     `## Source Plan`,
     "",
@@ -175,6 +193,10 @@ export function buildBusinessSummaryMarkdown(input: {
     `- Linear parent issue: ${input.linearPublication?.parentIssue?.url ?? input.linearPublication?.parentIssue?.identifier ?? "not created"}`,
     `- Has drift: ${input.hasDrift ? "yes" : "no"}`,
     `- Desired outcome: ${input.normalizedIntent.businessIntent.desiredOutcome}`,
+    "",
+    `## AI Stages`,
+    "",
+    buildAgentStageMarkdown(input.normalizedIntent.normalizationMeta.stages),
     "",
     `## Business Intent`,
     "",

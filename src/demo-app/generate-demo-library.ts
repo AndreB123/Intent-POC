@@ -71,10 +71,9 @@ async function runDemoLibrary(): Promise<void> {
 
   const result = await runIntent({
     configPath,
-    sourceId: "demo-components",
-    mode: "baseline",
+    sourceIds: ["demo-components"],
     trackedBaseline: true,
-    intent: "Regenerate the tracked screenshot library for the built-in demo surface catalog."
+    intent: "Create a baseline for the tracked screenshot library for the built-in demo surface catalog."
   });
 
   await Promise.all(getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));

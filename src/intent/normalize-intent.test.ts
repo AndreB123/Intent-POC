@@ -6,11 +6,19 @@ import { SourceConfig } from "../config/schema";
 const geminiAgent = {
   mode: "bounded-runner" as const,
   provider: "gemini",
-  model: "gemini-2.5-flash",
   apiKeyEnv: "GEMINI_API_KEY",
   apiVersion: "v1alpha",
   temperature: 0.1,
   allowPromptNormalization: true,
+  allowIntentPlanning: false,
+  stages: {
+    promptNormalization: {
+      model: "gemini-3.1-flash"
+    },
+    intentPlanning: {
+      model: "gemini-3.1"
+    }
+  },
   fallbackToRules: true
 };
 
@@ -127,6 +135,13 @@ test("normalizeIntent infers baseline mode from free-text prompt", () => {
   assert.equal(normalized.businessIntent.scenarios.length, 3);
   assert.equal(normalized.planning.repoCandidates[0]?.repoId, "client-systems");
   assert.equal(normalized.planning.linearPlan.mode, "new");
+  assert.deepEqual(
+    normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
+    [
+      ["promptNormalization", "skipped", "skipped", "gemini-3.1-flash"],
+      ["intentPlanning", "skipped", "skipped", "gemini-3.1"]
+    ]
+  );
 });
 
 test("normalizeIntent maps explicit capture names to subset mode", () => {
@@ -203,6 +218,27 @@ test("normalizeIntent prefers exact source tokens over overlapping aliases", () 
   assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source demo-catalog was referenced directly in the prompt.");
 });
 
+test("normalizeIntent honors the requested source scope across multiple sources", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Prepare reviewable visual evidence for the current release.",
+    runMode: "compare",
+    defaultSourceId: "client-systems-roach-admin",
+    continueOnCaptureError: false,
+    availableSources,
+    requestedSourceIds: ["docs-portal", "client-systems-roach-admin"]
+  });
+
+  assert.deepEqual(
+    normalized.executionPlan.sources.map((source) => source.sourceId),
+    ["docs-portal", "client-systems-roach-admin"]
+  );
+  assert.equal(normalized.executionPlan.orchestrationStrategy, "multi-source");
+  assert.equal(
+    normalized.executionPlan.sources[0]?.selectionReason,
+    "Source docs-portal was selected in the requested source scope."
+  );
+});
+
 test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid bounded ids", async () => {
   const normalized = await normalizeIntentWithAgent(
     {
@@ -234,9 +270,116 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     captureIds: ["docs-home"]
   });
   assert.equal(normalized.normalizationMeta.source, "llm");
+  assert.deepEqual(
+    normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
+    [
+      ["promptNormalization", "completed", "llm", "gemini-3.1-flash"],
+      ["intentPlanning", "skipped", "skipped", "gemini-3.1"]
+    ]
+  );
   assert.ok(
     normalized.normalizationMeta.warnings.some((warning) => warning.includes("Gemini selected the documentation source"))
   );
+});
+
+test("normalizeIntentWithAgent applies Gemini planning refinement when the planning stage is enabled", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Prepare the documentation screenshots so release managers can review the docs lane.",
+      runMode: "compare",
+      defaultSourceId: "client-systems-roach-admin",
+      continueOnCaptureError: false,
+      availableSources,
+      agent: {
+        ...geminiAgent,
+        allowIntentPlanning: true
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["docs-portal"]
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        statement: "Prepare the docs evidence package for release review.",
+        desiredOutcome: "Release managers can review documentation evidence without reading implementation details.",
+        acceptanceCriteria: [
+          {
+            description: "The docs evidence package is ready for release review."
+          },
+          {
+            description: "The docs plan stays inside the selected documentation source scope."
+          }
+        ],
+        scenarios: [
+          {
+            title: "Documentation evidence is planned for release review",
+            goal: "Produce a reviewable docs evidence lane.",
+            given: ["The documentation source is selected."],
+            when: ["The planner refines the docs lane."],
+            then: ["The docs evidence package is ready for release review."],
+            applicableSourceIds: ["docs-portal"]
+          }
+        ],
+        warnings: ["Gemini planning refined the documentation plan."]
+      })
+    }
+  );
+
+  assert.equal(normalized.businessIntent.statement, "Prepare the docs evidence package for release review.");
+  assert.equal(
+    normalized.businessIntent.desiredOutcome,
+    "Release managers can review documentation evidence without reading implementation details."
+  );
+  assert.deepEqual(
+    normalized.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
+    [
+      "The docs evidence package is ready for release review.",
+      "The docs plan stays inside the selected documentation source scope."
+    ]
+  );
+  assert.deepEqual(
+    normalized.businessIntent.scenarios.map((scenario) => scenario.title),
+    ["Documentation evidence is planned for release review"]
+  );
+  assert.deepEqual(
+    normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
+    [
+      ["promptNormalization", "completed", "llm", "gemini-3.1-flash"],
+      ["intentPlanning", "completed", "llm", "gemini-3.1"]
+    ]
+  );
+  assert.ok(
+    normalized.normalizationMeta.warnings.some((warning) =>
+      warning.includes("Gemini planning refined the documentation plan")
+    )
+  );
+});
+
+test("normalizeIntentWithAgent keeps the requested source scope when Gemini returns a narrower source hint", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Prepare reviewable evidence for the release.",
+      runMode: "compare",
+      defaultSourceId: "client-systems-roach-admin",
+      continueOnCaptureError: false,
+      availableSources,
+      requestedSourceIds: ["docs-portal", "client-systems-roach-admin"],
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["docs-portal"],
+        warnings: ["Gemini narrowed the scope to documentation."]
+      })
+    }
+  );
+
+  assert.deepEqual(
+    normalized.executionPlan.sources.map((source) => source.sourceId),
+    ["docs-portal", "client-systems-roach-admin"]
+  );
+  assert.equal(normalized.normalizationMeta.source, "llm");
+  assert.equal(normalized.normalizationMeta.stages[1]?.status, "skipped");
 });
 
 test("normalizeIntentWithAgent falls back to rules when Gemini normalization fails", async () => {
@@ -260,6 +403,10 @@ test("normalizeIntentWithAgent falls back to rules when Gemini normalization fai
   assert.equal(normalized.sourceId, "client-systems-roach-admin");
   assert.equal(normalized.captureScope.mode, "subset");
   assert.deepEqual(normalized.captureScope.captureIds, ["roach-statements"]);
+  assert.deepEqual(
+    normalized.normalizationMeta.stages.map((stage) => stage.status),
+    ["fallback", "skipped"]
+  );
   assert.ok(
     normalized.normalizationMeta.warnings.some((warning) => warning.includes("quota exceeded"))
   );

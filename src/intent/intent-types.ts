@@ -1,7 +1,9 @@
+import type { AgentStageId } from "./agent-stage-config";
 import { RunMode } from "../config/schema";
 
 export type IntentType = RunMode | "refresh-library";
 export type NormalizationSource = "llm" | "rules" | "fallback";
+export type AgentStageSource = NormalizationSource | "skipped";
 export type ExecutionStrategy = "single-source" | "multi-source";
 export type RepoContextStatus = "selected" | "candidate";
 export type ExecutionDestinationType =
@@ -126,6 +128,17 @@ export interface PlanningContext {
   linearPlan: PlanningResumeTarget;
 }
 
+export interface AgentStageMeta {
+  stageId: AgentStageId;
+  label: string;
+  description: string;
+  provider?: string;
+  model?: string;
+  status: "skipped" | "completed" | "fallback";
+  source: AgentStageSource;
+  warnings: string[];
+}
+
 export interface NormalizedIntent {
   intentId: string;
   receivedAt: string;
@@ -157,5 +170,6 @@ export interface NormalizedIntent {
   normalizationMeta: {
     source: NormalizationSource;
     warnings: string[];
+    stages: AgentStageMeta[];
   };
 }

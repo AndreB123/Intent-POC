@@ -85,10 +85,16 @@ const sourcePlanningSchema = z.object({
   notes: z.array(z.string()).default([])
 });
 
+const sourceStudioSchema = z.object({
+  displayName: z.string().min(1).optional(),
+  visible: z.boolean().default(true)
+});
+
 const sourceSchema = z.object({
   aliases: z.array(z.string()).default([]),
   source: z.discriminatedUnion("type", [localSourceSchema, gitSourceSchema]),
   planning: sourcePlanningSchema.default({}),
+  studio: sourceStudioSchema.default({}),
   workspace: z.object({
     checkoutMode: z.enum(["existing", "clone-if-missing", "fresh-clone"]).default("existing"),
     cloneRoot: z.string().default("./.workdirs"),
@@ -109,6 +115,17 @@ const sourceSchema = z.object({
 });
 
 const sourceRecordSchema = z.record(z.string().min(1), sourceSchema);
+
+const agentStageSchema = z.object({
+  enabled: z.boolean().optional(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(1).optional(),
+  maxTokens: z.number().int().positive().optional(),
+  apiKeyEnv: z.string().optional(),
+  apiVersion: z.string().optional(),
+  fallbackToRules: z.boolean().optional()
+});
 
 const artifactsSchema = z.object({
   storageMode: z.enum(["controller", "both"]).default("controller"),
@@ -164,7 +181,14 @@ export const configSchema = z
       apiKeyEnv: z.string().optional(),
       apiVersion: z.string().optional(),
       allowPromptNormalization: z.boolean().default(true),
-      fallbackToRules: z.boolean().default(true)
+      allowIntentPlanning: z.boolean().default(true),
+      fallbackToRules: z.boolean().default(true),
+      stages: z
+        .object({
+          promptNormalization: agentStageSchema.default({}),
+          intentPlanning: agentStageSchema.default({})
+        })
+        .default({})
     }),
     sources: sourceRecordSchema,
     playwright: z.object({

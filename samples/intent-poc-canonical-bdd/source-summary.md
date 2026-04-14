@@ -11,6 +11,11 @@
 - Desired outcome: product and engineering leads can inspect the baseline without reading implementation details
 - Error: none
 
+## AI Stages
+
+- Prompt Interpretation: skipped [deterministic]
+- Intent Planning: skipped [deterministic]
+
 ## Source Plan
 
 - Selection reason: Source demo-catalog was referenced directly in the prompt.

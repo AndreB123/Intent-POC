@@ -32,53 +32,6 @@
           "Configured visual captures across linked sources: 49."
         ],
         "captureCount": 49
-      },
-      {
-        "repoId": "client-systems",
-        "label": "Client Systems",
-        "role": "external product repo",
-        "sourceIds": [
-          "client-systems-postgres"
-        ],
-        "selectionStatus": "candidate",
-        "reason": "Repo client-systems remains available in the configured shortlist for future plan expansion.",
-        "summary": "Git-backed product repo used for multi-repo planning and downstream implementation handoff.",
-        "sourceTypes": [
-          "git"
-        ],
-        "locations": [
-          "https://github.com/geniusmonkey/client-systems.git"
-        ],
-        "refs": [
-          "master"
-        ],
-        "notes": [
-          "Uses CLIENT_SYSTEMS_GIT_TOKEN when authenticated git access is required.",
-          "Configured visual captures across linked sources: 2."
-        ],
-        "captureCount": 2
-      },
-      {
-        "repoId": "target-app",
-        "label": "Example Storybook",
-        "role": "example target app",
-        "sourceIds": [
-          "example-storybook"
-        ],
-        "selectionStatus": "candidate",
-        "reason": "Repo target-app remains available in the configured shortlist for future plan expansion.",
-        "summary": "Local example repo kept for storybook-oriented capture and planning experiments.",
-        "sourceTypes": [
-          "local"
-        ],
-        "locations": [
-          "/home/andre/Desktop/GeniusMonkey/target-app"
-        ],
-        "refs": [],
-        "notes": [
-          "Configured visual captures across linked sources: 2."
-        ],
-        "captureCount": 2
       }
     ],
     "plannerSections": [
@@ -96,12 +49,36 @@
         "summary": "Planner-owned lane for demo-catalog, intended for downstream implementation and verification handoff."
       }
     ],
-    "reviewNotes": [
-      "2 additional configured repo candidates remain available if the plan expands."
-    ],
+    "reviewNotes": [],
     "linearPlan": {
       "mode": "new"
     }
+  },
+  "normalizationMeta": {
+    "source": "rules",
+    "warnings": [
+      "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
+    ],
+    "stages": [
+      {
+        "stageId": "promptNormalization",
+        "label": "Prompt Interpretation",
+        "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+        "model": "gemini-3.1-flash",
+        "status": "skipped",
+        "source": "skipped",
+        "warnings": []
+      },
+      {
+        "stageId": "intentPlanning",
+        "label": "Intent Planning",
+        "description": "Refine the business intent, acceptance criteria, and BDD plan after bounded normalization.",
+        "model": "gemini-3.1",
+        "status": "skipped",
+        "source": "skipped",
+        "warnings": []
+      }
+    ]
   },
   "linear": {
     "parentIssue": null,

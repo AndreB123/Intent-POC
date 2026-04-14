@@ -18,6 +18,7 @@ interface BehaviorSourceInput {
   rootDir: string;
   aliases: string[];
   planning: SourceConfig["planning"];
+  studio?: Partial<SourceConfig["studio"]>;
   startCommand: string;
   baseUrl: string;
   captureItems: SourceConfig["capture"]["items"];
@@ -40,6 +41,10 @@ export function buildBehaviorSource(input: BehaviorSourceInput): SourceConfig {
   return {
     aliases: input.aliases,
     planning: input.planning,
+    studio: {
+      visible: true,
+      ...input.studio
+    },
     source: input.source ?? {
       type: "local",
       localPath: input.rootDir
@@ -121,6 +126,10 @@ export function buildDemoCatalogBehaviorSource(rootDir: string): SourceConfig {
       role: "controller-and-demo-source",
       summary: "Current workspace used to bootstrap resumable IDD planning and demo evidence flows.",
       notes: ["Use this repo as the first concrete repo-context example while agent access is pending."]
+    },
+    studio: {
+      displayName: "Current app",
+      visible: true
     },
     startCommand: "npm run demo:serve -- --port 6006",
     baseUrl: "http://127.0.0.1:6006",

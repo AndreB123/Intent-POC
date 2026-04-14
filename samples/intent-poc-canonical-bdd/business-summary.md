@@ -10,6 +10,11 @@
 - Has drift: no
 - Desired outcome: product and engineering leads can inspect the baseline without reading implementation details
 
+## AI Stages
+
+- Prompt Interpretation: skipped [deterministic]
+- Intent Planning: skipped [deterministic]
+
 ## Business Intent
 
 Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.

@@ -14,12 +14,17 @@ linear:
 agent:
   mode: bounded-runner
   provider: gemini
-  model: gemini-2.5-flash
   apiKeyEnv: GEMINI_KEY
   apiVersion: v1alpha
   temperature: 0.1
   allowPromptNormalization: true
+  allowIntentPlanning: true
   fallbackToRules: true
+  stages:
+    promptNormalization:
+      model: gemini-3.1-flash
+    intentPlanning:
+      model: gemini-3.1
 sources:
   demo-catalog:
     aliases:
@@ -33,6 +38,9 @@ sources:
       summary: Current workspace used to exercise low-risk prompt normalization and demo evidence flows.
       notes:
         - Use this source for prompt-planning and dry-run validation inside the Intent Driven Development POC.
+    studio:
+      displayName: Current app
+      visible: true
     source:
       type: local
       localPath: .
@@ -83,6 +91,9 @@ sources:
       summary: Built-in demo surface catalog used for low-risk screenshot regeneration through the shared runner path.
       notes:
         - Keep this source scoped to the built-in demo surfaces for the POC.
+    studio:
+      displayName: Tracked demo screenshots
+      visible: false
     source:
       type: local
       localPath: .

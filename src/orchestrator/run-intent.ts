@@ -15,6 +15,7 @@ import {
 } from "../evidence/write-manifest";
 import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evidence/write-summary";
 import { NormalizedIntent } from "../intent/intent-types";
+import { RunAgentConfigOverride, applyAgentOverrides } from "../intent/agent-stage-config";
 import { normalizeIntentWithAgent } from "../intent/normalize-intent";
 import { LinearClient, LinearIssueRef } from "../linear/linear-client";
 import {
@@ -63,8 +64,8 @@ export interface RunIntentResult {
 export interface RunIntentOptions {
   configPath: string;
   intent?: string;
-  mode?: RunMode;
-  sourceId?: string;
+  sourceIds?: string[];
+  agentOverrides?: RunAgentConfigOverride;
   trackedBaseline?: boolean;
   resumeIssue?: string;
   dryRun?: boolean;
@@ -956,9 +957,9 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
   return async function runIntent(options: RunIntentOptions): Promise<RunIntentResult> {
     const loadedConfig = await dependencies.loadConfig(options.configPath);
     const config = loadedConfig.config;
-    const sourceIdOverride = options.sourceId;
-    const sourceId = options.sourceId ?? config.run.sourceId;
-    const mode = options.mode ?? config.run.mode;
+    const agent = applyAgentOverrides(config.agent, options.agentOverrides);
+    const requestedSourceIds = options.sourceIds?.length ? Array.from(new Set(options.sourceIds)) : undefined;
+    const mode = config.run.mode;
     const rawPrompt = options.intent ?? config.run.intent;
     const trackedBaseline = options.trackedBaseline ?? config.run.trackedBaseline;
     const resumeIssue = options.resumeIssue ?? config.run.resumeIssue;
@@ -969,13 +970,11 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       defaultSourceId: config.run.sourceId,
       linearEnabled: config.linear.enabled,
       sourceCount: Object.keys(config.sources).length,
+      requestedSourceIds,
+      agentOverrides: options.agentOverrides,
       trackedBaseline,
       resumeIssue
     });
-
-    if (trackedBaseline && mode !== "baseline") {
-      throw new Error("Tracked baseline runs currently require baseline mode.");
-    }
 
     if (!rawPrompt || rawPrompt.trim().length === 0) {
       throw new Error("A free-text intent is required. Pass --intent or set run.intent in the config.");
@@ -998,14 +997,17 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       runMode: mode,
       defaultSourceId: config.run.sourceId,
       continueOnCaptureError: config.run.continueOnCaptureError,
-      agent: config.agent,
-      sourceIdOverride,
-      modeOverride: options.mode,
+      agent,
+      requestedSourceIds,
       resumeIssue,
       linearEnabled: config.linear.enabled,
       publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
       availableSources
     });
+
+    if (trackedBaseline && normalizedIntent.execution.runMode !== "baseline") {
+      throw new Error("Tracked baseline runs currently require baseline mode.");
+    }
 
     const sourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
     const paths = await dependencies.createRunPaths(loadedConfig, sourceIds, normalizedIntent.execution.runMode);
@@ -1016,6 +1018,7 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       summary: normalizedIntent.summary,
       sourceId: normalizedIntent.executionPlan.primarySourceId,
       sourceIds,
+      requestedSourceIds,
       runMode: normalizedIntent.execution.runMode,
       normalizedIntent,
       businessIntent: normalizedIntent.businessIntent,

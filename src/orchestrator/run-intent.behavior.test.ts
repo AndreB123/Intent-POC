@@ -215,6 +215,35 @@ test("runIntent Given a multi-source plan When one source lane fails Then it con
   }
 });
 
+test("runIntent Given a requested source scope When dry run executes Then it plans only the requested source lanes", async () => {
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-scope-"));
+  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
+
+  try {
+    const runIntent = createRunIntentRunner({
+      loadConfig: async () => loadedConfig
+    });
+
+    const result = await runIntent({
+      configPath: loadedConfig.configPath,
+      intent: "Prepare reviewable evidence for the current release.",
+      sourceIds: ["docs-portal", "client-systems-roach-admin"],
+      dryRun: true
+    });
+
+    assert.deepEqual(
+      result.normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId),
+      ["docs-portal", "client-systems-roach-admin"]
+    );
+    assert.equal(
+      result.normalizedIntent.executionPlan.sources[0]?.selectionReason,
+      "Source docs-portal was selected in the requested source scope."
+    );
+  } finally {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  }
+});
+
 test("runIntent Given tracked baseline output When the mode is not baseline Then it rejects the run before execution", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-tracked-"));
   const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
@@ -232,8 +261,7 @@ test("runIntent Given tracked baseline output When the mode is not baseline Then
         await runIntent({
           configPath: loadedConfig.configPath,
           intent: "Compare drift only for cockroach statements on client-systems",
-          trackedBaseline: true,
-          mode: "compare"
+          trackedBaseline: true
         }),
       /Tracked baseline runs currently require baseline mode\./
     );
@@ -242,19 +270,29 @@ test("runIntent Given tracked baseline output When the mode is not baseline Then
   }
 });
 
-test("runIntent Given Gemini agent config When dry run executes Then the agent settings are passed into normalization", async () => {
+test("runIntent Given Gemini stage config and runtime overrides When dry run executes Then the merged stage settings are passed into normalization", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-agent-"));
   const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
   let capturedProvider: string | undefined;
   let capturedApiKeyEnv: string | undefined;
+  let capturedPromptModel: string | undefined;
+  let capturedPlanningModel: string | undefined;
 
   loadedConfig.config.agent = {
     ...loadedConfig.config.agent,
     provider: "gemini",
-    model: "gemini-2.5-flash",
     apiKeyEnv: "GEMINI_API_KEY",
     apiVersion: "v1alpha",
     allowPromptNormalization: true,
+    allowIntentPlanning: true,
+    stages: {
+      promptNormalization: {
+        model: "gemini-3.1-flash"
+      },
+      intentPlanning: {
+        model: "gemini-3.1"
+      }
+    },
     fallbackToRules: true
   };
 
@@ -264,6 +302,8 @@ test("runIntent Given Gemini agent config When dry run executes Then the agent s
       normalizeIntent: async (input) => {
         capturedProvider = input.agent?.provider;
         capturedApiKeyEnv = input.agent?.apiKeyEnv;
+        capturedPromptModel = input.agent?.stages?.promptNormalization.model;
+        capturedPlanningModel = input.agent?.stages?.intentPlanning.model;
         return normalizeIntent(input);
       }
     });
@@ -271,12 +311,21 @@ test("runIntent Given Gemini agent config When dry run executes Then the agent s
     const result = await runIntent({
       configPath: loadedConfig.configPath,
       intent: "Compare drift only for cockroach statements on client-systems",
+      agentOverrides: {
+        stages: {
+          intentPlanning: {
+            model: "gemini-3"
+          }
+        }
+      },
       dryRun: true
     });
 
     assert.equal(result.status, "completed");
     assert.equal(capturedProvider, "gemini");
     assert.equal(capturedApiKeyEnv, "GEMINI_API_KEY");
+    assert.equal(capturedPromptModel, "gemini-3.1-flash");
+    assert.equal(capturedPlanningModel, "gemini-3");
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }

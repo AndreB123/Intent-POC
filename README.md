@@ -33,7 +33,11 @@ npm run install:browsers
 cp .env.example .env
 ```
 
-To enable live prompt normalization with the Gemini Developer API, set `GEMINI_KEY`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` in `.env` or the process environment and configure the `agent` block with `provider: gemini` plus a Gemini model such as `gemini-2.5-flash`. The checked-in `intent-poc.yaml` intentionally stays rules-backed by default so dry runs, tests, and canonical snapshots remain deterministic. `intent-poc.local-no-linear.yaml` is the live Gemini example config in this repo, and it is scoped to the built-in Intent Driven Development POC demo sources rather than `client-systems`.
+To enable live Gemini planning, set `GEMINI_KEY`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` in `.env` or the process environment and configure the `agent` block with `provider: gemini` plus per-stage models under `agent.stages`. The checked-in `intent-poc.yaml` intentionally stays rules-backed by default so dry runs, tests, and canonical snapshots remain deterministic. `intent-poc.local-no-linear.yaml` is the live Gemini example config in this repo, and it is scoped to the built-in Intent Driven Development POC demo sources rather than `client-systems`.
+
+The current Gemini stage split is:
+- `promptNormalization`: bounded prompt interpretation, source scope hints, and capture hints. Recommended models: `gemini-3.1-flash` or `gemini-3-flash`.
+- `intentPlanning`: business-intent refinement, acceptance criteria cleanup, and scenario shaping. Recommended models: `gemini-3.1` or `gemini-3`.
 
 This path uses the Gemini API key directly. A Google Cloud service account is not used for Gemini Developer API authentication.
 
@@ -66,7 +70,9 @@ http://127.0.0.1:6010/
 
 The prompt screen now lets you:
 - submit an intent prompt
-- choose source and mode
+- choose work scope from config-backed checkbox cards
+- open the active config in the editor to rename scope cards or add repos
+- override Gemini models per AI stage
 - watch live orchestration status
 - inspect Linear activity when enabled
 - open summaries, manifests, logs, screenshots, and diff images
@@ -83,7 +89,7 @@ You can switch demo library variants in the browser with:
 http://127.0.0.1:6010/library?variant=v2
 ```
 
-The sample `intent-poc.yaml` still defaults to the built-in demo source, so the repo works without needing a separate Storybook app, Docker source, or Linear credentials.
+The sample `intent-poc.yaml` now starts with one visible Studio scope source labeled `Current app`, plus a hidden automation-only source for tracked demo screenshots. Add more repos under `sources` when you want broader scope.
 
 ## Run
 
@@ -105,6 +111,25 @@ Live Gemini dry run using the example local config:
 npm run dev -- run --config ./intent-poc.local-no-linear.yaml --source demo-catalog --intent "Prepare a lightweight visual evidence review for the demo-catalog source in the Intent Driven Development POC so the current built-in demo experience is easy to inspect." --dry-run
 ```
 
+`--source` now requests source scope rather than overriding a single source. Repeat the flag or pass a comma-separated list when the run should stay inside a specific set of configured sources.
+
+Studio work scope cards are driven by YAML. The display name and visibility come from `sources.<id>.studio`, while the contextual repo text comes from `sources.<id>.planning`:
+
+```yaml
+sources:
+	demo-catalog:
+		planning:
+			repoLabel: Intent POC
+			summary: Current workspace used for intent planning and demo evidence flows.
+		studio:
+			displayName: Current app
+			visible: true
+```
+
+Use the `Open config in editor` action in the Studio when you want to rename the current card, expose hidden automation sources, or add another repo as a new checkbox.
+
+Stage-specific Gemini models live under `agent.stages` in YAML. Studio can override those per run without mutating the checked-in config, and custom Gemini model ids are allowed when you need something outside the curated list.
+
 Resume an existing Linear plan explicitly by issue id or identifier:
 
 ```bash
@@ -114,25 +139,31 @@ npm run dev -- run --config ./intent-poc.yaml --resume-issue ENG-321 --intent "C
 Baseline run:
 
 ```bash
-npm run dev -- run --config ./intent-poc.yaml --intent "Create a baseline screenshot library for the configured source" --mode baseline
+npm run dev -- run --config ./intent-poc.yaml --intent "Create a baseline screenshot library for the configured source"
 ```
 
 Comparison run:
 
 ```bash
-npm run dev -- run --config ./intent-poc.yaml --intent "Re-run the screenshot library and report visual drift" --mode compare
+npm run dev -- run --config ./intent-poc.yaml --intent "Re-run the screenshot library and report visual drift"
 ```
 
 Compare the built-in demo against variant `v2` after changing the source start command or app variant:
 
 ```bash
-npm run dev -- run --config ./intent-poc.yaml --source demo-catalog --intent "Re-run the demo catalog and report visual drift" --mode compare
+npm run dev -- run --config ./intent-poc.yaml --source demo-catalog --intent "Re-run the demo catalog and report visual drift"
 ```
 
-Run a specific source:
+After adding another repo source to YAML, run a specific source scope:
 
 ```bash
-npm run dev -- run --config ./intent-poc.yaml --source client-systems-roach-admin --intent "Create baseline evidence for client-systems roach admin" --mode baseline
+npm run dev -- run --config ./intent-poc.yaml --source repo-a --intent "Create baseline evidence for repo-a"
+```
+
+After adding multiple repos to YAML, run a constrained multi-source scope:
+
+```bash
+npm run dev -- run --config ./intent-poc.yaml --source repo-a --source repo-b --intent "Prepare reviewable evidence across repo-a and repo-b for the current release" --dry-run
 ```
 
 ## Tests
@@ -235,7 +266,7 @@ To publish artifacts into the source repo as well:
 - `run.resumeIssue` or `--resume-issue` lets the planner attach to an existing Linear parent issue and update only planner-managed IDD sections.
 - `run.trackedBaseline` or `--tracked-baseline` stages captures under the run artifacts and upserts them into a configured source `capture.trackedRoot`; this is currently used by the built-in `demo-components` source.
 - The prompt entrypoint is intentionally unstructured. The runner converts it into a bounded internal plan.
-- The implementation currently uses a rules-based normalizer and deterministic runner logic.
+- The implementation now supports an optional Gemini-backed prompt interpretation stage and an optional Gemini-backed intent-planning stage; execution, capture, comparison, and artifact publishing remain deterministic.
 
 Generate the tracked demo screenshot library with real images:
 

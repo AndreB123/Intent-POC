@@ -1,0 +1,193 @@
+import { z } from "zod";
+import { RunMode } from "../config/schema";
+import { ResolvedAgentStageConfig } from "./agent-stage-config";
+import { createGeminiClient } from "./gemini-client";
+import { PromptNormalizerSourceDescriptor } from "./gemini-prompt-normalizer";
+import { IntentType } from "./intent-types";
+
+export interface GeminiIntentPlanningInput {
+  rawPrompt: string;
+  intentType: IntentType;
+  runMode: RunMode;
+  sourceIds: string[];
+  requestedSourceIds?: string[];
+  availableSources: Record<string, PromptNormalizerSourceDescriptor>;
+  draftPlan: {
+    statement: string;
+    desiredOutcome: string;
+    acceptanceCriteria: Array<{
+      description: string;
+      origin: "prompt" | "inferred";
+    }>;
+    scenarios: Array<{
+      title: string;
+      goal: string;
+      given: string[];
+      when: string[];
+      then: string[];
+      applicableSourceIds: string[];
+    }>;
+  };
+  stage: ResolvedAgentStageConfig;
+}
+
+export interface GeminiIntentPlanningRefinement {
+  statement?: string;
+  desiredOutcome?: string;
+  acceptanceCriteria?: Array<{
+    description: string;
+  }>;
+  scenarios?: Array<{
+    title: string;
+    goal: string;
+    given: string[];
+    when: string[];
+    then: string[];
+    applicableSourceIds?: string[];
+  }>;
+  warnings?: string[];
+}
+
+const planningRefinementSchema: z.ZodType<GeminiIntentPlanningRefinement> = z.object({
+  statement: z.string().min(1).optional(),
+  desiredOutcome: z.string().min(1).optional(),
+  acceptanceCriteria: z
+    .array(
+      z.object({
+        description: z.string().min(1)
+      })
+    )
+    .optional(),
+  scenarios: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        goal: z.string().min(1),
+        given: z.array(z.string().min(1)).min(1),
+        when: z.array(z.string().min(1)).min(1),
+        then: z.array(z.string().min(1)).min(1),
+        applicableSourceIds: z.array(z.string().min(1)).optional()
+      })
+    )
+    .optional(),
+  warnings: z.array(z.string().min(1)).optional()
+});
+
+const planningRefinementResponseJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    statement: { type: "string" },
+    desiredOutcome: { type: "string" },
+    acceptanceCriteria: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          description: { type: "string" }
+        },
+        required: ["description"]
+      }
+    },
+    scenarios: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          title: { type: "string" },
+          goal: { type: "string" },
+          given: { type: "array", items: { type: "string" } },
+          when: { type: "array", items: { type: "string" } },
+          then: { type: "array", items: { type: "string" } },
+          applicableSourceIds: { type: "array", items: { type: "string" } }
+        },
+        required: ["title", "goal", "given", "when", "then"]
+      }
+    },
+    warnings: {
+      type: "array",
+      items: { type: "string" }
+    }
+  }
+} as const;
+
+function buildSourceSummary(availableSources: Record<string, PromptNormalizerSourceDescriptor>): string {
+  return JSON.stringify(
+    Object.entries(availableSources).map(([sourceId, source]) => ({
+      sourceId,
+      aliases: source.aliases,
+      repoId: source.planning.repoId,
+      repoLabel: source.planning.repoLabel,
+      role: source.planning.role,
+      sourceType: source.source.type,
+      captures: source.capture.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        path: item.path
+      }))
+    })),
+    null,
+    2
+  );
+}
+
+function buildPlanningPrompt(input: GeminiIntentPlanningInput): string {
+  return [
+    "You are refining a bounded intent-driven development plan for a visual evidence runner.",
+    "Return only JSON that matches the provided schema.",
+    "Do not invent source ids, capture ids, destinations, tools, or run modes.",
+    "You may rewrite the business statement, desired outcome, acceptance criteria, and scenarios to make the plan clearer and more execution-ready.",
+    "Keep all scenarios within the provided source ids.",
+    "If you are unsure, omit the field instead of guessing.",
+    `Intent type: ${input.intentType}`,
+    `Run mode: ${input.runMode}`,
+    `Selected source ids: ${input.sourceIds.join(", ")}`,
+    ...(input.requestedSourceIds && input.requestedSourceIds.length > 0
+      ? [`Requested source scope: ${input.requestedSourceIds.join(", ")}`]
+      : []),
+    "Available sources:",
+    buildSourceSummary(input.availableSources),
+    "Current draft plan:",
+    JSON.stringify(input.draftPlan, null, 2),
+    "User prompt:",
+    input.rawPrompt
+  ].join("\n\n");
+}
+
+export async function refineIntentPlanWithGemini(
+  input: GeminiIntentPlanningInput
+): Promise<GeminiIntentPlanningRefinement> {
+  const ai = createGeminiClient({
+    apiKeyEnv: input.stage.apiKeyEnv,
+    apiVersion: input.stage.apiVersion
+  });
+
+  const response = await ai.models.generateContent({
+    model: input.stage.model,
+    contents: buildPlanningPrompt(input),
+    config: {
+      temperature: input.stage.temperature,
+      maxOutputTokens: input.stage.maxTokens,
+      responseMimeType: "application/json",
+      responseJsonSchema: planningRefinementResponseJsonSchema
+    }
+  });
+
+  const text = response.text?.trim();
+  if (!text) {
+    throw new Error("Gemini intent planning returned an empty response.");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `Gemini intent planning returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  return planningRefinementSchema.parse(parsed);
+}

@@ -15,6 +15,7 @@ agent:
   mode: bounded-runner
   temperature: 0.1
   allowPromptNormalization: true
+  allowIntentPlanning: true
   fallbackToRules: true
 sources:
   demo-catalog:
@@ -29,6 +30,9 @@ sources:
       summary: Current workspace used to bootstrap resumable IDD planning and demo evidence flows.
       notes:
         - Use this repo as the first concrete repo-context example while agent access is pending.
+    studio:
+      displayName: Current app
+      visible: true
     source:
       type: local
       localPath: .
@@ -80,6 +84,9 @@ sources:
       notes:
         - Use this source for tracked screenshot refreshes under evidence/baselines/demo-components.
         - Keep demo screenshot regeneration on runIntent rather than adding a parallel capture implementation.
+    studio:
+      displayName: Tracked demo screenshots
+      visible: false
     source:
       type: local
       localPath: .
@@ -107,98 +114,6 @@ sources:
         - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
       defaultFullPage: false
       items: []
-  client-systems-postgres:
-    aliases:
-      - client-systems
-      - cs
-      - postgres
-      - pg
-    planning:
-      repoId: client-systems
-      repoLabel: Client Systems
-      role: external product repo
-      summary: Git-backed product repo used for multi-repo planning and downstream implementation handoff.
-    source:
-      type: git
-      gitUrl: https://github.com/geniusmonkey/client-systems.git
-      ref: master
-      authTokenEnv: CLIENT_SYSTEMS_GIT_TOKEN
-    workspace:
-      checkoutMode: clone-if-missing
-      cloneRoot: ./.workdirs
-      installTimeoutMs: 600000
-      env: {}
-    app:
-      workdir: .
-      startCommand: docker compose up -d postgres
-      stopCommand: docker compose stop postgres
-      baseUrl: http://127.0.0.1:6006
-      startTimeoutMs: 120000
-      env: {}
-      readiness:
-        type: http
-        url: http://127.0.0.1:6006
-        expectedStatus: 200
-        timeoutMs: 180000
-        intervalMs: 2000
-    capture:
-      waitAfterLoadMs: 700
-      injectCss:
-        - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
-      defaultFullPage: true
-      items:
-        - id: ui-overview
-          name: UI Overview
-          path: /
-          fullPage: true
-        - id: ui-primary-surface
-          name: UI Primary Surface
-          path: /iframe.html?id=button--primary
-          fullPage: true
-  example-storybook:
-    aliases:
-      - storybook
-      - demo
-    planning:
-      repoId: target-app
-      repoLabel: Example Storybook
-      role: example target app
-      summary: Local example repo kept for storybook-oriented capture and planning experiments.
-    source:
-      type: local
-      localPath: ../target-app
-    workspace:
-      checkoutMode: existing
-      installCommand: npm ci
-      installTimeoutMs: 600000
-      env: {}
-    app:
-      workdir: .
-      startCommand: npm run storybook -- --port 6006 --ci
-      baseUrl: http://127.0.0.1:6006
-      startTimeoutMs: 120000
-      env: {}
-      readiness:
-        type: http
-        url: http://127.0.0.1:6006
-        expectedStatus: 200
-        timeoutMs: 120000
-        intervalMs: 2000
-    capture:
-      waitAfterLoadMs: 700
-      injectCss:
-        - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
-      defaultFullPage: false
-      items:
-        - id: button-primary
-          name: Primary Button
-          path: /iframe.html?id=button--primary
-          locator: "[data-testid='button-root']"
-          waitForSelector: "[data-testid='button-root']"
-        - id: card-default
-          name: Default Card
-          path: /iframe.html?id=card--default
-          locator: "[data-testid='card-root']"
 playwright:
   browser: chromium
   headless: true

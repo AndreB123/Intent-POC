@@ -24,6 +24,19 @@ function parseVariant(value: string): "v1" | "v2" {
   throw new InvalidArgumentError("Variant must be 'v1' or 'v2'.");
 }
 
+function parseSourceScope(value: string, previous: string[]): string[] {
+  const sourceIds = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (sourceIds.length === 0) {
+    throw new InvalidArgumentError("Source scope must include at least one source id.");
+  }
+
+  return Array.from(new Set([...previous, ...sourceIds]));
+}
+
 program
   .name("intent-poc")
   .description("Intent-driven visual evidence proof of concept controller.")
@@ -34,8 +47,12 @@ program
   .description("Execute a configured intent run against a source app.")
   .requiredOption("-c, --config <path>", "Path to the YAML config file.")
   .option("-i, --intent <text>", "Free-text intent prompt.")
-  .option("-m, --mode <mode>", "Override the configured run mode: baseline, compare, approve-baseline.")
-  .option("-s, --source <id>", "Override the configured source id.")
+  .option(
+    "-s, --source <id>",
+    "Add a source id to the requested planning scope. Repeat the flag or pass a comma-separated list.",
+    parseSourceScope,
+    [] as string[]
+  )
   .option("--tracked-baseline", "Stage captures for upsert into the configured tracked screenshot root for the selected source.")
   .option("--resume-issue <id-or-key>", "Attach the run to an existing Linear parent issue by id or identifier.")
   .option("--dry-run", "Validate config and intent normalization without launching the source app.")
@@ -44,8 +61,7 @@ program
       await runIntent({
         configPath: options.config,
         intent: options.intent,
-        mode: options.mode,
-        sourceId: options.source,
+        sourceIds: options.source.length > 0 ? options.source : undefined,
         trackedBaseline: options.trackedBaseline,
         resumeIssue: options.resumeIssue,
         dryRun: options.dryRun

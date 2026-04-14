@@ -5,6 +5,12 @@ import path from "node:path";
 import { loadConfig } from "../../config/load-config";
 import { RunMode } from "../../config/schema";
 import { toRelativePath } from "../../evidence/paths";
+import {
+  AGENT_STAGE_SEQUENCE,
+  RunAgentConfigOverride,
+  applyAgentOverrides,
+  resolveAgentStageConfig
+} from "../../intent/agent-stage-config";
 import { normalizeIntentWithAgent } from "../../intent/normalize-intent";
 import { NormalizedIntent } from "../../intent/intent-types";
 import { RunIntentEvent, RunIntentResult, runIntent } from "../../orchestrator/run-intent";
@@ -29,6 +35,9 @@ export interface StartIntentStudioServerOptions {
 interface StudioSourceSummary {
   id: string;
   label: string;
+  repoId?: string;
+  repoLabel?: string;
+  role?: string;
   summary: string;
   aliases: string[];
   captureCount: number;
@@ -37,6 +46,8 @@ interface StudioSourceSummary {
   startCommand: string;
   readiness: string;
   baseUrl: string;
+  defaultScope: boolean;
+  visibleInStudio: boolean;
   status: "ready" | "attention";
   issues: string[];
   notes: string[];
@@ -64,6 +75,8 @@ interface StudioSourceRunSummary {
 interface StudioRunRecord {
   sessionId: string;
   prompt: string;
+  requestedSourceIds?: string[];
+  agentOverrides?: RunAgentConfigOverride;
   sourceId?: string;
   mode?: RunMode;
   resumeIssue?: string;
@@ -100,14 +113,28 @@ interface StudioRunRecord {
   };
 }
 
+interface StudioAgentStageSummary {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  provider?: string;
+  model: string;
+  fallbackToRules: boolean;
+}
+
 interface StudioState {
   configPath: string;
+  configFileUrl?: string;
+  configEditorUrl?: string;
   configError?: string;
   linearEnabled: boolean;
   defaultPrompt?: string;
   defaultSourceId?: string;
   defaultMode?: RunMode;
+  agentStages: StudioAgentStageSummary[];
   sources: StudioSourceSummary[];
+  hiddenSourceCount: number;
   currentRun: StudioRunRecord | null;
   recentRuns: StudioRunRecord[];
   serverTime: string;
@@ -155,13 +182,24 @@ function summarizeSource(sourceId: string, sourceType: string, startCommand: str
     : "Local source with custom app startup.";
 }
 
+function buildConfigFileUrl(relativePath: string): string {
+  return `/files/${encodeURIComponent(relativePath)}`;
+}
+
+function buildEditorUrl(filePath: string): string {
+  const normalizedPath = filePath.split(path.sep).join("/");
+  const prefixedPath = normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`;
+  return `vscode://file${encodeURI(prefixedPath)}`;
+}
+
 async function buildSourceSummary(
   workspaceRoot: string,
   sourceId: string,
+  defaultSourceId: string,
   source: Awaited<ReturnType<typeof loadConfig>>["config"]["sources"][string]
 ): Promise<StudioSourceSummary> {
   const issues: string[] = [];
-  const notes: string[] = [];
+  const notes = [...source.planning.notes];
   let sourceLocation: string;
 
   if (source.source.type === "local") {
@@ -192,13 +230,18 @@ async function buildSourceSummary(
 
   return {
     id: sourceId,
-    label: formatSourceLabel(sourceId),
-    summary: summarizeSource(
-      sourceId,
-      source.source.type,
-      source.app.startCommand,
-      source.source.type === "local" ? formatWorkspacePath(workspaceRoot, source.source.localPath) : undefined
-    ),
+    label: source.studio.displayName ?? source.planning.repoLabel ?? formatSourceLabel(sourceId),
+    repoId: source.planning.repoId,
+    repoLabel: source.planning.repoLabel,
+    role: source.planning.role,
+    summary:
+      source.planning.summary ??
+      summarizeSource(
+        sourceId,
+        source.source.type,
+        source.app.startCommand,
+        source.source.type === "local" ? formatWorkspacePath(workspaceRoot, source.source.localPath) : undefined
+      ),
     aliases: source.aliases,
     captureCount: source.capture.items.length,
     sourceType: source.source.type,
@@ -206,6 +249,8 @@ async function buildSourceSummary(
     startCommand: source.app.startCommand,
     readiness,
     baseUrl: source.app.baseUrl,
+    defaultScope: sourceId === defaultSourceId,
+    visibleInStudio: source.studio.visible,
     status: issues.length > 0 ? "attention" : "ready",
     issues,
     notes
@@ -277,16 +322,81 @@ function createEventId(run: StudioRunRecord): string {
   return `${run.sessionId}-${run.events.length + 1}`;
 }
 
-function normalizeMode(value: unknown): RunMode | undefined {
+function normalizeRequestedSourceIds(value: unknown): string[] | undefined {
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
 
-  if (value === "baseline" || value === "compare" || value === "approve-baseline") {
-    return value;
+  const rawValues = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(",")
+      : undefined;
+
+  if (!rawValues) {
+    throw new Error("Source scope must be an array of source ids or a comma-separated string.");
   }
 
-  throw new Error("Mode must be one of baseline, compare, or approve-baseline.");
+  const sourceIds = Array.from(
+    new Set(
+      rawValues.map((entry) => {
+        if (typeof entry !== "string") {
+          throw new Error("Source scope entries must be strings.");
+        }
+
+        return entry.trim();
+      }).filter((entry) => entry.length > 0)
+    )
+  );
+
+  return sourceIds.length > 0 ? sourceIds : undefined;
+}
+
+function normalizeAgentOverrides(value: unknown): RunAgentConfigOverride | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const rawStages = (value as { stages?: Record<string, unknown> }).stages;
+  if (!rawStages || typeof rawStages !== "object") {
+    return undefined;
+  }
+
+  const stages: NonNullable<RunAgentConfigOverride["stages"]> = {};
+
+  for (const stageId of AGENT_STAGE_SEQUENCE) {
+    const rawStageOverride = rawStages[stageId];
+    if (!rawStageOverride || typeof rawStageOverride !== "object") {
+      continue;
+    }
+
+    const model =
+      typeof (rawStageOverride as { model?: unknown }).model === "string" &&
+      (rawStageOverride as { model?: string }).model!.trim().length > 0
+        ? (rawStageOverride as { model: string }).model.trim()
+        : undefined;
+
+    if (model) {
+      stages[stageId] = { model };
+    }
+  }
+
+  return Object.keys(stages).length > 0 ? { stages } : undefined;
+}
+
+function buildStudioAgentStages(agent: Awaited<ReturnType<typeof loadConfig>>["config"]["agent"]): StudioAgentStageSummary[] {
+  return AGENT_STAGE_SEQUENCE.map((stageId) => {
+    const stage = resolveAgentStageConfig(agent, stageId);
+    return {
+      id: stage.id,
+      label: stage.label,
+      description: stage.description,
+      enabled: stage.enabled,
+      provider: stage.provider,
+      model: stage.model,
+      fallbackToRules: stage.fallbackToRules
+    };
+  });
 }
 
 function buildPlannerSources(
@@ -311,24 +421,22 @@ function buildPlannerSources(
 async function previewNormalizedIntent(input: {
   configPath: string;
   prompt: string;
-  sourceId?: string;
-  mode?: RunMode;
+  sourceIds?: string[];
+  agentOverrides?: RunAgentConfigOverride;
   resumeIssue?: string;
 }): Promise<NormalizedIntent> {
   const loaded = await loadConfig(input.configPath);
-  const sourceId = input.sourceId ?? loaded.config.run.sourceId;
-  const mode = input.mode ?? loaded.config.run.mode;
+  const agent = applyAgentOverrides(loaded.config.agent, input.agentOverrides);
 
   return await normalizeIntentWithAgent({
     rawPrompt: input.prompt,
-    runMode: mode,
-    defaultSourceId: sourceId,
+    runMode: loaded.config.run.mode,
+    defaultSourceId: loaded.config.run.sourceId,
     continueOnCaptureError: loaded.config.run.continueOnCaptureError,
-    agent: loaded.config.agent,
+    agent,
     resumeIssue: input.resumeIssue ?? loaded.config.run.resumeIssue,
     availableSources: buildPlannerSources(loaded.config.sources),
-    sourceIdOverride: input.sourceId,
-    modeOverride: input.mode,
+    requestedSourceIds: input.sourceIds,
     linearEnabled: loaded.config.linear.enabled,
     publishToSourceWorkspace:
       loaded.config.artifacts.storageMode === "both" && Boolean(loaded.config.artifacts.copyToSourcePath)
@@ -412,29 +520,42 @@ export async function startIntentStudioServer(
   async function buildState(): Promise<StudioState> {
     try {
       const loaded = await loadConfig(configPath);
-      const sources = await Promise.all(
+      const allSources = await Promise.all(
         Object.entries(loaded.config.sources).map(async ([sourceId, source]) =>
-          await buildSourceSummary(workspaceRoot, sourceId, source)
+          await buildSourceSummary(workspaceRoot, sourceId, loaded.config.run.sourceId, source)
         )
       );
+      const sources = allSources
+        .filter((source) => source.visibleInStudio)
+        .sort((left, right) => Number(right.defaultScope) - Number(left.defaultScope));
+      const relativeConfigPath = path.relative(workspaceRoot, loaded.configPath) || path.basename(loaded.configPath);
 
       return {
-        configPath: path.relative(workspaceRoot, loaded.configPath) || path.basename(loaded.configPath),
+        configPath: relativeConfigPath,
+        configFileUrl: buildConfigFileUrl(relativeConfigPath),
+        configEditorUrl: buildEditorUrl(loaded.configPath),
         linearEnabled: loaded.config.linear.enabled,
         defaultPrompt: loaded.config.run.intent,
         defaultSourceId: loaded.config.run.sourceId,
         defaultMode: loaded.config.run.mode,
+        agentStages: buildStudioAgentStages(loaded.config.agent),
         sources,
+        hiddenSourceCount: allSources.length - sources.length,
         currentRun: currentRun ? cloneRun(currentRun) : null,
         recentRuns: recentRuns.map((run) => cloneRun(run)),
         serverTime: new Date().toISOString()
       };
     } catch (error) {
+      const relativeConfigPath = path.relative(workspaceRoot, path.resolve(configPath)) || configPath;
       return {
-        configPath: path.relative(workspaceRoot, path.resolve(configPath)) || configPath,
+        configPath: relativeConfigPath,
+        configFileUrl: buildConfigFileUrl(relativeConfigPath),
+        configEditorUrl: buildEditorUrl(path.resolve(configPath)),
         configError: error instanceof Error ? error.message : String(error),
         linearEnabled: false,
+        agentStages: [],
         sources: [],
+        hiddenSourceCount: 0,
         currentRun: currentRun ? cloneRun(currentRun) : null,
         recentRuns: recentRuns.map((run) => cloneRun(run)),
         serverTime: new Date().toISOString()
@@ -504,14 +625,20 @@ export async function startIntentStudioServer(
     }
   }
 
-  function startRun(input: { prompt: string; sourceId?: string; mode?: RunMode; resumeIssue?: string; dryRun: boolean }): void {
+  function startRun(input: {
+    prompt: string;
+    sourceIds?: string[];
+    agentOverrides?: RunAgentConfigOverride;
+    resumeIssue?: string;
+    dryRun: boolean;
+  }): void {
     archiveCurrentRun();
 
     const run: StudioRunRecord = {
       sessionId: createSessionId(),
       prompt: input.prompt,
-      sourceId: input.sourceId,
-      mode: input.mode,
+      requestedSourceIds: input.sourceIds,
+      agentOverrides: input.agentOverrides,
       resumeIssue: input.resumeIssue,
       dryRun: input.dryRun,
       status: "running",
@@ -529,8 +656,8 @@ export async function startIntentStudioServer(
       phase: "run",
       message: "Run request accepted.",
       details: {
-        sourceId: input.sourceId,
-        mode: input.mode,
+        requestedSourceIds: input.sourceIds,
+        agentOverrides: input.agentOverrides,
         resumeIssue: input.resumeIssue,
         dryRun: input.dryRun
       }
@@ -542,8 +669,8 @@ export async function startIntentStudioServer(
         const result = await runIntent({
           configPath,
           intent: input.prompt,
-          sourceId: input.sourceId,
-          mode: input.mode,
+          sourceIds: input.sourceIds,
+          agentOverrides: input.agentOverrides,
           resumeIssue: input.resumeIssue,
           dryRun: input.dryRun,
           onEvent: (event) => {
@@ -633,18 +760,16 @@ export async function startIntentStudioServer(
           return;
         }
 
-        const sourceId = typeof body.sourceId === "string" && body.sourceId.trim().length > 0
-          ? body.sourceId.trim()
-          : undefined;
-        const mode = normalizeMode(body.mode);
+        const sourceIds = normalizeRequestedSourceIds(body.sourceIds ?? body.sourceId);
+        const agentOverrides = normalizeAgentOverrides(body.agentOverrides);
         const resumeIssue = typeof body.resumeIssue === "string" && body.resumeIssue.trim().length > 0
           ? body.resumeIssue.trim()
           : undefined;
         const plan = await previewNormalizedIntent({
           configPath,
           prompt,
-          sourceId,
-          mode,
+          sourceIds,
+          agentOverrides,
           resumeIssue
         });
 
@@ -686,16 +811,14 @@ export async function startIntentStudioServer(
           return;
         }
 
-        const sourceId = typeof body.sourceId === "string" && body.sourceId.trim().length > 0
-          ? body.sourceId.trim()
-          : undefined;
-        const mode = normalizeMode(body.mode);
+        const sourceIds = normalizeRequestedSourceIds(body.sourceIds ?? body.sourceId);
+        const agentOverrides = normalizeAgentOverrides(body.agentOverrides);
         const resumeIssue = typeof body.resumeIssue === "string" && body.resumeIssue.trim().length > 0
           ? body.resumeIssue.trim()
           : undefined;
         const dryRun = body.dryRun === true;
 
-        startRun({ prompt, sourceId, mode, resumeIssue, dryRun });
+        startRun({ prompt, sourceIds, agentOverrides, resumeIssue, dryRun });
         sendJson(res, 202, { ok: true });
       } catch (error) {
         sendJson(res, 400, { error: error instanceof Error ? error.message : String(error) });

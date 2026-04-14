@@ -1,6 +1,7 @@
-import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { AgentConfig, RunMode, SourceConfig } from "../config/schema";
+import { RunMode, SourceConfig } from "../config/schema";
+import { ResolvedAgentStageConfig } from "./agent-stage-config";
+import { createGeminiClient } from "./gemini-client";
 import { IntentType } from "./intent-types";
 
 export type PromptNormalizerSourceDescriptor = Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">;
@@ -10,7 +11,8 @@ export interface GeminiPromptNormalizationInput {
   runMode: RunMode;
   defaultSourceId: string;
   availableSources: Record<string, PromptNormalizerSourceDescriptor>;
-  agent: AgentConfig;
+  requestedSourceIds?: string[];
+  stage: ResolvedAgentStageConfig;
 }
 
 export interface PromptNormalizationHints {
@@ -90,6 +92,12 @@ function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string
     "If you are unsure about a field, omit it instead of guessing.",
     "Choose sourceIds only from the configured source list.",
     "Choose captureIdsBySource[sourceId] only from that source's configured capture ids.",
+    ...(input.requestedSourceIds && input.requestedSourceIds.length > 0
+      ? [
+          `Requested source scope: ${input.requestedSourceIds.join(", ")}`,
+          "Keep any returned sourceIds inside the requested source scope."
+        ]
+      : []),
     "The supported intentType values are baseline, compare, approve-baseline, and refresh-library.",
     `Configured default source id: ${input.defaultSourceId}`,
     `Configured fallback run mode: ${input.runMode}`,
@@ -100,39 +108,20 @@ function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string
   ].join("\n\n");
 }
 
-function resolveGeminiApiKey(agent: AgentConfig): { apiKey: string; envName: string } {
-  const candidateEnvNames = Array.from(
-    new Set([agent.apiKeyEnv, "GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"].filter((value): value is string => Boolean(value)))
-  );
-
-  for (const envName of candidateEnvNames) {
-    const apiKey = process.env[envName];
-    if (apiKey) {
-      return { apiKey, envName };
-    }
-  }
-
-  throw new Error(
-    `Gemini prompt normalization requires one of these environment variables: ${candidateEnvNames.join(", ")}.`
-  );
-}
-
 export async function normalizePromptWithGemini(
   input: GeminiPromptNormalizationInput
 ): Promise<PromptNormalizationHints> {
-  const { apiKey } = resolveGeminiApiKey(input.agent);
-
-  const ai = new GoogleGenAI({
-    apiKey,
-    apiVersion: input.agent.apiVersion
+  const ai = createGeminiClient({
+    apiKeyEnv: input.stage.apiKeyEnv,
+    apiVersion: input.stage.apiVersion
   });
 
   const response = await ai.models.generateContent({
-    model: input.agent.model ?? "gemini-2.5-flash",
+    model: input.stage.model,
     contents: buildNormalizationPrompt(input),
     config: {
-      temperature: input.agent.temperature,
-      maxOutputTokens: input.agent.maxTokens,
+      temperature: input.stage.temperature,
+      maxOutputTokens: input.stage.maxTokens,
       responseMimeType: "application/json",
       responseJsonSchema: promptNormalizationResponseJsonSchema
     }

@@ -27,9 +27,17 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "agent:",
       "  mode: bounded-runner",
       "  provider: gemini",
-      "  model: gemini-2.5-flash",
+      "  model:",
       "  apiKeyEnv: GEMINI_API_KEY",
-      "  apiVersion: v1alpha",
+      "  apiVersion:",
+      "  allowIntentPlanning: true",
+      "  stages:",
+      "    promptNormalization:",
+      "      model: gemini-3.1-flash",
+      "      apiVersion: v1alpha",
+      "    intentPlanning:",
+      "      model: gemini-3.1",
+      "      apiKeyEnv:",
       "sources:",
       "  s1:",
       "    planning:",
@@ -37,6 +45,8 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "      repoLabel: Intent POC",
       "      notes:",
       "        - Current workspace bootstrap repo",
+      "    studio:",
+      "      displayName: Current app",
       "    source:",
       "      type: local",
       `      localPath: ${JSON.stringify(tmpDir)}`,
@@ -82,12 +92,19 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.run.sourceId, "s1");
   assert.ok(loaded.config.sources.s1);
   assert.equal(loaded.config.agent.provider, "gemini");
-  assert.equal(loaded.config.agent.model, "gemini-2.5-flash");
+  assert.equal(loaded.config.agent.model, undefined);
   assert.equal(loaded.config.agent.apiKeyEnv, "GEMINI_API_KEY");
-  assert.equal(loaded.config.agent.apiVersion, "v1alpha");
+  assert.equal(loaded.config.agent.apiVersion, undefined);
+  assert.equal(loaded.config.agent.allowIntentPlanning, true);
+  assert.equal(loaded.config.agent.stages.promptNormalization.model, "gemini-3.1-flash");
+  assert.equal(loaded.config.agent.stages.promptNormalization.apiVersion, "v1alpha");
+  assert.equal(loaded.config.agent.stages.intentPlanning.model, "gemini-3.1");
+  assert.equal(loaded.config.agent.stages.intentPlanning.apiKeyEnv, undefined);
   assert.equal(loaded.config.linear.defaultStateIds.started, undefined);
   assert.equal(loaded.config.sources.s1.planning.repoId, "intent-poc");
   assert.deepEqual(loaded.config.sources.s1.planning.notes, ["Current workspace bootstrap repo"]);
+  assert.equal(loaded.config.sources.s1.studio.displayName, "Current app");
+  assert.equal(loaded.config.sources.s1.studio.visible, true);
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
