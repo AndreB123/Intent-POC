@@ -40,7 +40,6 @@ sources:
         - Use this source for prompt-planning and dry-run validation inside the Intent Driven Development POC.
     studio:
       displayName: Current app
-      visible: true
     source:
       type: local
       localPath: .
@@ -92,8 +91,7 @@ sources:
       notes:
         - Keep this source scoped to the built-in demo surfaces for the POC.
     studio:
-      displayName: Tracked demo screenshots
-      visible: false
+      displayName: Demo components
     source:
       type: local
       localPath: .

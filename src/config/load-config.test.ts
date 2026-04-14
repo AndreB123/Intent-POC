@@ -30,12 +30,13 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "  model:",
       "  apiKeyEnv: GEMINI_API_KEY",
       "  apiVersion:",
-      "  allowIntentPlanning: true",
+      "  allowBDDPlanning: true",
+      "  allowTDDPlanning: true",
       "  stages:",
       "    promptNormalization:",
       "      model: gemini-3.1-flash",
       "      apiVersion: v1alpha",
-      "    intentPlanning:",
+      "    bddPlanning:",
       "      model: gemini-3.1",
       "      apiKeyEnv:",
       "sources:",
@@ -95,16 +96,16 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.agent.model, undefined);
   assert.equal(loaded.config.agent.apiKeyEnv, "GEMINI_API_KEY");
   assert.equal(loaded.config.agent.apiVersion, undefined);
-  assert.equal(loaded.config.agent.allowIntentPlanning, true);
+  assert.equal(loaded.config.agent.allowBDDPlanning, true);
+  assert.equal(loaded.config.agent.allowTDDPlanning, true);
   assert.equal(loaded.config.agent.stages.promptNormalization.model, "gemini-3.1-flash");
   assert.equal(loaded.config.agent.stages.promptNormalization.apiVersion, "v1alpha");
-  assert.equal(loaded.config.agent.stages.intentPlanning.model, "gemini-3.1");
-  assert.equal(loaded.config.agent.stages.intentPlanning.apiKeyEnv, undefined);
+  assert.equal(loaded.config.agent.stages.bddPlanning.model, "gemini-3.1");
+  assert.equal(loaded.config.agent.stages.bddPlanning.apiKeyEnv, undefined);
   assert.equal(loaded.config.linear.defaultStateIds.started, undefined);
   assert.equal(loaded.config.sources.s1.planning.repoId, "intent-poc");
   assert.deepEqual(loaded.config.sources.s1.planning.notes, ["Current workspace bootstrap repo"]);
   assert.equal(loaded.config.sources.s1.studio.displayName, "Current app");
-  assert.equal(loaded.config.sources.s1.studio.visible, true);
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });

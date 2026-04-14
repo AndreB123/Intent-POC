@@ -3,6 +3,7 @@ import { CaptureOutcome } from "../capture/capture-target";
 import { ComparisonSummary } from "../compare/run-comparison";
 import { LoadedConfig } from "../config/load-config";
 import { AppConfig, RunMode, SourceConfig, configSchema } from "../config/schema";
+import { SourceRunAttemptRecord, SourceStageExecutionRecord } from "../evidence/write-manifest";
 import { ExecuteSourceRunInput, SourceRunResult } from "./run-intent";
 
 interface BehaviorTestConfigOptions {
@@ -42,8 +43,13 @@ export function buildBehaviorSource(input: BehaviorSourceInput): SourceConfig {
     aliases: input.aliases,
     planning: input.planning,
     studio: {
-      visible: true,
       ...input.studio
+    },
+    testing: {
+      playwright: {
+        enabled: false,
+        outputDir: "tests/intent/generated"
+      }
     },
     source: input.source ?? {
       type: "local",
@@ -128,8 +134,7 @@ export function buildDemoCatalogBehaviorSource(rootDir: string): SourceConfig {
       notes: ["Use this repo as the first concrete repo-context example while agent access is pending."]
     },
     studio: {
-      displayName: "Current app",
-      visible: true
+      displayName: "Current app"
     },
     startCommand: "npm run demo:serve -- --port 6006",
     baseUrl: "http://127.0.0.1:6006",
@@ -297,6 +302,32 @@ export function buildCapturedOutcome(
   };
 }
 
+export function buildSourceStageExecutionRecord(
+  overrides: Partial<SourceStageExecutionRecord> = {}
+): SourceStageExecutionRecord {
+  return {
+    status: "skipped",
+    summary: "Stage skipped.",
+    commands: [],
+    ...overrides
+  };
+}
+
+export function buildSourceRunAttemptRecord(
+  overrides: Partial<SourceRunAttemptRecord> = {}
+): SourceRunAttemptRecord {
+  return {
+    attemptNumber: overrides.attemptNumber ?? 1,
+    startedAt: overrides.startedAt ?? "2026-01-01T00:00:00.000Z",
+    finishedAt: overrides.finishedAt ?? "2026-01-01T00:00:01.000Z",
+    status: overrides.status ?? "completed",
+    failureStage: overrides.failureStage,
+    implementation: buildSourceStageExecutionRecord(overrides.implementation),
+    qaVerification: buildSourceStageExecutionRecord(overrides.qaVerification),
+    ...overrides
+  };
+}
+
 export function buildSourceRunResult(
   input: ExecuteSourceRunInput,
   overrides: {
@@ -304,6 +335,7 @@ export function buildSourceRunResult(
     captures?: SourceRunResult["captures"];
     comparison?: SourceRunResult["comparison"];
     error?: string;
+    attempts?: SourceRunResult["attempts"];
   } = {}
 ): SourceRunResult {
   return {
@@ -314,6 +346,8 @@ export function buildSourceRunResult(
     comparison: overrides.comparison,
     error: overrides.error,
     linearIssue: input.sourceIssue,
+    generatedPlaywrightTests: [],
+    attempts: overrides.attempts ?? [],
     summaryMarkdown: `# ${input.sourcePlan.sourceId}`
   };
 }

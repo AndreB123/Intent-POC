@@ -1,6 +1,13 @@
 import { AgentConfig } from "../config/schema";
 
-export const AGENT_STAGE_SEQUENCE = ["promptNormalization", "intentPlanning"] as const;
+export const AGENT_STAGE_SEQUENCE = [
+  "promptNormalization",
+  "linearScoping",
+  "bddPlanning",
+  "tddPlanning",
+  "implementation",
+  "qaVerification"
+] as const;
 
 export type AgentStageId = (typeof AGENT_STAGE_SEQUENCE)[number];
 
@@ -16,25 +23,25 @@ export const GEMINI_MODEL_OPTIONS: GeminiModelOption[] = [
     id: "gemini-3",
     label: "Gemini 3",
     description: "Highest-quality Gemini 3 option for deeper planning passes.",
-    recommendedStages: ["intentPlanning"]
+    recommendedStages: ["bddPlanning", "tddPlanning", "implementation", "qaVerification"]
   },
   {
     id: "gemini-3-flash",
     label: "Gemini 3 Flash",
     description: "Fast Gemini 3 option for lightweight prompt interpretation.",
-    recommendedStages: ["promptNormalization"]
+    recommendedStages: ["promptNormalization", "linearScoping"]
   },
   {
     id: "gemini-3.1",
     label: "Gemini 3.1",
     description: "Latest high-reasoning Gemini option for intent planning and refinement.",
-    recommendedStages: ["intentPlanning"]
+    recommendedStages: ["bddPlanning", "tddPlanning", "implementation", "qaVerification"]
   },
   {
     id: "gemini-3.1-flash",
     label: "Gemini 3.1 Flash",
     description: "Latest fast Gemini option for prompt interpretation and bounded extraction.",
-    recommendedStages: ["promptNormalization"]
+    recommendedStages: ["promptNormalization", "linearScoping"]
   }
 ];
 
@@ -45,7 +52,14 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     label: string;
     description: string;
     defaultModel: string;
-    enabledFlag: "allowPromptNormalization" | "allowIntentPlanning";
+    defaultEnabled: boolean;
+    enabledFlag:
+      | "allowPromptNormalization"
+      | "allowLinearScoping"
+      | "allowBDDPlanning"
+      | "allowTDDPlanning"
+      | "allowImplementation"
+      | "allowQAVerification";
   }
 > = {
   promptNormalization: {
@@ -53,14 +67,48 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     label: "Prompt Interpretation",
     description: "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
     defaultModel: "gemini-3.1-flash",
+    defaultEnabled: true,
     enabledFlag: "allowPromptNormalization"
   },
-  intentPlanning: {
-    id: "intentPlanning",
-    label: "Intent Planning",
-    description: "Refine the business intent, acceptance criteria, and BDD plan after bounded normalization.",
+  linearScoping: {
+    id: "linearScoping",
+    label: "Linear Scoping",
+    description: "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+    defaultModel: "gemini-3.1-flash",
+    defaultEnabled: true,
+    enabledFlag: "allowLinearScoping"
+  },
+  bddPlanning: {
+    id: "bddPlanning",
+    label: "BDD Planning",
+    description: "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
     defaultModel: "gemini-3.1",
-    enabledFlag: "allowIntentPlanning"
+    defaultEnabled: true,
+    enabledFlag: "allowBDDPlanning"
+  },
+  tddPlanning: {
+    id: "tddPlanning",
+    label: "TDD Planning",
+    description: "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+    defaultModel: "gemini-3.1",
+    defaultEnabled: true,
+    enabledFlag: "allowTDDPlanning"
+  },
+  implementation: {
+    id: "implementation",
+    label: "Implementation",
+    description: "Apply the planned changes against the scoped source workspace.",
+    defaultModel: "gemini-3.1",
+    defaultEnabled: false,
+    enabledFlag: "allowImplementation"
+  },
+  qaVerification: {
+    id: "qaVerification",
+    label: "QA Verification",
+    description: "Verify implementation output, tests, and evidence before completion or retry.",
+    defaultModel: "gemini-3.1",
+    defaultEnabled: false,
+    enabledFlag: "allowQAVerification"
   }
 };
 
@@ -104,7 +152,7 @@ export function resolveAgentStageConfig(
     id: stageId,
     label: definition.label,
     description: definition.description,
-    enabled: stageConfig.enabled ?? (agent?.[definition.enabledFlag] ?? true),
+    enabled: stageConfig.enabled ?? (agent?.[definition.enabledFlag] ?? definition.defaultEnabled),
     provider: stageConfig.provider ?? agent?.provider,
     model: stageConfig.model ?? agent?.model ?? definition.defaultModel,
     temperature: stageConfig.temperature ?? agent?.temperature ?? 0.1,

@@ -16,10 +16,41 @@ export type ExecutionDestinationType =
 export type ExecutionDestinationStatus = "active" | "planned" | "inactive";
 export type ExecutionToolType =
   | "intent-planning"
+  | "linear-scoping"
+  | "playwright-tdd"
   | "screenshot"
   | "comparison"
+  | "environment-deployment"
+  | "implementation"
+  | "qa-verification"
   | "reporting"
   | "linear-publishing";
+
+export type PlaywrightCheckpointAction = "goto" | "click" | "fill" | "assert-visible";
+
+export interface PlaywrightCheckpoint {
+  id: string;
+  label: string;
+  action: PlaywrightCheckpointAction;
+  assertion: string;
+  screenshotId: string;
+  path?: string;
+  target?: string;
+  value?: string;
+  captureId?: string;
+  locator?: string;
+  waitForSelector?: string;
+}
+
+export interface PlaywrightSpecArtifact {
+  framework: "playwright";
+  sourceId: string;
+  relativeSpecPath: string;
+  suiteName: string;
+  testName: string;
+  scenarioIds: string[];
+  checkpoints: PlaywrightCheckpoint[];
+}
 
 export interface AcceptanceCriterion {
   id: string;
@@ -39,12 +70,17 @@ export interface BDDScenario {
 
 export interface TDDWorkItem {
   id: string;
+  type: "playwright-spec";
   title: string;
   description: string;
   scenarioIds: string[];
   sourceIds: string[];
   userVisibleOutcome: string;
   verification: string;
+  playwright: {
+    generatedBy: "rules" | "llm";
+    specs: PlaywrightSpecArtifact[];
+  };
 }
 
 export interface BusinessIntent {

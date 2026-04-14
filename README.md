@@ -71,7 +71,8 @@ http://127.0.0.1:6010/
 The prompt screen now lets you:
 - submit an intent prompt
 - choose work scope from config-backed checkbox cards
-- open the active config in the editor to rename scope cards or add repos
+- edit source labels and repo context directly in Studio
+- open the active config in the editor when you need structural source changes
 - override Gemini models per AI stage
 - watch live orchestration status
 - inspect Linear activity when enabled
@@ -89,7 +90,7 @@ You can switch demo library variants in the browser with:
 http://127.0.0.1:6010/library?variant=v2
 ```
 
-The sample `intent-poc.yaml` now starts with one visible Studio scope source labeled `Current app`, plus a hidden automation-only source for tracked demo screenshots. Add more repos under `sources` when you want broader scope.
+The sample `intent-poc.yaml` now starts with two visible Studio scope sources: `Current app` and `Demo components`. Add more repos under `sources` when you want broader scope.
 
 ## Run
 
@@ -113,7 +114,7 @@ npm run dev -- run --config ./intent-poc.local-no-linear.yaml --source demo-cata
 
 `--source` now requests source scope rather than overriding a single source. Repeat the flag or pass a comma-separated list when the run should stay inside a specific set of configured sources.
 
-Studio work scope cards are driven by YAML. The display name and visibility come from `sources.<id>.studio`, while the contextual repo text comes from `sources.<id>.planning`:
+Studio work scope cards are driven by YAML. The display name comes from `sources.<id>.studio`, while the contextual repo text comes from `sources.<id>.planning`. You can edit the user-facing label, repo label, role, and summary directly in the Studio Source Metadata panel.
 
 ```yaml
 sources:
@@ -123,10 +124,9 @@ sources:
 			summary: Current workspace used for intent planning and demo evidence flows.
 		studio:
 			displayName: Current app
-			visible: true
 ```
 
-Use the `Open config in editor` action in the Studio when you want to rename the current card, expose hidden automation sources, or add another repo as a new checkbox.
+Use the `Open config in editor` action in the Studio when you want to add, remove, or structurally change sources. Use the in-Studio editor when you only need to rename a source or improve its context.
 
 Stage-specific Gemini models live under `agent.stages` in YAML. Studio can override those per run without mutating the checked-in config, and custom Gemini model ids are allowed when you need something outside the curated list.
 

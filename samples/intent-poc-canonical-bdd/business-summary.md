@@ -13,7 +13,11 @@
 ## AI Stages
 
 - Prompt Interpretation: skipped [deterministic]
-- Intent Planning: skipped [deterministic]
+- Linear Scoping: completed [deterministic]
+- BDD Planning: completed [deterministic]
+- TDD Planning: completed [deterministic]
+- Implementation: skipped [deterministic]
+- QA Verification: skipped [deterministic]
 
 ## Business Intent
 
@@ -63,25 +67,33 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
   - Sources: demo-catalog
   - Outcome: turn the request into acceptance-ready work for the built-in catalog experience
   - Verification: publish a reviewable evidence package for GitHub and documentation stakeholders
+  - Playwright specs: 1
+  - Checkpoints: 3
 - Executable evidence is prepared for applicable sources
   - Sources: demo-catalog
   - Outcome: Evidence is ready to be gathered from demo-catalog.
   - Verification: The resulting work remains understandable without a specific agent implementation.
+  - Playwright specs: 1
+  - Checkpoints: 3
 - Results are distributed consistently
   - Sources: demo-catalog
   - Outcome: Stakeholders can inspect the outcome through a consistent package tied to the intent.
   - Verification: Distribution remains decoupled from any single source-specific workflow.
+  - Playwright specs: 1
+  - Checkpoints: 3
 - Produce visible evidence for demo-catalog
   - Sources: demo-catalog
   - Outcome: Users can verify the outcome for demo-catalog without reading implementation details.
   - Verification: Evidence for demo-catalog is linked back to the intent and its scenarios.
+  - Playwright specs: 1
+  - Checkpoints: 3
 
 ## Execution Plan
 
 - Orchestration strategy: single-source
 - Planned sources: demo-catalog
 - Destinations: Controller artifacts [active], Linear parent issue [planned], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]
-- Tools: Intent planning [enabled], Visual evidence capture [enabled], Evidence comparison [planned], Evidence reporting [enabled], Linear publishing [planned]
+- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual evidence capture [enabled], Evidence comparison [planned], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]
 
 ## Source Runs
 
@@ -89,6 +101,9 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Status: completed
 - Error: none
 - Linear issue: not created
+- Generated Playwright specs: 0
+- Attempts: 0
+- Latest runtime result: not run
 - Summary: artifacts/runs/<generated-run-id>/sources/demo-catalog/summary.md
 - Manifest: artifacts/runs/<generated-run-id>/sources/demo-catalog/manifest.json
 

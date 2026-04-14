@@ -136,7 +136,7 @@ test("runIntent Given the canonical Intent POC BDD sample When the run is a dry 
   );
   assert.deepEqual(
     events.map((event) => event.phase),
-    ["config", "intent", "artifacts", "linear", "run"]
+    ["config", "linear", "intent", "artifacts", "run"]
   );
   assert.deepEqual(normalizeIntentSnapshot(normalizedIntent!), normalizedIntentSnapshot);
   assert.deepEqual(normalizePlanLifecycleSnapshot(planLifecycle!), planLifecycleSnapshot);
@@ -226,7 +226,8 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
       captures: result.sourceRuns[0]!.captures,
       comparison: result.sourceRuns[0]!.comparison,
       status: result.sourceRuns[0]!.status,
-      error: result.sourceRuns[0]!.error
+      error: result.sourceRuns[0]!.error,
+      attempts: result.sourceRuns[0]!.attempts
     });
 
     assert.deepEqual(executedSources, ["demo-catalog"]);
@@ -237,7 +238,7 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
     assert.equal(result.errors.length, 0);
     assert.deepEqual(
       events.map((event) => event.phase),
-      ["config", "intent", "artifacts", "linear", "artifacts", "artifacts", "run"]
+      ["config", "linear", "intent", "artifacts", "artifacts", "artifacts", "run"]
     );
     assertIntentPocBddSamplePlan(result.normalizedIntent);
     assert.equal(planLifecycle?.summary, INTENT_POC_BDD_SAMPLE.expected.summary);

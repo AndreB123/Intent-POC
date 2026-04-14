@@ -1,3 +1,4 @@
+import path from "node:path";
 import { LoadedConfig, loadConfig } from "../config/load-config";
 import { AppConfig, CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
@@ -8,14 +9,17 @@ import { publishArtifactsToSourceIfConfigured } from "../evidence/publish-artifa
 import { updateScreenshotLibrary } from "../evidence/screenshot-library";
 import {
   BusinessLinearPublication,
+  SourceRunAttemptRecord,
   writePlanLifecycleFile,
   SourceEvidenceRecord,
+  SourceStageCommandRecord,
+  SourceStageExecutionRecord,
   writeBusinessEvidenceFiles,
   writeSourceEvidenceFiles
 } from "../evidence/write-manifest";
 import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evidence/write-summary";
-import { NormalizedIntent } from "../intent/intent-types";
-import { RunAgentConfigOverride, applyAgentOverrides } from "../intent/agent-stage-config";
+import { NormalizedIntent, TDDWorkItem } from "../intent/intent-types";
+import { RunAgentConfigOverride, applyAgentOverrides, resolveAgentStageConfig } from "../intent/agent-stage-config";
 import { normalizeIntentWithAgent } from "../intent/normalize-intent";
 import { LinearClient, LinearIssueRef } from "../linear/linear-client";
 import {
@@ -26,16 +30,29 @@ import {
 } from "../linear/planner-sections";
 import { startApp } from "../runtime/start-app";
 import { waitForReady } from "../runtime/wait-for-ready";
-import { writeJsonFile } from "../shared/fs";
+import { runCommandAllowFailure } from "../shared/process";
+import { sanitizeFileSegment, writeJsonFile, writeTextFile } from "../shared/fs";
 import { log } from "../shared/log";
 import { prepareSourceWorkspace } from "../target/prepare-workspace";
 import { ResolvedSourceWorkspace, resolveSourceWorkspace } from "../target/resolve-target";
 import { upsertTrackedScreenshots } from "../demo-app/capture/upsert-tracked-screenshots";
+import { writeGeneratedPlaywrightTests } from "../tdd/write-generated-playwright-tests";
 
 export interface RunIntentEvent {
   timestamp: string;
   level: "info" | "warn" | "error";
-  phase: "config" | "intent" | "linear" | "workspace" | "app" | "capture" | "comparison" | "artifacts" | "run";
+  phase:
+    | "config"
+    | "intent"
+    | "linear"
+    | "workspace"
+    | "implementation"
+    | "qa-verification"
+    | "app"
+    | "capture"
+    | "comparison"
+    | "artifacts"
+    | "run";
   message: string;
   details?: unknown;
 }
@@ -87,9 +104,11 @@ export interface LinearClientLike {
 }
 
 type ExecutionSourcePlan = NormalizedIntent["executionPlan"]["sources"][number];
+type LinearPlanningDepth = "scoping" | "full";
 
 export interface ExecuteSourceRunInput {
   config: AppConfig;
+  agentConfig: AppConfig["agent"];
   normalizedIntent: NormalizedIntent;
   sourcePlan: ExecutionSourcePlan;
   runPaths: RunPaths;
@@ -100,6 +119,52 @@ export interface ExecuteSourceRunInput {
   parentIssue: LinearIssueRef | null;
   sourceIssue: LinearIssueRef | null;
   linearErrors: string[];
+  executeImplementationStage: (input: ExecuteImplementationStageInput) => Promise<SourceStageExecutionRecord>;
+  executeQAVerificationStage: (input: ExecuteQAVerificationStageInput) => Promise<SourceStageExecutionRecord>;
+}
+
+export interface ExecuteImplementationStageInput {
+  config: AppConfig;
+  normalizedIntent: NormalizedIntent;
+  sourcePlan: ExecutionSourcePlan;
+  sourcePaths: SourceRunPaths;
+  workspace: ResolvedSourceWorkspace;
+  generatedPlaywrightTests: string[];
+  attemptNumber: number;
+  options: RunIntentOptions;
+}
+
+export interface ExecuteQAVerificationStageInput {
+  config: AppConfig;
+  normalizedIntent: NormalizedIntent;
+  sourcePlan: ExecutionSourcePlan;
+  sourcePaths: SourceRunPaths;
+  workspace: ResolvedSourceWorkspace;
+  generatedPlaywrightTests: string[];
+  attemptNumber: number;
+  options: RunIntentOptions;
+}
+
+export interface SourceAttemptExecutionResult<Resource = void> {
+  implementation: SourceStageExecutionRecord;
+  qaVerification: SourceStageExecutionRecord;
+  resource?: Resource;
+}
+
+export interface RunSourceAttemptLoopInput<Resource = void> {
+  sourceId: string;
+  maxAttempts: number;
+  retryEnabled: boolean;
+  executeAttempt: (attemptNumber: number) => Promise<SourceAttemptExecutionResult<Resource>>;
+  releaseResource?: (resource: Resource) => Promise<void>;
+  onRetry?: (input: { attempt: SourceRunAttemptRecord; nextAttemptNumber: number }) => void;
+}
+
+export interface RunSourceAttemptLoopResult<Resource = void> {
+  attempts: SourceRunAttemptRecord[];
+  status: "completed" | "failed";
+  error?: string;
+  resource?: Resource;
 }
 
 export interface RunIntentDependencies {
@@ -108,12 +173,18 @@ export interface RunIntentDependencies {
   createRunPaths: typeof createRunPaths;
   createLinearClient: (config: AppConfig["linear"]) => LinearClientLike;
   executeSourceRun: (input: ExecuteSourceRunInput) => Promise<SourceRunResult>;
+  executeImplementationStage: (input: ExecuteImplementationStageInput) => Promise<SourceStageExecutionRecord>;
+  executeQAVerificationStage: (input: ExecuteQAVerificationStageInput) => Promise<SourceStageExecutionRecord>;
   writeJsonFile: typeof writeJsonFile;
   writePlanLifecycleFile: typeof writePlanLifecycleFile;
   writeBusinessEvidenceFiles: typeof writeBusinessEvidenceFiles;
   writeBusinessSummaryMarkdown: typeof writeBusinessSummaryMarkdown;
   retainRecentRuns: typeof retainRecentRuns;
 }
+
+const MAX_SOURCE_ATTEMPTS = 3;
+const QA_COMMAND_TIMEOUT_MS = 600_000;
+type RunningAppHandle = Awaited<ReturnType<typeof startApp>>;
 
 function buildTrackedBaselineSummary(mode: RunMode, captures: CaptureOutcome[]): ComparisonSummary {
   const counts = emptyComparisonCounts();
@@ -195,6 +266,472 @@ function captureErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function quoteShellArg(value: string): string {
+  return JSON.stringify(value);
+}
+
+function buildSkippedStageExecutionRecord(summary: string): SourceStageExecutionRecord {
+  return {
+    status: "skipped",
+    summary,
+    commands: []
+  };
+}
+
+function buildAttemptFailureMessage(sourceId: string, attempt: SourceRunAttemptRecord): string {
+  if (attempt.failureStage === "implementation") {
+    return `Implementation failed for source '${sourceId}' on attempt ${attempt.attemptNumber}: ${attempt.implementation.error ?? attempt.implementation.summary}`;
+  }
+
+  return `QA verification failed for source '${sourceId}' on attempt ${attempt.attemptNumber}: ${attempt.qaVerification.error ?? attempt.qaVerification.summary}`;
+}
+
+function buildCommandLogContent(command: SourceStageCommandRecord, stdout: string, stderr: string): string {
+  return [
+    `Command: ${command.command}`,
+    `Label: ${command.label}`,
+    `Cwd: ${command.cwd}`,
+    `Status: ${command.status}`,
+    `Exit code: ${command.exitCode ?? -1}`,
+    `Timed out: ${command.timedOut ? "yes" : "no"}`,
+    `Started at: ${command.startedAt}`,
+    `Finished at: ${command.finishedAt}`,
+    `Duration ms: ${command.durationMs}`,
+    command.error ? `Error: ${command.error}` : "Error: none",
+    "",
+    "## stdout",
+    "",
+    stdout || "",
+    "",
+    "## stderr",
+    "",
+    stderr || "",
+    ""
+  ].join("\n");
+}
+
+async function runLoggedStageCommand(input: {
+  stageId: "qaVerification";
+  attemptNumber: number;
+  sourcePaths: SourceRunPaths;
+  label: string;
+  command: string;
+  cwd: string;
+  env?: NodeJS.ProcessEnv;
+  timeoutMs: number;
+}): Promise<SourceStageCommandRecord> {
+  const startedAt = new Date().toISOString();
+  const result = await runCommandAllowFailure(input.command, {
+    cwd: input.cwd,
+    env: input.env,
+    timeoutMs: input.timeoutMs
+  });
+  const finishedAt = new Date().toISOString();
+  const status = !result.timedOut && result.exitCode === 0 ? "completed" : "failed";
+  const logPath = path.join(
+    input.sourcePaths.attemptsDir,
+    `attempt-${input.attemptNumber}-${sanitizeFileSegment(input.stageId)}-${sanitizeFileSegment(input.label)}.log`
+  );
+  const error = status === "failed"
+    ? result.timedOut
+      ? `Command timed out after ${input.timeoutMs}ms.`
+      : `Command failed (${result.exitCode}).`
+    : undefined;
+  const commandRecord: SourceStageCommandRecord = {
+    label: input.label,
+    command: input.command,
+    cwd: input.cwd,
+    startedAt,
+    finishedAt,
+    durationMs: Date.parse(finishedAt) - Date.parse(startedAt),
+    status,
+    exitCode: result.exitCode,
+    timedOut: result.timedOut || undefined,
+    error,
+    logPath
+  };
+
+  await writeTextFile(logPath, buildCommandLogContent(commandRecord, result.stdout, result.stderr));
+
+  return commandRecord;
+}
+
+async function executeDefaultImplementationStage(): Promise<SourceStageExecutionRecord> {
+  return buildSkippedStageExecutionRecord(
+    "No implementation executor is wired yet, so the current workspace state is verified as-is."
+  );
+}
+
+async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationStageInput): Promise<SourceStageExecutionRecord> {
+  const env = {
+    ...input.workspace.source.workspace.env,
+    ...input.workspace.source.app.env,
+    INTENT_POC_BASE_URL: input.workspace.baseUrl
+  };
+  const commands = [
+    {
+      label: "typecheck",
+      command: "npm run typecheck"
+    },
+    {
+      label: "test-code",
+      command: "npm run test:code"
+    },
+    ...(input.generatedPlaywrightTests.length > 0
+      ? [
+          {
+            label: "generated-playwright",
+            command: `npx playwright test ${input.generatedPlaywrightTests
+              .map((filePath) => quoteShellArg(path.relative(input.workspace.rootDir, filePath)))
+              .join(" ")}`
+          }
+        ]
+      : [])
+  ];
+  const commandRecords: SourceStageCommandRecord[] = [];
+
+  for (const command of commands) {
+    emitRunEvent(input.options, "qa-verification", `Running QA command '${command.label}'.`, {
+      sourceId: input.sourcePlan.sourceId,
+      attemptNumber: input.attemptNumber,
+      command: command.command,
+      cwd: input.workspace.rootDir
+    });
+
+    const commandRecord = await runLoggedStageCommand({
+      stageId: "qaVerification",
+      attemptNumber: input.attemptNumber,
+      sourcePaths: input.sourcePaths,
+      label: command.label,
+      command: command.command,
+      cwd: input.workspace.rootDir,
+      env,
+      timeoutMs: QA_COMMAND_TIMEOUT_MS
+    });
+    commandRecords.push(commandRecord);
+
+    if (commandRecord.status === "failed") {
+      return {
+        status: "failed",
+        summary: `QA verification failed while running '${command.label}'.`,
+        error: commandRecord.error,
+        commands: commandRecords
+      };
+    }
+  }
+
+  return {
+    status: "completed",
+    summary: `QA verification passed ${commandRecords.length} command${commandRecords.length === 1 ? "" : "s"}.`,
+    commands: commandRecords
+  };
+}
+
+async function startReadySourceApp(input: {
+  config: AppConfig;
+  workspace: ResolvedSourceWorkspace;
+  sourcePaths: SourceRunPaths;
+  runPaths: RunPaths;
+  options: RunIntentOptions;
+  reason: "qa-verification" | "evidence-capture";
+  attemptNumber?: number;
+}): Promise<RunningAppHandle> {
+  emitRunEvent(input.options, "app", "Starting source app.", {
+    sourceId: input.workspace.sourceId,
+    baseUrl: input.workspace.baseUrl,
+    startCommand: input.workspace.source.app.startCommand,
+    workdir: input.workspace.source.app.workdir,
+    reason: input.reason,
+    attemptNumber: input.attemptNumber
+  });
+
+  const appHandle = await startApp(input.workspace, input.sourcePaths.appLogPath);
+  log.info("Source app started.", {
+    sourceId: input.workspace.sourceId,
+    pid: appHandle.pid,
+    logPath: input.sourcePaths.appLogPath,
+    reason: input.reason,
+    attemptNumber: input.attemptNumber
+  });
+
+  emitRunEvent(input.options, "app", "Source app started.", {
+    sourceId: input.workspace.sourceId,
+    pid: appHandle.pid,
+    appLogPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.appLogPath),
+    reason: input.reason,
+    attemptNumber: input.attemptNumber
+  });
+
+  emitRunEvent(input.options, "app", "Waiting for readiness check.", {
+    sourceId: input.workspace.sourceId,
+    readiness: input.workspace.source.app.readiness,
+    reason: input.reason,
+    attemptNumber: input.attemptNumber
+  });
+
+  await waitForReady(input.config, input.workspace);
+  log.info("Source app is ready.", {
+    sourceId: input.workspace.sourceId,
+    baseUrl: input.workspace.baseUrl,
+    reason: input.reason,
+    attemptNumber: input.attemptNumber
+  });
+
+  emitRunEvent(input.options, "app", "Source app is ready.", {
+    sourceId: input.workspace.sourceId,
+    baseUrl: input.workspace.baseUrl,
+    reason: input.reason,
+    attemptNumber: input.attemptNumber
+  });
+
+  return appHandle;
+}
+
+export async function runSourceAttemptLoop<Resource>(
+  input: RunSourceAttemptLoopInput<Resource>
+): Promise<RunSourceAttemptLoopResult<Resource>> {
+  const attempts: SourceRunAttemptRecord[] = [];
+
+  for (let attemptNumber = 1; attemptNumber <= input.maxAttempts; attemptNumber += 1) {
+    const startedAt = new Date().toISOString();
+    const result = await input.executeAttempt(attemptNumber);
+    const finishedAt = new Date().toISOString();
+    const failureStage =
+      result.implementation.status === "failed"
+        ? "implementation"
+        : result.qaVerification.status === "failed"
+          ? "qaVerification"
+          : undefined;
+    const attempt: SourceRunAttemptRecord = {
+      attemptNumber,
+      startedAt,
+      finishedAt,
+      status: failureStage ? "failed" : "completed",
+      failureStage,
+      implementation: result.implementation,
+      qaVerification: result.qaVerification
+    };
+
+    attempts.push(attempt);
+
+    if (!failureStage) {
+      return {
+        attempts,
+        status: "completed",
+        resource: result.resource
+      };
+    }
+
+    if (result.resource && input.releaseResource) {
+      await input.releaseResource(result.resource);
+    }
+
+    const canRetry = input.retryEnabled && attemptNumber < input.maxAttempts && result.implementation.status !== "skipped";
+    if (!canRetry) {
+      return {
+        attempts,
+        status: "failed",
+        error: buildAttemptFailureMessage(input.sourceId, attempt)
+      };
+    }
+
+    input.onRetry?.({
+      attempt,
+      nextAttemptNumber: attemptNumber + 1
+    });
+  }
+
+  return {
+    attempts,
+    status: "failed",
+    error: `Implementation and QA attempts for source '${input.sourceId}' did not complete successfully.`
+  };
+}
+
+function formatWorkItemDescription(workItem: TDDWorkItem, includeSources: boolean): string {
+  const checkpointCount = workItem.playwright.specs.reduce((count, spec) => count + spec.checkpoints.length, 0);
+  const lines = [
+    `- ${workItem.title}`,
+    ...(includeSources ? [`  - Sources: ${workItem.sourceIds.join(", ")}`] : []),
+    `  - Outcome: ${workItem.userVisibleOutcome}`,
+    `  - Verification: ${workItem.verification}`,
+    `  - Playwright specs: ${workItem.playwright.specs.length}`,
+    `  - Checkpoints: ${checkpointCount}`
+  ];
+
+  if (workItem.playwright.specs.length > 0) {
+    lines.push(
+      `  - Spec paths: ${workItem.playwright.specs
+        .map((spec) => `${spec.sourceId}:${spec.relativeSpecPath}`)
+        .join(", ")}`
+    );
+  }
+
+  return lines.join("\n");
+}
+
+function buildRepoContextMarkdown(normalizedIntent: NormalizedIntent): string {
+  return (
+    normalizedIntent.planning.repoCandidates
+      .map((repo) => {
+        const details = [
+          `- ${repo.label} [${repo.selectionStatus}]`,
+          `  - Repo ID: ${repo.repoId}`,
+          `  - Sources: ${repo.sourceIds.join(", ")}`,
+          `  - Capture count: ${repo.captureCount}`,
+          `  - Reason: ${repo.reason}`
+        ];
+
+        if (repo.role) {
+          details.push(`  - Role: ${repo.role}`);
+        }
+
+        if (repo.summary) {
+          details.push(`  - Summary: ${repo.summary}`);
+        }
+
+        if (repo.locations.length > 0) {
+          details.push(`  - Locations: ${repo.locations.join(", ")}`);
+        }
+
+        if (repo.refs.length > 0) {
+          details.push(`  - Refs: ${repo.refs.join(", ")}`);
+        }
+
+        details.push(...repo.notes.map((note) => `  - Note: ${note}`));
+        return details.join("\n");
+      })
+      .join("\n") || "- None"
+  );
+}
+
+function buildExecutionSourcesMarkdown(normalizedIntent: NormalizedIntent): string {
+  return (
+    normalizedIntent.executionPlan.sources
+      .map(
+        (source) =>
+          `- ${source.sourceId} (${source.runMode}, ${source.captureScope.mode === "subset" ? source.captureScope.captureIds.join(", ") : "all captures"})`
+      )
+      .join("\n") || "- None"
+  );
+}
+
+function buildDestinationsMarkdown(normalizedIntent: NormalizedIntent): string {
+  return (
+    normalizedIntent.executionPlan.destinations
+      .map((destination) => `- ${destination.label} [${destination.status}] - ${destination.reason}`)
+      .join("\n") || "- None"
+  );
+}
+
+function buildToolsMarkdown(normalizedIntent: NormalizedIntent): string {
+  return (
+    normalizedIntent.executionPlan.tools
+      .map((tool) => `- ${tool.label} [${tool.enabled ? "enabled" : "planned"}] - ${tool.reason}`)
+      .join("\n") || "- None"
+  );
+}
+
+function buildPlanningLifecycleMarkdown(normalizedIntent: NormalizedIntent): string {
+  return (
+    [
+      `- Linear plan mode: ${normalizedIntent.planning.linearPlan.mode}`,
+      normalizedIntent.planning.linearPlan.issueReference
+        ? `- Resume issue: ${normalizedIntent.planning.linearPlan.issueReference}`
+        : undefined,
+      ...normalizedIntent.planning.reviewNotes.map((note) => `- ${note}`),
+      ...normalizedIntent.planning.plannerSections.map(
+        (section) => `- Managed section: ${section.title} - ${section.summary}`
+      )
+    ]
+      .filter((line): line is string => Boolean(line))
+      .join("\n") || "- None"
+  );
+}
+
+function describeSourceCaptureScope(sourcePlan: ExecutionSourcePlan | undefined): string {
+  return sourcePlan?.captureScope.mode === "subset" ? sourcePlan.captureScope.captureIds.join(", ") : "all configured captures";
+}
+
+function buildLinearScopingParentIssueDescription(input: {
+  rawPrompt: string;
+  normalizedIntent: NormalizedIntent;
+}): string {
+  return [
+    `## Business Intent`,
+    "",
+    input.normalizedIntent.businessIntent.statement,
+    "",
+    `## Desired Outcome`,
+    "",
+    input.normalizedIntent.businessIntent.desiredOutcome,
+    "",
+    `## Linear Scoping`,
+    "",
+    `- Summary: ${input.normalizedIntent.summary}`,
+    `- Orchestration strategy: ${input.normalizedIntent.executionPlan.orchestrationStrategy}`,
+    `- Planned sources: ${input.normalizedIntent.executionPlan.sources.map((source) => source.sourceId).join(", ") || "none"}`,
+    "",
+    `## Repo Context`,
+    "",
+    buildRepoContextMarkdown(input.normalizedIntent),
+    "",
+    `## Execution Sources`,
+    "",
+    buildExecutionSourcesMarkdown(input.normalizedIntent),
+    "",
+    `## Destinations`,
+    "",
+    buildDestinationsMarkdown(input.normalizedIntent),
+    "",
+    `## Tools`,
+    "",
+    buildToolsMarkdown(input.normalizedIntent),
+    "",
+    `## Plan Lifecycle`,
+    "",
+    buildPlanningLifecycleMarkdown(input.normalizedIntent),
+    "",
+    `## Raw Intent`,
+    "",
+    input.rawPrompt,
+    ""
+  ].join("\n");
+}
+
+function buildLinearScopingSourceIssueDescription(input: {
+  normalizedIntent: NormalizedIntent;
+  sourceId: string;
+}): string {
+  const sourcePlan = input.normalizedIntent.executionPlan.sources.find((source) => source.sourceId === input.sourceId);
+  const repoContext = input.normalizedIntent.planning.repoCandidates.find((repo) => repo.sourceIds.includes(input.sourceId));
+
+  return [
+    `## Source Lane`,
+    "",
+    `- Source: ${input.sourceId}`,
+    `- Mode: ${sourcePlan?.runMode ?? input.normalizedIntent.execution.runMode}`,
+    `- Capture scope: ${describeSourceCaptureScope(sourcePlan)}`,
+    `- Selection reason: ${sourcePlan?.selectionReason ?? "not recorded"}`,
+    repoContext ? `- Repo context: ${repoContext.label} (${repoContext.repoId})` : `- Repo context: not linked`,
+    "",
+    `## Linear Scope`,
+    "",
+    `- Business summary: ${input.normalizedIntent.summary}`,
+    `- Desired outcome: ${input.normalizedIntent.businessIntent.desiredOutcome}`,
+    `- Detailed BDD and Playwright-first TDD planning will be added after Linear scoping completes.`,
+    "",
+    `## Planner Warnings`,
+    "",
+    sourcePlan?.warnings.length ? sourcePlan.warnings.map((warning) => `- ${warning}`).join("\n") : "- None",
+    "",
+    `## Repo Notes`,
+    "",
+    repoContext?.notes.length ? repoContext.notes.map((note) => `- ${note}`).join("\n") : "- None",
+    ""
+  ].join("\n");
+}
+
 function buildParentIssueDescription(input: {
   rawPrompt: string;
   normalizedIntent: NormalizedIntent;
@@ -215,69 +752,7 @@ function buildParentIssueDescription(input: {
     )
     .join("\n\n");
   const workItems = input.normalizedIntent.businessIntent.workItems
-    .map(
-      (workItem) =>
-        [
-          `- ${workItem.title}`,
-          `  - Sources: ${workItem.sourceIds.join(", ")}`,
-          `  - Outcome: ${workItem.userVisibleOutcome}`,
-          `  - Verification: ${workItem.verification}`
-        ].join("\n")
-    )
-    .join("\n");
-  const repoContext = input.normalizedIntent.planning.repoCandidates
-    .map((repo) => {
-      const details = [
-        `- ${repo.label} [${repo.selectionStatus}]`,
-        `  - Repo ID: ${repo.repoId}`,
-        `  - Sources: ${repo.sourceIds.join(", ")}`,
-        `  - Capture count: ${repo.captureCount}`,
-        `  - Reason: ${repo.reason}`
-      ];
-
-      if (repo.role) {
-        details.push(`  - Role: ${repo.role}`);
-      }
-
-      if (repo.summary) {
-        details.push(`  - Summary: ${repo.summary}`);
-      }
-
-      if (repo.locations.length > 0) {
-        details.push(`  - Locations: ${repo.locations.join(", ")}`);
-      }
-
-      if (repo.refs.length > 0) {
-        details.push(`  - Refs: ${repo.refs.join(", ")}`);
-      }
-
-      details.push(...repo.notes.map((note) => `  - Note: ${note}`));
-      return details.join("\n");
-    })
-    .join("\n");
-  const sources = input.normalizedIntent.executionPlan.sources
-    .map(
-      (source) =>
-        `- ${source.sourceId} (${source.runMode}, ${source.captureScope.mode === "subset" ? source.captureScope.captureIds.join(", ") : "all captures"})`
-    )
-    .join("\n");
-  const destinations = input.normalizedIntent.executionPlan.destinations
-    .map((destination) => `- ${destination.label} [${destination.status}] - ${destination.reason}`)
-    .join("\n");
-  const tools = input.normalizedIntent.executionPlan.tools
-    .map((tool) => `- ${tool.label} [${tool.enabled ? "enabled" : "planned"}] - ${tool.reason}`)
-    .join("\n");
-  const planningLifecycle = [
-    `- Linear plan mode: ${input.normalizedIntent.planning.linearPlan.mode}`,
-    input.normalizedIntent.planning.linearPlan.issueReference
-      ? `- Resume issue: ${input.normalizedIntent.planning.linearPlan.issueReference}`
-      : undefined,
-    ...input.normalizedIntent.planning.reviewNotes.map((note) => `- ${note}`),
-    ...input.normalizedIntent.planning.plannerSections.map(
-      (section) => `- Managed section: ${section.title} - ${section.summary}`
-    )
-  ]
-    .filter((line): line is string => Boolean(line))
+    .map((workItem) => formatWorkItemDescription(workItem, true))
     .join("\n");
 
   return [
@@ -291,35 +766,35 @@ function buildParentIssueDescription(input: {
     "",
     `## Acceptance Criteria`,
     "",
-    acceptanceCriteria,
+    acceptanceCriteria || "- None",
     "",
     `## BDD Scenarios`,
     "",
-    scenarios,
+    scenarios || "- None",
     "",
     `## TDD Work Items`,
     "",
-    workItems,
+    workItems || "- None",
     "",
     `## Repo Context`,
     "",
-    repoContext,
+    buildRepoContextMarkdown(input.normalizedIntent),
     "",
     `## Execution Sources`,
     "",
-    sources,
+    buildExecutionSourcesMarkdown(input.normalizedIntent),
     "",
     `## Destinations`,
     "",
-    destinations,
+    buildDestinationsMarkdown(input.normalizedIntent),
     "",
     `## Tools`,
     "",
-    tools,
+    buildToolsMarkdown(input.normalizedIntent),
     "",
     `## Plan Lifecycle`,
     "",
-    planningLifecycle,
+    buildPlanningLifecycleMarkdown(input.normalizedIntent),
     "",
     `## Raw Intent`,
     "",
@@ -356,14 +831,7 @@ function buildSourceIssueDescription(input: {
     .join("\n\n");
   const workItems = input.normalizedIntent.businessIntent.workItems
     .filter((workItem) => workItem.sourceIds.includes(input.sourceId))
-    .map(
-      (workItem) =>
-        [
-          `- ${workItem.title}`,
-          `  - Outcome: ${workItem.userVisibleOutcome}`,
-          `  - Verification: ${workItem.verification}`
-        ].join("\n")
-    )
+    .map((workItem) => formatWorkItemDescription(workItem, false))
     .join("\n");
 
   return [
@@ -371,7 +839,7 @@ function buildSourceIssueDescription(input: {
     "",
     `- Source: ${input.sourceId}`,
     `- Mode: ${sourcePlan?.runMode ?? input.normalizedIntent.execution.runMode}`,
-    `- Capture scope: ${sourcePlan?.captureScope.mode === "subset" ? sourcePlan.captureScope.captureIds.join(", ") : "all configured captures"}`,
+    `- Capture scope: ${describeSourceCaptureScope(sourcePlan)}`,
     `- Selection reason: ${sourcePlan?.selectionReason ?? "not recorded"}`,
     repoContext ? `- Repo context: ${repoContext.label} (${repoContext.repoId})` : `- Repo context: not linked`,
     "",
@@ -397,22 +865,24 @@ function buildSourceIssueDescription(input: {
 function buildManagedParentIssueDescription(existingDescription: string | undefined, input: {
   rawPrompt: string;
   normalizedIntent: NormalizedIntent;
+  planningDepth?: LinearPlanningDepth;
 }): string {
   return upsertPlannerSection(existingDescription, {
     id: BUSINESS_PLAN_SECTION_ID,
     title: "IDD Plan",
-    body: buildParentIssueDescription(input)
+    body: input.planningDepth === "scoping" ? buildLinearScopingParentIssueDescription(input) : buildParentIssueDescription(input)
   });
 }
 
 function buildManagedSourceIssueDescription(existingDescription: string | undefined, input: {
   normalizedIntent: NormalizedIntent;
   sourceId: string;
+  planningDepth?: LinearPlanningDepth;
 }): string {
   return upsertPlannerSection(existingDescription, {
     id: sourceLaneSectionId(input.sourceId),
     title: `IDD Source Lane: ${input.sourceId}`,
-    body: buildSourceIssueDescription(input)
+    body: input.planningDepth === "scoping" ? buildLinearScopingSourceIssueDescription(input) : buildSourceIssueDescription(input)
   });
 }
 
@@ -460,14 +930,199 @@ async function safeLinearTask<T>(input: {
   }
 }
 
+async function upsertLinearParentIssue(input: {
+  linearClient: LinearClientLike;
+  options: RunIntentOptions;
+  errors: string[];
+  rawPrompt: string;
+  normalizedIntent: NormalizedIntent;
+  planningDepth: LinearPlanningDepth;
+  existingParentIssue?: LinearIssueRef | null;
+  resumeIssue?: string;
+  createIfMissing: boolean;
+}): Promise<LinearIssueRef | null> {
+  const issueTitle = input.normalizedIntent.linear.issueTitle;
+  const currentParentIssue = input.existingParentIssue ?? null;
+
+  if (currentParentIssue) {
+    return (
+      (await safeLinearTask({
+        enabled: true,
+        options: input.options,
+        errors: input.errors,
+        message: "Failed to update the Linear parent issue",
+        task: async () => {
+          const description = buildManagedParentIssueDescription(currentParentIssue.description, {
+            rawPrompt: input.rawPrompt,
+            normalizedIntent: input.normalizedIntent,
+            planningDepth: input.planningDepth
+          });
+
+          await input.linearClient.updateIssueTitle(currentParentIssue.id, issueTitle);
+          await input.linearClient.updateIssueDescription(currentParentIssue.id, description);
+
+          return {
+            ...currentParentIssue,
+            title: issueTitle,
+            description
+          };
+        }
+      })) ?? currentParentIssue
+    );
+  }
+
+  if (input.resumeIssue) {
+    return (
+      (await safeLinearTask({
+        enabled: true,
+        options: input.options,
+        errors: input.errors,
+        message: `Failed to resolve the Linear resume issue '${input.resumeIssue}'`,
+        task: async () => {
+          const existingIssue = await input.linearClient.fetchIssue(input.resumeIssue!);
+          if (!existingIssue) {
+            throw new Error(`Linear issue '${input.resumeIssue}' was not found.`);
+          }
+
+          const description = buildManagedParentIssueDescription(existingIssue.description, {
+            rawPrompt: input.rawPrompt,
+            normalizedIntent: input.normalizedIntent,
+            planningDepth: input.planningDepth
+          });
+
+          await input.linearClient.updateIssueTitle(existingIssue.id, issueTitle);
+          await input.linearClient.updateIssueDescription(existingIssue.id, description);
+
+          return {
+            ...existingIssue,
+            title: issueTitle,
+            description
+          };
+        }
+      })) ?? null
+    );
+  }
+
+  if (!input.createIfMissing) {
+    return null;
+  }
+
+  return (
+    (await safeLinearTask({
+      enabled: true,
+      options: input.options,
+      errors: input.errors,
+      message: "Failed to create the Linear parent issue",
+      task: async () =>
+        await input.linearClient.createIssue({
+          title: issueTitle,
+          description: buildManagedParentIssueDescription(undefined, {
+            rawPrompt: input.rawPrompt,
+            normalizedIntent: input.normalizedIntent,
+            planningDepth: input.planningDepth
+          })
+        })
+    })) ?? null
+  );
+}
+
+async function upsertLinearSourceIssues(input: {
+  linearClient: LinearClientLike;
+  options: RunIntentOptions;
+  errors: string[];
+  parentIssue: LinearIssueRef;
+  normalizedIntent: NormalizedIntent;
+  planningDepth: LinearPlanningDepth;
+  sourceIssues: Record<string, LinearIssueRef>;
+  loadReusableChildren: boolean;
+}): Promise<void> {
+  const reusableSourceIssues = input.loadReusableChildren
+    ? (
+        (await safeLinearTask({
+          enabled: true,
+          options: input.options,
+          errors: input.errors,
+          message: `Failed to list existing Linear child issues for '${input.parentIssue.identifier ?? input.parentIssue.id}'`,
+          task: async () => await input.linearClient.listChildIssues(input.parentIssue.id)
+        })) ?? []
+      )
+    : [];
+
+  for (const sourcePlan of input.normalizedIntent.executionPlan.sources) {
+    const existingSourceIssue = input.sourceIssues[sourcePlan.sourceId] ?? findReusableSourceIssue(reusableSourceIssues, sourcePlan.sourceId);
+    const issueTitle = buildSourceIssueTitle(input.normalizedIntent, sourcePlan.sourceId);
+
+    const sourceIssue = existingSourceIssue
+      ? await safeLinearTask({
+          enabled: true,
+          options: input.options,
+          errors: input.errors,
+          message: `Failed to update the Linear source issue for ${sourcePlan.sourceId}`,
+          details: { sourceId: sourcePlan.sourceId },
+          task: async () => {
+            const issueDescription = buildManagedSourceIssueDescription(existingSourceIssue.description, {
+              normalizedIntent: input.normalizedIntent,
+              sourceId: sourcePlan.sourceId,
+              planningDepth: input.planningDepth
+            });
+
+            await input.linearClient.updateIssueTitle(existingSourceIssue.id, issueTitle);
+            await input.linearClient.updateIssueDescription(existingSourceIssue.id, issueDescription);
+
+            return {
+              ...existingSourceIssue,
+              title: issueTitle,
+              description: issueDescription
+            };
+          }
+        })
+      : await safeLinearTask({
+          enabled: true,
+          options: input.options,
+          errors: input.errors,
+          message: `Failed to create the Linear source issue for ${sourcePlan.sourceId}`,
+          details: { sourceId: sourcePlan.sourceId },
+          task: async () =>
+            await input.linearClient.createIssue({
+              title: issueTitle,
+              description: buildManagedSourceIssueDescription(undefined, {
+                normalizedIntent: input.normalizedIntent,
+                sourceId: sourcePlan.sourceId,
+                planningDepth: input.planningDepth
+              }),
+              parentId: input.parentIssue.id
+            })
+        });
+
+    if (sourceIssue) {
+      input.sourceIssues[sourcePlan.sourceId] = sourceIssue;
+      emitRunEvent(
+        input.options,
+        "linear",
+        existingSourceIssue ? "Linear source issue updated." : "Linear source issue created.",
+        {
+          sourceId: sourcePlan.sourceId,
+          identifier: sourceIssue.identifier,
+          url: sourceIssue.url,
+          parentId: input.parentIssue.id,
+          planningDepth: input.planningDepth
+        }
+      );
+    }
+  }
+}
+
 async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRunResult> {
   let workspace: ResolvedSourceWorkspace | undefined;
   let captures: CaptureOutcome[] = [];
   let comparison: ComparisonSummary | undefined;
   let summaryMarkdown: string | undefined;
   let publishedSourcePath: string | undefined;
-  let appHandle: Awaited<ReturnType<typeof startApp>> | null = null;
+  let generatedPlaywrightTests: string[] = [];
+  let attempts: SourceRunAttemptRecord[] = [];
+  let appHandle: RunningAppHandle | null = null;
   let trackedScreenshotRoot: string | undefined;
+  const sourceErrors: string[] = [];
 
   try {
     emitRunEvent(input.options, "workspace", "Resolving source workspace.", {
@@ -495,6 +1150,21 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       checkoutMode: workspace.source.workspace.checkoutMode
     });
 
+    const generatedSpecBundle = await writeGeneratedPlaywrightTests({
+      workspace,
+      normalizedIntent: input.normalizedIntent,
+      sourceId: input.sourcePlan.sourceId
+    });
+
+    if (generatedSpecBundle) {
+      generatedPlaywrightTests = generatedSpecBundle.files;
+      emitRunEvent(input.options, "artifacts", "Generated Playwright specs written to source workspace.", {
+        sourceId: input.sourcePlan.sourceId,
+        outputDir: toRelativePath(input.runPaths.controllerRoot, generatedSpecBundle.outputDir),
+        files: generatedSpecBundle.files.map((filePath) => toRelativePath(input.runPaths.controllerRoot, filePath))
+      });
+    }
+
     await safeLinearTask({
       enabled: Boolean(input.linearClient && input.parentIssue && input.config.linear.commentOnProgress),
       options: input.options,
@@ -509,38 +1179,231 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       }
     });
 
-    emitRunEvent(input.options, "app", "Starting source app.", {
-      sourceId: workspace.sourceId,
-      baseUrl: workspace.baseUrl,
-      startCommand: workspace.source.app.startCommand,
-      workdir: workspace.source.app.workdir
-    });
+    const implementationStage = resolveAgentStageConfig(input.agentConfig, "implementation");
+    const qaVerificationStage = resolveAgentStageConfig(input.agentConfig, "qaVerification");
 
-    appHandle = await startApp(workspace, input.sourcePaths.appLogPath);
-    log.info("Source app started.", {
-      sourceId: workspace.sourceId,
-      pid: appHandle.pid,
-      logPath: input.sourcePaths.appLogPath
-    });
+    if (implementationStage.enabled || qaVerificationStage.enabled) {
+      const attemptLoop = await runSourceAttemptLoop<RunningAppHandle>({
+        sourceId: input.sourcePlan.sourceId,
+        maxAttempts: implementationStage.enabled ? MAX_SOURCE_ATTEMPTS : 1,
+        retryEnabled: implementationStage.enabled,
+        executeAttempt: async (attemptNumber) => {
+          let implementationResult = buildSkippedStageExecutionRecord(
+            implementationStage.enabled
+              ? "Implementation did not run."
+              : "Implementation stage is disabled for this run."
+          );
 
-    emitRunEvent(input.options, "app", "Source app started.", {
-      sourceId: workspace.sourceId,
-      pid: appHandle.pid,
-      appLogPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.appLogPath)
-    });
+          if (implementationStage.enabled) {
+            emitRunEvent(input.options, "implementation", "Implementation attempt started.", {
+              sourceId: input.sourcePlan.sourceId,
+              attemptNumber,
+              model: implementationStage.model,
+              provider: implementationStage.provider
+            });
 
-    emitRunEvent(input.options, "app", "Waiting for readiness check.", {
-      sourceId: workspace.sourceId,
-      readiness: workspace.source.app.readiness
-    });
+            try {
+              implementationResult = await input.executeImplementationStage({
+                config: input.config,
+                normalizedIntent: input.normalizedIntent,
+                sourcePlan: input.sourcePlan,
+                sourcePaths: input.sourcePaths,
+                workspace: workspace!,
+                generatedPlaywrightTests,
+                attemptNumber,
+                options: input.options
+              });
+            } catch (error) {
+              implementationResult = {
+                status: "failed",
+                summary: "Implementation executor threw before the source lane could continue.",
+                error: captureErrorMessage(error),
+                commands: []
+              };
+            }
 
-    await waitForReady(input.config, workspace);
-    log.info("Source app is ready.", { sourceId: workspace.sourceId, baseUrl: workspace.baseUrl });
+            emitRunEvent(
+              input.options,
+              "implementation",
+              implementationResult.status === "failed"
+                ? "Implementation attempt failed."
+                : implementationResult.status === "completed"
+                  ? "Implementation attempt completed."
+                  : "Implementation attempt skipped.",
+              {
+                sourceId: input.sourcePlan.sourceId,
+                attemptNumber,
+                status: implementationResult.status,
+                summary: implementationResult.summary,
+                error: implementationResult.error
+              },
+              implementationResult.status === "failed"
+                ? "error"
+                : implementationResult.status === "skipped"
+                  ? "warn"
+                  : "info"
+            );
+          }
 
-    emitRunEvent(input.options, "app", "Source app is ready.", {
-      sourceId: workspace.sourceId,
-      baseUrl: workspace.baseUrl
-    });
+          if (implementationResult.status === "failed") {
+            return {
+              implementation: implementationResult,
+              qaVerification: buildSkippedStageExecutionRecord(
+                "QA verification was skipped because implementation did not complete successfully."
+              )
+            };
+          }
+
+          let attemptAppHandle: RunningAppHandle | null = null;
+
+          try {
+            attemptAppHandle = await startReadySourceApp({
+              config: input.config,
+              workspace: workspace!,
+              sourcePaths: input.sourcePaths,
+              runPaths: input.runPaths,
+              options: input.options,
+              reason: qaVerificationStage.enabled ? "qa-verification" : "evidence-capture",
+              attemptNumber
+            });
+
+            if (!qaVerificationStage.enabled) {
+              return {
+                implementation: implementationResult,
+                qaVerification: buildSkippedStageExecutionRecord("QA verification stage is disabled for this run."),
+                resource: attemptAppHandle
+              };
+            }
+
+            emitRunEvent(input.options, "qa-verification", "QA verification started.", {
+              sourceId: input.sourcePlan.sourceId,
+              attemptNumber,
+              model: qaVerificationStage.model,
+              provider: qaVerificationStage.provider,
+              generatedPlaywrightSpecs: generatedPlaywrightTests.length
+            });
+
+            let qaVerificationResult: SourceStageExecutionRecord;
+
+            try {
+              qaVerificationResult = await input.executeQAVerificationStage({
+                config: input.config,
+                normalizedIntent: input.normalizedIntent,
+                sourcePlan: input.sourcePlan,
+                sourcePaths: input.sourcePaths,
+                workspace: workspace!,
+                generatedPlaywrightTests,
+                attemptNumber,
+                options: input.options
+              });
+            } catch (error) {
+              qaVerificationResult = {
+                status: "failed",
+                summary: "QA verification threw before the source lane could continue.",
+                error: captureErrorMessage(error),
+                commands: []
+              };
+            }
+
+            emitRunEvent(
+              input.options,
+              "qa-verification",
+              qaVerificationResult.status === "failed"
+                ? "QA verification failed."
+                : qaVerificationResult.status === "completed"
+                  ? "QA verification passed."
+                  : "QA verification skipped.",
+              {
+                sourceId: input.sourcePlan.sourceId,
+                attemptNumber,
+                status: qaVerificationResult.status,
+                summary: qaVerificationResult.summary,
+                error: qaVerificationResult.error,
+                commands: qaVerificationResult.commands.map((command) => ({
+                  label: command.label,
+                  status: command.status,
+                  logPath: toRelativePath(input.runPaths.controllerRoot, command.logPath)
+                }))
+              },
+              qaVerificationResult.status === "failed"
+                ? "error"
+                : qaVerificationResult.status === "skipped"
+                  ? "warn"
+                  : "info"
+            );
+
+            if (qaVerificationResult.status === "completed") {
+              return {
+                implementation: implementationResult,
+                qaVerification: qaVerificationResult,
+                resource: attemptAppHandle
+              };
+            }
+
+            await attemptAppHandle.stop();
+
+            return {
+              implementation: implementationResult,
+              qaVerification: qaVerificationResult
+            };
+          } catch (error) {
+            if (attemptAppHandle) {
+              await attemptAppHandle.stop();
+            }
+
+            return {
+              implementation: implementationResult,
+              qaVerification: {
+                status: "failed",
+                summary: "QA verification could not start because the source app never became ready.",
+                error: captureErrorMessage(error),
+                commands: []
+              }
+            };
+          }
+        },
+        releaseResource: async (resource) => {
+          await resource.stop();
+        },
+        onRetry: ({ attempt, nextAttemptNumber }) => {
+          emitRunEvent(
+            input.options,
+            "run",
+            "Retrying source lane after failed implementation or QA verification.",
+            {
+              sourceId: input.sourcePlan.sourceId,
+              nextAttemptNumber,
+              failedAttempt: attempt.attemptNumber,
+              failureStage: attempt.failureStage,
+              error:
+                attempt.failureStage === "implementation"
+                  ? attempt.implementation.error ?? attempt.implementation.summary
+                  : attempt.qaVerification.error ?? attempt.qaVerification.summary
+            },
+            "warn"
+          );
+        }
+      });
+
+      attempts = attemptLoop.attempts;
+
+      if (attemptLoop.status === "failed") {
+        throw new Error(attemptLoop.error ?? `Implementation or QA verification failed for source '${input.sourcePlan.sourceId}'.`);
+      }
+
+      appHandle = attemptLoop.resource ?? null;
+    }
+
+    if (!appHandle) {
+      appHandle = await startReadySourceApp({
+        config: input.config,
+        workspace,
+        sourcePaths: input.sourcePaths,
+        runPaths: input.runPaths,
+        options: input.options,
+        reason: "evidence-capture"
+      });
+    }
 
     const selectedCaptureItems = selectCaptureItems(
       workspace.source.capture.items,
@@ -643,7 +1506,6 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       });
     }
 
-    const sourceErrors: string[] = [];
     if (captureResult.abortedDueToError) {
       sourceErrors.push("Capture run stopped early because continueOnCaptureError is disabled.");
     }
@@ -739,6 +1601,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
     const status = sourceErrors.length > 0 ? "failed" : "completed";
     const error = sourceErrors.length > 0 ? sourceErrors.join(" ") : undefined;
     const completionCounts = comparison?.counts ?? emptyComparisonCounts();
+    const latestAttempt = attempts.at(-1);
 
     await writeSourceEvidenceFiles({
       loadedConfig: { config: input.config, configPath: "", configDir: input.runPaths.controllerRoot },
@@ -752,7 +1615,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       writeBaselineRecords: !input.trackedBaseline,
       status,
       error,
-      publishedSourcePath
+      publishedSourcePath,
+      generatedPlaywrightTests,
+      attempts
     });
 
     emitRunEvent(input.options, "artifacts", "Source evidence files written.", {
@@ -771,7 +1636,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       captures,
       comparison,
       status,
-      error
+      error,
+      generatedPlaywrightTests,
+      attempts
     });
 
     emitRunEvent(input.options, "artifacts", "Source summary written.", {
@@ -791,6 +1658,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
             input.sourceIssue!.id,
             [
               `Source lane ${status} for '${input.sourcePlan.sourceId}'.`,
+              `Attempts: ${attempts.length}`,
+              `Latest runtime result: ${latestAttempt ? `${latestAttempt.status}${latestAttempt.failureStage ? ` (${latestAttempt.failureStage})` : ""}` : "not run"}`,
               `Changed: ${completionCounts.changed}`,
               `Unchanged: ${completionCounts.unchanged}`,
               `Missing baseline: ${completionCounts["missing-baseline"]}`,
@@ -818,6 +1687,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
           input.parentIssue!.id,
           [
             `Source lane ${status}: ${input.sourcePlan.sourceId}`,
+            `Attempts: ${attempts.length}`,
             `Changed: ${completionCounts.changed}`,
             `Unchanged: ${completionCounts.unchanged}`,
             `Summary: ${toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.summaryPath)}`,
@@ -837,6 +1707,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
         summaryPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.summaryPath),
         hasDrift: comparison.hasDrift,
         counts: comparison.counts,
+        attemptCount: attempts.length,
+        latestFailureStage: latestAttempt?.failureStage,
         error
       },
       status === "completed" ? "info" : "error"
@@ -852,10 +1724,13 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       error,
       linearIssue: input.sourceIssue,
       publishedSourcePath,
+      generatedPlaywrightTests,
+      attempts,
       summaryMarkdown
     };
   } catch (error) {
     const errorMessage = captureErrorMessage(error);
+    const latestAttempt = attempts.at(-1);
 
     await writeSourceEvidenceFiles({
       loadedConfig: { config: input.config, configPath: "", configDir: input.runPaths.controllerRoot },
@@ -868,7 +1743,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       comparison,
       status: "failed",
       error: errorMessage,
-      publishedSourcePath
+      publishedSourcePath,
+      generatedPlaywrightTests,
+      attempts
     });
 
     summaryMarkdown = await writeSourceSummaryMarkdown({
@@ -880,7 +1757,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       captures,
       comparison,
       status: "failed",
-      error: errorMessage
+      error: errorMessage,
+      generatedPlaywrightTests,
+      attempts
     });
 
     await safeLinearTask({
@@ -891,7 +1770,14 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       details: { sourceId: input.sourcePlan.sourceId },
       task: async () => {
         if (input.config.linear.commentOnCompletion) {
-          await input.linearClient!.createComment(input.sourceIssue!.id, `Source lane failed: ${errorMessage}`);
+          await input.linearClient!.createComment(
+            input.sourceIssue!.id,
+            [
+              `Source lane failed: ${errorMessage}`,
+              `Attempts: ${attempts.length}`,
+              `Latest runtime result: ${latestAttempt ? `${latestAttempt.status}${latestAttempt.failureStage ? ` (${latestAttempt.failureStage})` : ""}` : "not run"}`
+            ].join("\n")
+          );
         }
         await input.linearClient!.updateIssueState(input.sourceIssue!.id, input.config.linear.defaultStateIds.failed);
       }
@@ -904,13 +1790,22 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       message: `Failed to post Linear parent failure comment for ${input.sourcePlan.sourceId}`,
       details: { sourceId: input.sourcePlan.sourceId },
       task: async () => {
-        await input.linearClient!.createComment(input.parentIssue!.id, `Source lane failed for '${input.sourcePlan.sourceId}': ${errorMessage}`);
+        await input.linearClient!.createComment(
+          input.parentIssue!.id,
+          [
+            `Source lane failed for '${input.sourcePlan.sourceId}': ${errorMessage}`,
+            `Attempts: ${attempts.length}`,
+            `Latest runtime result: ${latestAttempt ? `${latestAttempt.status}${latestAttempt.failureStage ? ` (${latestAttempt.failureStage})` : ""}` : "not run"}`
+          ].join("\n")
+        );
       }
     });
 
     emitRunEvent(input.options, "run", "Source lane failed.", {
       sourceId: input.sourcePlan.sourceId,
       error: errorMessage,
+      attemptCount: attempts.length,
+      latestFailureStage: latestAttempt?.failureStage,
       summaryPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.summaryPath)
     }, "error");
 
@@ -924,6 +1819,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       error: errorMessage,
       linearIssue: input.sourceIssue,
       publishedSourcePath,
+      generatedPlaywrightTests,
+      attempts,
       summaryMarkdown
     };
   } finally {
@@ -940,6 +1837,8 @@ function createDefaultRunIntentDependencies(): RunIntentDependencies {
     createRunPaths,
     createLinearClient: (config) => new LinearClient(config),
     executeSourceRun,
+    executeImplementationStage: executeDefaultImplementationStage,
+    executeQAVerificationStage: executeDefaultQAVerificationStage,
     writeJsonFile,
     writePlanLifecycleFile,
     writeBusinessEvidenceFiles,
@@ -992,6 +1891,82 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       ])
     );
 
+    const linearClient = config.linear.enabled ? dependencies.createLinearClient(config.linear) : null;
+    const linearErrors: string[] = [];
+    const linearPublication: BusinessLinearPublication = {
+      parentIssue: null,
+      sourceIssues: {},
+      errors: linearErrors
+    };
+
+    emitRunEvent(options, "linear", config.linear.enabled ? "Linear integration enabled." : "Linear integration disabled.", {
+      enabled: config.linear.enabled,
+      createIssueOnStart: config.linear.createIssueOnStart,
+      commentOnProgress: config.linear.commentOnProgress,
+      commentOnCompletion: config.linear.commentOnCompletion,
+      trackedBaseline,
+      resumeIssue
+    });
+
+    const shouldManageLinearPlan = Boolean(!trackedBaseline && linearClient && (config.linear.createIssueOnStart || resumeIssue));
+    let scopingIntent: NormalizedIntent | null = null;
+
+    if (linearClient && shouldManageLinearPlan) {
+      scopingIntent = await dependencies.normalizeIntent({
+        rawPrompt,
+        runMode: mode,
+        defaultSourceId: config.run.sourceId,
+        continueOnCaptureError: config.run.continueOnCaptureError,
+        agent,
+        requestedSourceIds,
+        resumeIssue,
+        linearEnabled: config.linear.enabled,
+        publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
+        availableSources,
+        planningDepth: "scoping"
+      });
+
+      emitRunEvent(options, "linear", "Linear scoping prepared.", {
+        sourceIds: scopingIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId),
+        summary: scopingIntent.summary
+      });
+
+      linearPublication.parentIssue = await upsertLinearParentIssue({
+        linearClient,
+        options,
+        errors: linearErrors,
+        rawPrompt,
+        normalizedIntent: scopingIntent,
+        planningDepth: "scoping",
+        existingParentIssue: linearPublication.parentIssue,
+        resumeIssue,
+        createIfMissing: Boolean(!resumeIssue && config.linear.createIssueOnStart)
+      });
+
+      if (resumeIssue && !linearPublication.parentIssue) {
+        throw new Error(`Configured resume issue '${resumeIssue}' could not be resolved in Linear.`);
+      }
+
+      if (linearPublication.parentIssue) {
+        emitRunEvent(options, "linear", "Linear parent issue scoped.", {
+          identifier: linearPublication.parentIssue.identifier,
+          url: linearPublication.parentIssue.url,
+          planningDepth: "scoping"
+        });
+
+        await upsertLinearSourceIssues({
+          linearClient,
+          options,
+          errors: linearErrors,
+          parentIssue: linearPublication.parentIssue,
+          normalizedIntent: scopingIntent,
+          planningDepth: "scoping",
+          sourceIssues: linearPublication.sourceIssues,
+          loadReusableChildren: Boolean(resumeIssue)
+        });
+      }
+    }
+
     const normalizedIntent = await dependencies.normalizeIntent({
       rawPrompt,
       runMode: mode,
@@ -1004,6 +1979,57 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
       availableSources
     });
+
+    if (linearClient && shouldManageLinearPlan && scopingIntent) {
+      const scopedSourceIds = scopingIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
+      const plannedSourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
+      const addedSourceIds = plannedSourceIds.filter((sourceId) => !scopedSourceIds.includes(sourceId));
+      const removedSourceIds = scopedSourceIds.filter((sourceId) => !plannedSourceIds.includes(sourceId));
+
+      if (addedSourceIds.length > 0 || removedSourceIds.length > 0) {
+        for (const sourceId of removedSourceIds) {
+          delete linearPublication.sourceIssues[sourceId];
+        }
+
+        emitRunEvent(
+          options,
+          "linear",
+          "Detailed planning changed the scoped Linear source lanes.",
+          {
+            addedSourceIds,
+            removedSourceIds,
+            note: "Removed lanes remain in Linear, but they are not part of this run's final plan."
+          },
+          "warn"
+        );
+      }
+
+      if (linearPublication.parentIssue) {
+        linearPublication.parentIssue = await upsertLinearParentIssue({
+          linearClient,
+          options,
+          errors: linearErrors,
+          rawPrompt,
+          normalizedIntent,
+          planningDepth: "full",
+          existingParentIssue: linearPublication.parentIssue,
+          createIfMissing: false
+        });
+
+        if (linearPublication.parentIssue) {
+          await upsertLinearSourceIssues({
+            linearClient,
+            options,
+            errors: linearErrors,
+            parentIssue: linearPublication.parentIssue,
+            normalizedIntent,
+            planningDepth: "full",
+            sourceIssues: linearPublication.sourceIssues,
+            loadReusableChildren: false
+          });
+        }
+      }
+    }
 
     if (trackedBaseline && normalizedIntent.execution.runMode !== "baseline") {
       throw new Error("Tracked baseline runs currently require baseline mode.");
@@ -1034,158 +2060,7 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       }))
     });
 
-    const linearClient = config.linear.enabled ? dependencies.createLinearClient(config.linear) : null;
-    const linearErrors: string[] = [];
-    const linearPublication: BusinessLinearPublication = {
-      parentIssue: null,
-      sourceIssues: {},
-      errors: linearErrors
-    };
-
-    emitRunEvent(options, "linear", config.linear.enabled ? "Linear integration enabled." : "Linear integration disabled.", {
-      enabled: config.linear.enabled,
-      createIssueOnStart: config.linear.createIssueOnStart,
-      commentOnProgress: config.linear.commentOnProgress,
-      commentOnCompletion: config.linear.commentOnCompletion,
-      trackedBaseline,
-      resumeIssue
-    });
-
-    const shouldManageLinearPlan = Boolean(!trackedBaseline && linearClient && (config.linear.createIssueOnStart || resumeIssue));
-
     if (linearClient && shouldManageLinearPlan) {
-      if (resumeIssue) {
-        emitRunEvent(options, "linear", "Resolving existing Linear parent issue.", {
-          issueReference: resumeIssue
-        });
-
-        linearPublication.parentIssue = await safeLinearTask({
-          enabled: true,
-          options,
-          errors: linearErrors,
-          message: `Failed to resolve the Linear resume issue '${resumeIssue}'`,
-          task: async () => {
-            const existingIssue = await linearClient.fetchIssue(resumeIssue);
-            if (!existingIssue) {
-              throw new Error(`Linear issue '${resumeIssue}' was not found.`);
-            }
-
-            const description = buildManagedParentIssueDescription(existingIssue.description, {
-              rawPrompt,
-              normalizedIntent
-            });
-
-            await linearClient.updateIssueDescription(existingIssue.id, description);
-
-            return {
-              ...existingIssue,
-              description
-            };
-          }
-        }) ?? null;
-
-        if (!linearPublication.parentIssue) {
-          throw new Error(`Configured resume issue '${resumeIssue}' could not be resolved in Linear.`);
-        }
-
-        emitRunEvent(options, "linear", "Linear parent issue resumed.", {
-          issueReference: resumeIssue,
-          identifier: linearPublication.parentIssue.identifier,
-          url: linearPublication.parentIssue.url
-        });
-      } else {
-        emitRunEvent(options, "linear", "Creating Linear parent issue.", {
-          teamId: config.linear.teamId,
-          projectId: config.linear.projectId,
-          title: normalizedIntent.linear.issueTitle
-        });
-
-        linearPublication.parentIssue = await safeLinearTask({
-          enabled: true,
-          options,
-          errors: linearErrors,
-          message: "Failed to create the Linear parent issue",
-          task: async () =>
-            await linearClient.createIssue({
-              title: normalizedIntent.linear.issueTitle,
-              description: buildManagedParentIssueDescription(undefined, {
-                rawPrompt,
-                normalizedIntent
-              })
-            })
-        }) ?? null;
-
-        if (linearPublication.parentIssue) {
-          emitRunEvent(options, "linear", "Linear parent issue created.", {
-            identifier: linearPublication.parentIssue.identifier,
-            url: linearPublication.parentIssue.url
-          });
-        }
-      }
-
-      if (linearPublication.parentIssue) {
-        const existingSourceIssues = resumeIssue
-          ? await safeLinearTask({
-              enabled: true,
-              options,
-              errors: linearErrors,
-              message: `Failed to list existing Linear child issues for '${resumeIssue}'`,
-              task: async () => await linearClient.listChildIssues(linearPublication.parentIssue!.id)
-            }) ?? []
-          : [];
-
-        for (const sourcePlan of normalizedIntent.executionPlan.sources) {
-          const issueTitle = buildSourceIssueTitle(normalizedIntent, sourcePlan.sourceId);
-          const existingSourceIssue = findReusableSourceIssue(existingSourceIssues, sourcePlan.sourceId);
-          const issueDescription = buildManagedSourceIssueDescription(existingSourceIssue?.description, {
-            normalizedIntent,
-            sourceId: sourcePlan.sourceId
-          });
-
-          const sourceIssue = existingSourceIssue
-            ? await safeLinearTask({
-                enabled: true,
-                options,
-                errors: linearErrors,
-                message: `Failed to update the Linear source issue for ${sourcePlan.sourceId}`,
-                details: { sourceId: sourcePlan.sourceId },
-                task: async () => {
-                  await linearClient.updateIssueTitle(existingSourceIssue.id, issueTitle);
-                  await linearClient.updateIssueDescription(existingSourceIssue.id, issueDescription);
-
-                  return {
-                    ...existingSourceIssue,
-                    title: issueTitle,
-                    description: issueDescription
-                  };
-                }
-              })
-            : await safeLinearTask({
-                enabled: true,
-                options,
-                errors: linearErrors,
-                message: `Failed to create the Linear source issue for ${sourcePlan.sourceId}`,
-                details: { sourceId: sourcePlan.sourceId },
-                task: async () =>
-                  await linearClient.createIssue({
-                    title: issueTitle,
-                    description: issueDescription,
-                    parentId: linearPublication.parentIssue!.id
-                  })
-              });
-
-          if (sourceIssue) {
-            linearPublication.sourceIssues[sourcePlan.sourceId] = sourceIssue;
-            emitRunEvent(options, "linear", existingSourceIssue ? "Linear source issue updated." : "Linear source issue created.", {
-              sourceId: sourcePlan.sourceId,
-              identifier: sourceIssue.identifier,
-              url: sourceIssue.url,
-              parentId: linearPublication.parentIssue.id
-            });
-          }
-        }
-      }
-
       await dependencies.writeJsonFile(paths.linearPath, linearPublication);
     }
 
@@ -1195,6 +2070,7 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
         status: "planned",
         paths: paths.sourceRuns[currentSourceId],
         captures: [],
+        attempts: [],
         linearIssue: linearPublication.sourceIssues[currentSourceId] ?? null
       }));
 
@@ -1244,6 +2120,7 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     for (const sourcePlan of normalizedIntent.executionPlan.sources) {
       const sourceRun = await dependencies.executeSourceRun({
         config,
+        agentConfig: agent,
         normalizedIntent,
         sourcePlan,
         runPaths: paths,
@@ -1253,7 +2130,9 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
         linearClient,
         parentIssue: linearPublication.parentIssue,
         sourceIssue: linearPublication.sourceIssues[sourcePlan.sourceId] ?? null,
-        linearErrors
+        linearErrors,
+        executeImplementationStage: dependencies.executeImplementationStage,
+        executeQAVerificationStage: dependencies.executeQAVerificationStage
       });
       sourceRuns.push(sourceRun);
     }

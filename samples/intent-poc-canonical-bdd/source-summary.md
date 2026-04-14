@@ -14,7 +14,11 @@
 ## AI Stages
 
 - Prompt Interpretation: skipped [deterministic]
-- Intent Planning: skipped [deterministic]
+- Linear Scoping: completed [deterministic]
+- BDD Planning: completed [deterministic]
+- TDD Planning: completed [deterministic]
+- Implementation: skipped [deterministic]
+- QA Verification: skipped [deterministic]
 
 ## Source Plan
 
@@ -66,15 +70,31 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Intent is translated into acceptance-ready work
   - Outcome: turn the request into acceptance-ready work for the built-in catalog experience
   - Verification: publish a reviewable evidence package for GitHub and documentation stakeholders
+  - Playwright specs: 1
+  - Checkpoints: 3
 - Executable evidence is prepared for applicable sources
   - Outcome: Evidence is ready to be gathered from demo-catalog.
   - Verification: The resulting work remains understandable without a specific agent implementation.
+  - Playwright specs: 1
+  - Checkpoints: 3
 - Results are distributed consistently
   - Outcome: Stakeholders can inspect the outcome through a consistent package tied to the intent.
   - Verification: Distribution remains decoupled from any single source-specific workflow.
+  - Playwright specs: 1
+  - Checkpoints: 3
 - Produce visible evidence for demo-catalog
   - Outcome: Users can verify the outcome for demo-catalog without reading implementation details.
   - Verification: Evidence for demo-catalog is linked back to the intent and its scenarios.
+  - Playwright specs: 1
+  - Checkpoints: 3
+
+## Generated Playwright Specs
+
+- None
+
+## Runtime Attempts
+
+- None
 
 ## Counts
 

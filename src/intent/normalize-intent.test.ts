@@ -10,14 +10,26 @@ const geminiAgent = {
   apiVersion: "v1alpha",
   temperature: 0.1,
   allowPromptNormalization: true,
-  allowIntentPlanning: false,
+  allowLinearScoping: true,
+  allowBDDPlanning: false,
+  allowTDDPlanning: true,
+  allowImplementation: false,
+  allowQAVerification: false,
   stages: {
     promptNormalization: {
       model: "gemini-3.1-flash"
     },
-    intentPlanning: {
+    linearScoping: {
+      model: "gemini-3.1-flash"
+    },
+    bddPlanning: {
       model: "gemini-3.1"
-    }
+    },
+    tddPlanning: {
+      model: "gemini-3.1"
+    },
+    implementation: {},
+    qaVerification: {}
   },
   fallbackToRules: true
 };
@@ -138,9 +150,42 @@ test("normalizeIntent infers baseline mode from free-text prompt", () => {
   assert.deepEqual(
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
-      ["promptNormalization", "skipped", "skipped", "gemini-3.1-flash"],
-      ["intentPlanning", "skipped", "skipped", "gemini-3.1"]
+      ["promptNormalization", "completed", "rules", "gemini-3.1-flash"],
+      ["linearScoping", "completed", "rules", "gemini-3.1-flash"],
+      ["bddPlanning", "completed", "rules", "gemini-3.1"],
+      ["tddPlanning", "completed", "rules", "gemini-3.1"],
+      ["implementation", "skipped", "skipped", "gemini-3.1"],
+      ["qaVerification", "skipped", "skipped", "gemini-3.1"]
     ]
+  );
+  assert.equal(normalized.businessIntent.workItems[0]?.type, "playwright-spec");
+  assert.ok((normalized.businessIntent.workItems[0]?.playwright.specs.length ?? 0) > 0);
+});
+
+test("normalizeIntent defers BDD and TDD details during the Linear scoping pass", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Compare drift only for cockroach statements on client-systems.",
+    runMode: "baseline",
+    defaultSourceId: "client-systems-roach-admin",
+    continueOnCaptureError: false,
+    planningDepth: "scoping",
+    availableSources,
+    agent: geminiAgent
+  });
+
+  assert.deepEqual(normalized.businessIntent.acceptanceCriteria, []);
+  assert.deepEqual(normalized.businessIntent.scenarios, []);
+  assert.deepEqual(normalized.businessIntent.workItems, []);
+  assert.equal(normalized.executionPlan.tools.find((tool) => tool.id === "linear-scoping")?.enabled, true);
+  assert.equal(normalized.executionPlan.tools.find((tool) => tool.id === "bdd-planning")?.enabled, false);
+  assert.equal(normalized.executionPlan.tools.find((tool) => tool.id === "playwright-tdd")?.enabled, false);
+  assert.equal(
+    normalized.normalizationMeta.stages.find((stage) => stage.stageId === "bddPlanning")?.warnings[0],
+    "BDD planning is deferred until Linear scoping completes."
+  );
+  assert.equal(
+    normalized.normalizationMeta.stages.find((stage) => stage.stageId === "tddPlanning")?.warnings[0],
+    "Playwright-first TDD planning is deferred until Linear scoping completes."
   );
 });
 
@@ -274,7 +319,11 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
       ["promptNormalization", "completed", "llm", "gemini-3.1-flash"],
-      ["intentPlanning", "skipped", "skipped", "gemini-3.1"]
+      ["linearScoping", "completed", "rules", "gemini-3.1-flash"],
+      ["bddPlanning", "skipped", "skipped", "gemini-3.1"],
+      ["tddPlanning", "completed", "rules", "gemini-3.1"],
+      ["implementation", "skipped", "skipped", "gemini-3.1"],
+      ["qaVerification", "skipped", "skipped", "gemini-3.1"]
     ]
   );
   assert.ok(
@@ -292,7 +341,7 @@ test("normalizeIntentWithAgent applies Gemini planning refinement when the plann
       availableSources,
       agent: {
         ...geminiAgent,
-        allowIntentPlanning: true
+        allowBDDPlanning: true
       }
     },
     {
@@ -345,7 +394,11 @@ test("normalizeIntentWithAgent applies Gemini planning refinement when the plann
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
       ["promptNormalization", "completed", "llm", "gemini-3.1-flash"],
-      ["intentPlanning", "completed", "llm", "gemini-3.1"]
+      ["linearScoping", "completed", "rules", "gemini-3.1-flash"],
+      ["bddPlanning", "completed", "llm", "gemini-3.1"],
+      ["tddPlanning", "completed", "rules", "gemini-3.1"],
+      ["implementation", "skipped", "skipped", "gemini-3.1"],
+      ["qaVerification", "skipped", "skipped", "gemini-3.1"]
     ]
   );
   assert.ok(
@@ -379,7 +432,10 @@ test("normalizeIntentWithAgent keeps the requested source scope when Gemini retu
     ["docs-portal", "client-systems-roach-admin"]
   );
   assert.equal(normalized.normalizationMeta.source, "llm");
-  assert.equal(normalized.normalizationMeta.stages[1]?.status, "skipped");
+  assert.equal(
+    normalized.normalizationMeta.stages.find((stage) => stage.stageId === "bddPlanning")?.status,
+    "skipped"
+  );
 });
 
 test("normalizeIntentWithAgent falls back to rules when Gemini normalization fails", async () => {
@@ -405,7 +461,7 @@ test("normalizeIntentWithAgent falls back to rules when Gemini normalization fai
   assert.deepEqual(normalized.captureScope.captureIds, ["roach-statements"]);
   assert.deepEqual(
     normalized.normalizationMeta.stages.map((stage) => stage.status),
-    ["fallback", "skipped"]
+    ["fallback", "completed", "skipped", "completed", "skipped", "skipped"]
   );
   assert.ok(
     normalized.normalizationMeta.warnings.some((warning) => warning.includes("quota exceeded"))

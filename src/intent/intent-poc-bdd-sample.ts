@@ -76,9 +76,14 @@ const destinationStatuses: IntentPocBddSampleExpectation["destinationStatuses"] 
 ];
 
 const toolStates: IntentPocBddSampleExpectation["toolStates"] = [
-  { label: "Intent planning", enabled: true },
+  { label: "Linear-first scoping", enabled: true },
+  { label: "BDD planning", enabled: true },
+  { label: "Playwright TDD generation", enabled: true },
   { label: "Visual evidence capture", enabled: true },
   { label: "Evidence comparison", enabled: false },
+  { label: "Environment deployment", enabled: false },
+  { label: "Implementation loop", enabled: false },
+  { label: "QA verification", enabled: false },
   { label: "Evidence reporting", enabled: true },
   { label: "Linear publishing", enabled: false }
 ];
@@ -120,8 +125,10 @@ export const INTENT_POC_BDD_SAMPLE = {
       `- Given A business intent has been captured: ${prompt}`,
       "## TDD Work Items",
       "- Produce visible evidence for demo-catalog",
+      "  - Playwright specs: 1",
+      "  - Checkpoints: 3",
       "- Destinations: Controller artifacts [active], Linear parent issue [planned], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]",
-      "- Tools: Intent planning [enabled], Visual evidence capture [enabled], Evidence comparison [planned], Evidence reporting [enabled], Linear publishing [planned]"
+      "- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual evidence capture [enabled], Evidence comparison [planned], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]"
     ]
   }
 } satisfies IntentPocBddSampleContract;

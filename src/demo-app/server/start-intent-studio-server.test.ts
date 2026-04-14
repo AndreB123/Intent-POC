@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { startIntentStudioServer } from "./start-intent-studio-server";
 
-test("startIntentStudioServer exposes only visible work-scope sources and config edit links", async (t) => {
+test("startIntentStudioServer exposes all configured sources and saves source metadata edits", async (t) => {
   const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
   const configPath = path.join(tmpDir, "intent-poc.yaml");
 
@@ -30,7 +30,6 @@ test("startIntentStudioServer exposes only visible work-scope sources and config
       "      summary: Current workspace scope.",
       "    studio:",
       "      displayName: Current app",
-      "      visible: true",
       "    source:",
       "      type: local",
       `      localPath: ${JSON.stringify(tmpDir)}`,
@@ -50,12 +49,11 @@ test("startIntentStudioServer exposes only visible work-scope sources and config
       "  screenshots:",
       "    planning:",
       "      repoId: intent-poc",
-      "      repoLabel: Intent POC",
-      "      role: internal automation",
-      "      summary: Hidden screenshot maintenance source.",
+      "      repoLabel: Intent POC Demo Components",
+      "      role: tracked screenshots",
+      "      summary: Demo screenshot maintenance source.",
       "    studio:",
-      "      displayName: Hidden screenshots",
-      "      visible: false",
+      "      displayName: Tracked demo screenshots",
       "    source:",
       "      type: local",
       `      localPath: ${JSON.stringify(tmpDir)}`,
@@ -106,7 +104,6 @@ test("startIntentStudioServer exposes only visible work-scope sources and config
     configPath: string;
     configFileUrl?: string;
     configEditorUrl?: string;
-    hiddenSourceCount: number;
     sources: Array<{
       id: string;
       label: string;
@@ -120,17 +117,46 @@ test("startIntentStudioServer exposes only visible work-scope sources and config
   assert.equal(state.configPath, expectedRelativeConfigPath);
   assert.equal(state.configFileUrl, `/files/${encodeURIComponent(expectedRelativeConfigPath)}`);
   assert.match(state.configEditorUrl ?? "", /^vscode:\/\/file\//);
-  assert.equal(state.hiddenSourceCount, 1);
-  assert.equal(state.sources.length, 1);
+  assert.equal(state.sources.length, 2);
   assert.equal(state.sources[0].id, "app");
   assert.equal(state.sources[0].label, "Current app");
   assert.equal(state.sources[0].repoLabel, "Intent POC");
   assert.equal(state.sources[0].role, "current repo");
   assert.equal(state.sources[0].defaultScope, true);
+  assert.equal(state.sources[1].id, "screenshots");
+  assert.equal(state.sources[1].label, "Tracked demo screenshots");
+
+  const saveResponse = await fetch(`${server.baseUrl}/api/source-metadata`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sourceId: "screenshots",
+      displayName: "Demo components",
+      repoLabel: "Intent POC Demo Surfaces",
+      role: "shared demo component library",
+      summary: "Visible demo component source for tracked screenshots and catalog review."
+    })
+  });
+  assert.equal(saveResponse.status, 200);
+
+  const updatedStateResponse = await fetch(`${server.baseUrl}/api/state`);
+  assert.equal(updatedStateResponse.status, 200);
+  const updatedState = (await updatedStateResponse.json()) as typeof state;
+  assert.equal(updatedState.sources[1].label, "Demo components");
+  assert.equal(updatedState.sources[1].repoLabel, "Intent POC Demo Surfaces");
+  assert.equal(updatedState.sources[1].role, "shared demo component library");
+
+  const updatedConfig = await fs.readFile(configPath, "utf8");
+  assert.match(updatedConfig, /displayName: Demo components/);
+  assert.match(updatedConfig, /repoLabel: Intent POC Demo Surfaces/);
+  assert.match(updatedConfig, /role: shared demo component library/);
 
   const pageResponse = await fetch(server.baseUrl);
   assert.equal(pageResponse.status, 200);
   const pageHtml = await pageResponse.text();
   assert.match(pageHtml, /id="source-scope"/);
+  assert.match(pageHtml, /id="source-editor-form"/);
   assert.match(pageHtml, /Open config in editor/);
 });

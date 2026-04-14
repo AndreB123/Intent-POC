@@ -70,9 +70,45 @@
         "warnings": []
       },
       {
-        "stageId": "intentPlanning",
-        "label": "Intent Planning",
-        "description": "Refine the business intent, acceptance criteria, and BDD plan after bounded normalization.",
+        "stageId": "linearScoping",
+        "label": "Linear Scoping",
+        "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+        "model": "gemini-3.1-flash",
+        "status": "completed",
+        "source": "rules",
+        "warnings": []
+      },
+      {
+        "stageId": "bddPlanning",
+        "label": "BDD Planning",
+        "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+        "model": "gemini-3.1",
+        "status": "completed",
+        "source": "rules",
+        "warnings": []
+      },
+      {
+        "stageId": "tddPlanning",
+        "label": "TDD Planning",
+        "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+        "model": "gemini-3.1",
+        "status": "completed",
+        "source": "rules",
+        "warnings": []
+      },
+      {
+        "stageId": "implementation",
+        "label": "Implementation",
+        "description": "Apply the planned changes against the scoped source workspace.",
+        "model": "gemini-3.1",
+        "status": "skipped",
+        "source": "skipped",
+        "warnings": []
+      },
+      {
+        "stageId": "qaVerification",
+        "label": "QA Verification",
+        "description": "Verify implementation output, tests, and evidence before completion or retry.",
         "model": "gemini-3.1",
         "status": "skipped",
         "source": "skipped",
@@ -91,7 +127,9 @@
       "status": "planned",
       "selectionReason": "Source demo-catalog was referenced directly in the prompt.",
       "runMode": "baseline",
-      "linearIssue": null
+      "linearIssue": null,
+      "attemptCount": 0,
+      "attempts": []
     }
   ]
 }

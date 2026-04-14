@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { AddressInfo } from "node:net";
 import path from "node:path";
+import YAML from "yaml";
 import { loadConfig } from "../../config/load-config";
 import { RunMode } from "../../config/schema";
 import { toRelativePath } from "../../evidence/paths";
@@ -47,7 +48,6 @@ interface StudioSourceSummary {
   readiness: string;
   baseUrl: string;
   defaultScope: boolean;
-  visibleInStudio: boolean;
   status: "ready" | "attention";
   issues: string[];
   notes: string[];
@@ -68,6 +68,9 @@ interface StudioSourceRunSummary {
   status: "planned" | "completed" | "failed";
   error?: string;
   counts?: Record<string, number>;
+  attemptCount?: number;
+  latestAttemptStatus?: "completed" | "failed";
+  latestFailureStage?: "implementation" | "qaVerification";
   summaryPath?: string;
   appLogPath?: string;
 }
@@ -134,10 +137,17 @@ interface StudioState {
   defaultMode?: RunMode;
   agentStages: StudioAgentStageSummary[];
   sources: StudioSourceSummary[];
-  hiddenSourceCount: number;
   currentRun: StudioRunRecord | null;
   recentRuns: StudioRunRecord[];
   serverTime: string;
+}
+
+interface StudioSourceMetadataUpdate {
+  sourceId: string;
+  displayName?: string;
+  repoLabel?: string;
+  role?: string;
+  summary?: string;
 }
 
 function formatSourceLabel(sourceId: string): string {
@@ -190,6 +200,102 @@ function buildEditorUrl(filePath: string): string {
   const normalizedPath = filePath.split(path.sep).join("/");
   const prefixedPath = normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`;
   return `vscode://file${encodeURI(prefixedPath)}`;
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeSourceMetadataUpdate(value: unknown): StudioSourceMetadataUpdate {
+  if (!value || typeof value !== "object") {
+    throw new Error("Source metadata update must be a JSON object.");
+  }
+
+  const body = value as Record<string, unknown>;
+  const sourceId = typeof body.sourceId === "string" ? body.sourceId.trim() : "";
+  if (!sourceId) {
+    throw new Error("A sourceId is required when saving source metadata.");
+  }
+
+  return {
+    sourceId,
+    displayName: normalizeOptionalString(body.displayName),
+    repoLabel: normalizeOptionalString(body.repoLabel),
+    role: normalizeOptionalString(body.role),
+    summary: normalizeOptionalString(body.summary)
+  };
+}
+
+async function updateSourceMetadataInConfig(configPathInput: string, update: StudioSourceMetadataUpdate): Promise<void> {
+  const configPath = path.resolve(configPathInput);
+  const rawContent = await fs.readFile(configPath, "utf8");
+  const parsed = YAML.parse(rawContent);
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("The active config file does not contain a valid root object.");
+  }
+
+  const root = parsed as Record<string, unknown>;
+  const sources = root.sources;
+  if (!sources || typeof sources !== "object" || Array.isArray(sources)) {
+    throw new Error("The active config file does not contain a sources block.");
+  }
+
+  const sourceRecord = (sources as Record<string, unknown>)[update.sourceId];
+  if (!sourceRecord || typeof sourceRecord !== "object" || Array.isArray(sourceRecord)) {
+    throw new Error(`Source '${update.sourceId}' was not found in the active config.`);
+  }
+
+  const nextSource = { ...(sourceRecord as Record<string, unknown>) };
+  const nextPlanning =
+    nextSource.planning && typeof nextSource.planning === "object" && !Array.isArray(nextSource.planning)
+      ? { ...(nextSource.planning as Record<string, unknown>) }
+      : {};
+  const nextStudio =
+    nextSource.studio && typeof nextSource.studio === "object" && !Array.isArray(nextSource.studio)
+      ? { ...(nextSource.studio as Record<string, unknown>) }
+      : {};
+
+  if (update.displayName) {
+    nextStudio.displayName = update.displayName;
+  } else {
+    delete nextStudio.displayName;
+  }
+
+  if (update.repoLabel) {
+    nextPlanning.repoLabel = update.repoLabel;
+  } else {
+    delete nextPlanning.repoLabel;
+  }
+
+  if (update.role) {
+    nextPlanning.role = update.role;
+  } else {
+    delete nextPlanning.role;
+  }
+
+  if (update.summary) {
+    nextPlanning.summary = update.summary;
+  } else {
+    delete nextPlanning.summary;
+  }
+
+  nextSource.planning = nextPlanning;
+  if (Object.keys(nextStudio).length > 0) {
+    nextSource.studio = nextStudio;
+  } else {
+    delete nextSource.studio;
+  }
+
+  (sources as Record<string, unknown>)[update.sourceId] = nextSource;
+  root.sources = sources;
+
+  await fs.writeFile(configPath, YAML.stringify(root), "utf8");
 }
 
 async function buildSourceSummary(
@@ -250,7 +356,6 @@ async function buildSourceSummary(
     readiness,
     baseUrl: source.app.baseUrl,
     defaultScope: sourceId === defaultSourceId,
-    visibleInStudio: source.studio.visible,
     status: issues.length > 0 ? "attention" : "ready",
     issues,
     notes
@@ -475,14 +580,21 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
   run.errors = result.errors;
   run.error = result.errors.length > 0 ? result.errors.join(" | ") : undefined;
   run.captures = toStudioCaptureSummaries(result);
-  run.sourceRuns = result.sourceRuns.map((sourceRun) => ({
-    sourceId: sourceRun.sourceId,
-    status: sourceRun.status,
-    error: sourceRun.error,
-    counts: sourceRun.comparison?.counts,
-    summaryPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.summaryPath),
-    appLogPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.appLogPath)
-  }));
+  run.sourceRuns = result.sourceRuns.map((sourceRun) => {
+    const latestAttempt = sourceRun.attempts.at(-1);
+
+    return {
+      sourceId: sourceRun.sourceId,
+      status: sourceRun.status,
+      error: sourceRun.error,
+      counts: sourceRun.comparison?.counts,
+      attemptCount: sourceRun.attempts.length,
+      latestAttemptStatus: latestAttempt?.status,
+      latestFailureStage: latestAttempt?.failureStage,
+      summaryPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.summaryPath),
+      appLogPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.appLogPath)
+    };
+  });
   run.linearIssue = result.linearIssue
     ? {
         identifier: result.linearIssue.identifier,
@@ -520,14 +632,12 @@ export async function startIntentStudioServer(
   async function buildState(): Promise<StudioState> {
     try {
       const loaded = await loadConfig(configPath);
-      const allSources = await Promise.all(
+      const sources = await Promise.all(
         Object.entries(loaded.config.sources).map(async ([sourceId, source]) =>
           await buildSourceSummary(workspaceRoot, sourceId, loaded.config.run.sourceId, source)
         )
       );
-      const sources = allSources
-        .filter((source) => source.visibleInStudio)
-        .sort((left, right) => Number(right.defaultScope) - Number(left.defaultScope));
+      sources.sort((left, right) => Number(right.defaultScope) - Number(left.defaultScope));
       const relativeConfigPath = path.relative(workspaceRoot, loaded.configPath) || path.basename(loaded.configPath);
 
       return {
@@ -540,7 +650,6 @@ export async function startIntentStudioServer(
         defaultMode: loaded.config.run.mode,
         agentStages: buildStudioAgentStages(loaded.config.agent),
         sources,
-        hiddenSourceCount: allSources.length - sources.length,
         currentRun: currentRun ? cloneRun(currentRun) : null,
         recentRuns: recentRuns.map((run) => cloneRun(run)),
         serverTime: new Date().toISOString()
@@ -555,7 +664,6 @@ export async function startIntentStudioServer(
         linearEnabled: false,
         agentStages: [],
         sources: [],
-        hiddenSourceCount: 0,
         currentRun: currentRun ? cloneRun(currentRun) : null,
         recentRuns: recentRuns.map((run) => cloneRun(run)),
         serverTime: new Date().toISOString()
@@ -746,6 +854,20 @@ export async function startIntentStudioServer(
 
     if (req.method === "GET" && route === "/api/state") {
       sendJson(res, 200, await buildState());
+      return;
+    }
+
+    if (req.method === "POST" && route === "/api/source-metadata") {
+      try {
+        const rawBody = await readRequestBody(req);
+        const body = rawBody.length > 0 ? JSON.parse(rawBody) : {};
+        const update = normalizeSourceMetadataUpdate(body);
+        await updateSourceMetadataInConfig(configPath, update);
+        await broadcastState();
+        sendJson(res, 200, { ok: true });
+      } catch (error) {
+        sendJson(res, 400, { error: error instanceof Error ? error.message : String(error) });
+      }
       return;
     }
 

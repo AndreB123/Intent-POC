@@ -15,12 +15,16 @@ export interface CommandResult {
   exitCode: number;
 }
 
+export interface CommandResultWithStatus extends CommandResult {
+  timedOut: boolean;
+}
+
 export interface RunningCommand {
   pid: number | undefined;
   stop: () => Promise<void>;
 }
 
-export async function runCommand(command: string, options: CommandOptions): Promise<CommandResult> {
+export async function runCommandAllowFailure(command: string, options: CommandOptions): Promise<CommandResultWithStatus> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, {
       cwd: options.cwd,
@@ -59,31 +63,30 @@ export async function runCommand(command: string, options: CommandOptions): Prom
         clearTimeout(timeoutId);
       }
 
-      const result: CommandResult = {
+      resolve({
         command,
         cwd: options.cwd,
         stdout,
         stderr,
-        exitCode: code ?? -1
-      };
-
-      if (timedOut) {
-        reject(new Error(`Command timed out after ${options.timeoutMs}ms: ${command}`));
-        return;
-      }
-
-      if ((code ?? -1) !== 0) {
-        reject(
-          new Error(
-            `Command failed (${code ?? -1}) in ${options.cwd}: ${command}\n${stderr || stdout}`
-          )
-        );
-        return;
-      }
-
-      resolve(result);
+        exitCode: code ?? -1,
+        timedOut
+      });
     });
   });
+}
+
+export async function runCommand(command: string, options: CommandOptions): Promise<CommandResult> {
+  const result = await runCommandAllowFailure(command, options);
+
+  if (result.timedOut) {
+    throw new Error(`Command timed out after ${options.timeoutMs}ms: ${command}`);
+  }
+
+  if (result.exitCode !== 0) {
+    throw new Error(`Command failed (${result.exitCode}) in ${options.cwd}: ${command}\n${result.stderr || result.stdout}`);
+  }
+
+  return result;
 }
 
 export async function startBackgroundCommand(

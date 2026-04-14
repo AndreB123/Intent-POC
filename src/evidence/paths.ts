@@ -9,6 +9,7 @@ export interface SourceRunPaths {
   runId: string;
   sourceId: string;
   sourceDir: string;
+  attemptsDir: string;
   capturesDir: string;
   diffsDir: string;
   logsDir: string;
@@ -64,6 +65,7 @@ export async function createRunPaths(
           runId,
           sourceId,
           sourceDir,
+          attemptsDir: path.join(sourceDir, "attempts"),
           capturesDir: path.join(sourceDir, "captures"),
           diffsDir: path.join(sourceDir, "diffs"),
           logsDir: path.join(sourceDir, "logs"),
@@ -103,6 +105,7 @@ export async function createRunPaths(
   await Promise.all(
     Object.values(paths.sourceRuns).flatMap((sourcePaths) => [
       ensureDirectory(sourcePaths.sourceDir),
+      ensureDirectory(sourcePaths.attemptsDir),
       ensureDirectory(sourcePaths.capturesDir),
       ensureDirectory(sourcePaths.logsDir),
       ensureDirectory(sourcePaths.baselineSourceDir)

@@ -108,6 +108,7 @@
     "workItems": [
       {
         "id": "work-1-intent-is-translated-into-acceptance-ready-work",
+        "type": "playwright-spec",
         "title": "Intent is translated into acceptance-ready work",
         "description": "Turn the raw business statement into reviewable BDD structure.",
         "scenarioIds": [
@@ -117,10 +118,58 @@
           "demo-catalog"
         ],
         "userVisibleOutcome": "turn the request into acceptance-ready work for the built-in catalog experience",
-        "verification": "publish a reviewable evidence package for GitHub and documentation stakeholders"
+        "verification": "publish a reviewable evidence package for GitHub and documentation stakeholders",
+        "playwright": {
+          "generatedBy": "rules",
+          "specs": [
+            {
+              "framework": "playwright",
+              "sourceId": "demo-catalog",
+              "relativeSpecPath": "demo-catalog/work-1-intent-is-translated-into-acceptance-ready-work.spec.ts",
+              "suiteName": "Intent-driven flow for demo-catalog",
+              "testName": "Intent is translated into acceptance-ready work",
+              "scenarioIds": [
+                "scenario-1-intent-is-translated-into-acceptance-ready-work"
+              ],
+              "checkpoints": [
+                {
+                  "id": "checkpoint-1-library-index",
+                  "label": "Demo Catalog Index",
+                  "action": "goto",
+                  "assertion": "The page '/library' is ready for evidence review.",
+                  "screenshotId": "shot-1-library-index",
+                  "path": "/library",
+                  "captureId": "library-index"
+                },
+                {
+                  "id": "checkpoint-2-component-button-primary",
+                  "label": "Demo Primary Button",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.",
+                  "screenshotId": "shot-2-component-button-primary",
+                  "path": "/library/component-button-primary",
+                  "captureId": "component-button-primary",
+                  "locator": "[data-testid='component-button-primary']",
+                  "waitForSelector": "[data-testid='component-button-primary']",
+                  "target": "[data-testid='component-button-primary']"
+                },
+                {
+                  "id": "checkpoint-3-page-analytics-overview",
+                  "label": "Demo Analytics Overview",
+                  "action": "goto",
+                  "assertion": "The page '/library/page-analytics-overview' is ready for evidence review.",
+                  "screenshotId": "shot-3-page-analytics-overview",
+                  "path": "/library/page-analytics-overview",
+                  "captureId": "page-analytics-overview"
+                }
+              ]
+            }
+          ]
+        }
       },
       {
         "id": "work-2-executable-evidence-is-prepared-for-applicable-sources",
+        "type": "playwright-spec",
         "title": "Executable evidence is prepared for applicable sources",
         "description": "Define what visible verification should happen for each source involved in the intent.",
         "scenarioIds": [
@@ -130,10 +179,58 @@
           "demo-catalog"
         ],
         "userVisibleOutcome": "Evidence is ready to be gathered from demo-catalog.",
-        "verification": "The resulting work remains understandable without a specific agent implementation."
+        "verification": "The resulting work remains understandable without a specific agent implementation.",
+        "playwright": {
+          "generatedBy": "rules",
+          "specs": [
+            {
+              "framework": "playwright",
+              "sourceId": "demo-catalog",
+              "relativeSpecPath": "demo-catalog/work-2-executable-evidence-is-prepared-for-applicable-sources.spec.ts",
+              "suiteName": "Intent-driven flow for demo-catalog",
+              "testName": "Executable evidence is prepared for applicable sources",
+              "scenarioIds": [
+                "scenario-2-executable-evidence-is-prepared-for-applicable-sources"
+              ],
+              "checkpoints": [
+                {
+                  "id": "checkpoint-1-library-index",
+                  "label": "Demo Catalog Index",
+                  "action": "goto",
+                  "assertion": "The page '/library' is ready for evidence review.",
+                  "screenshotId": "shot-1-library-index",
+                  "path": "/library",
+                  "captureId": "library-index"
+                },
+                {
+                  "id": "checkpoint-2-component-button-primary",
+                  "label": "Demo Primary Button",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.",
+                  "screenshotId": "shot-2-component-button-primary",
+                  "path": "/library/component-button-primary",
+                  "captureId": "component-button-primary",
+                  "locator": "[data-testid='component-button-primary']",
+                  "waitForSelector": "[data-testid='component-button-primary']",
+                  "target": "[data-testid='component-button-primary']"
+                },
+                {
+                  "id": "checkpoint-3-page-analytics-overview",
+                  "label": "Demo Analytics Overview",
+                  "action": "goto",
+                  "assertion": "The page '/library/page-analytics-overview' is ready for evidence review.",
+                  "screenshotId": "shot-3-page-analytics-overview",
+                  "path": "/library/page-analytics-overview",
+                  "captureId": "page-analytics-overview"
+                }
+              ]
+            }
+          ]
+        }
       },
       {
         "id": "work-3-results-are-distributed-consistently",
+        "type": "playwright-spec",
         "title": "Results are distributed consistently",
         "description": "Make the outputs visible in the places that matter to stakeholders.",
         "scenarioIds": [
@@ -143,10 +240,58 @@
           "demo-catalog"
         ],
         "userVisibleOutcome": "Stakeholders can inspect the outcome through a consistent package tied to the intent.",
-        "verification": "Distribution remains decoupled from any single source-specific workflow."
+        "verification": "Distribution remains decoupled from any single source-specific workflow.",
+        "playwright": {
+          "generatedBy": "rules",
+          "specs": [
+            {
+              "framework": "playwright",
+              "sourceId": "demo-catalog",
+              "relativeSpecPath": "demo-catalog/work-3-results-are-distributed-consistently.spec.ts",
+              "suiteName": "Intent-driven flow for demo-catalog",
+              "testName": "Results are distributed consistently",
+              "scenarioIds": [
+                "scenario-3-results-are-distributed-consistently"
+              ],
+              "checkpoints": [
+                {
+                  "id": "checkpoint-1-library-index",
+                  "label": "Demo Catalog Index",
+                  "action": "goto",
+                  "assertion": "The page '/library' is ready for evidence review.",
+                  "screenshotId": "shot-1-library-index",
+                  "path": "/library",
+                  "captureId": "library-index"
+                },
+                {
+                  "id": "checkpoint-2-component-button-primary",
+                  "label": "Demo Primary Button",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.",
+                  "screenshotId": "shot-2-component-button-primary",
+                  "path": "/library/component-button-primary",
+                  "captureId": "component-button-primary",
+                  "locator": "[data-testid='component-button-primary']",
+                  "waitForSelector": "[data-testid='component-button-primary']",
+                  "target": "[data-testid='component-button-primary']"
+                },
+                {
+                  "id": "checkpoint-3-page-analytics-overview",
+                  "label": "Demo Analytics Overview",
+                  "action": "goto",
+                  "assertion": "The page '/library/page-analytics-overview' is ready for evidence review.",
+                  "screenshotId": "shot-3-page-analytics-overview",
+                  "path": "/library/page-analytics-overview",
+                  "captureId": "page-analytics-overview"
+                }
+              ]
+            }
+          ]
+        }
       },
       {
         "id": "work-4-visible-evidence-demo-catalog",
+        "type": "playwright-spec",
         "title": "Produce visible evidence for demo-catalog",
         "description": "Make the outcome of the intent inspectable through the evidence tools configured for demo-catalog.",
         "scenarioIds": [
@@ -158,7 +303,56 @@
           "demo-catalog"
         ],
         "userVisibleOutcome": "Users can verify the outcome for demo-catalog without reading implementation details.",
-        "verification": "Evidence for demo-catalog is linked back to the intent and its scenarios."
+        "verification": "Evidence for demo-catalog is linked back to the intent and its scenarios.",
+        "playwright": {
+          "generatedBy": "rules",
+          "specs": [
+            {
+              "framework": "playwright",
+              "sourceId": "demo-catalog",
+              "relativeSpecPath": "demo-catalog/work-4-visible-evidence-demo-catalog.spec.ts",
+              "suiteName": "Intent-driven flow for demo-catalog",
+              "testName": "Produce visible evidence for demo-catalog",
+              "scenarioIds": [
+                "scenario-1-intent-is-translated-into-acceptance-ready-work",
+                "scenario-2-executable-evidence-is-prepared-for-applicable-sources",
+                "scenario-3-results-are-distributed-consistently"
+              ],
+              "checkpoints": [
+                {
+                  "id": "checkpoint-1-library-index",
+                  "label": "Demo Catalog Index",
+                  "action": "goto",
+                  "assertion": "The page '/library' is ready for evidence review.",
+                  "screenshotId": "shot-1-library-index",
+                  "path": "/library",
+                  "captureId": "library-index"
+                },
+                {
+                  "id": "checkpoint-2-component-button-primary",
+                  "label": "Demo Primary Button",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.",
+                  "screenshotId": "shot-2-component-button-primary",
+                  "path": "/library/component-button-primary",
+                  "captureId": "component-button-primary",
+                  "locator": "[data-testid='component-button-primary']",
+                  "waitForSelector": "[data-testid='component-button-primary']",
+                  "target": "[data-testid='component-button-primary']"
+                },
+                {
+                  "id": "checkpoint-3-page-analytics-overview",
+                  "label": "Demo Analytics Overview",
+                  "action": "goto",
+                  "assertion": "The page '/library/page-analytics-overview' is ready for evidence review.",
+                  "screenshotId": "shot-3-page-analytics-overview",
+                  "path": "/library/page-analytics-overview",
+                  "captureId": "page-analytics-overview"
+                }
+              ]
+            }
+          ]
+        }
       }
     ]
   },
@@ -290,13 +484,33 @@
     ],
     "tools": [
       {
-        "id": "intent-planning",
-        "type": "intent-planning",
-        "label": "Intent planning",
+        "id": "linear-scoping",
+        "type": "linear-scoping",
+        "label": "Linear-first scoping",
         "enabled": true,
-        "reason": "The system converts the raw prompt into reviewable BDD and TDD structure before execution.",
+        "reason": "The runner creates resumable Linear business and source lanes before the detailed planner pass expands BDD and TDD output.",
         "details": [
-          "Deterministic and human-reviewable until a real agent is introduced."
+          "Detailed planner output is written back onto the same parent and source-lane issues after scoping completes."
+        ]
+      },
+      {
+        "id": "bdd-planning",
+        "type": "intent-planning",
+        "label": "BDD planning",
+        "enabled": true,
+        "reason": "The system converts the raw prompt into reviewable acceptance criteria and scenarios after Linear scoping completes.",
+        "details": [
+          "Deterministic by default, with optional Gemini refinement when configured."
+        ]
+      },
+      {
+        "id": "playwright-tdd",
+        "type": "playwright-tdd",
+        "label": "Playwright TDD generation",
+        "enabled": true,
+        "reason": "Applicable sources now produce Playwright-first executable test plans and checkpoint screenshots.",
+        "details": [
+          "Generated specs are intended for checked-in repo storage with overwrite semantics."
         ]
       },
       {
@@ -317,6 +531,36 @@
         "reason": "Comparison is not required for a baseline-only execution.",
         "details": [
           "Uses pixel diff today; future tools can add non-visual verification."
+        ]
+      },
+      {
+        "id": "environment-deployment",
+        "type": "environment-deployment",
+        "label": "Environment deployment",
+        "enabled": false,
+        "reason": "A generic local or Kubernetes deployment stage is planned but not yet wired into the runner.",
+        "details": [
+          "This will become the shared path for local, minikube, and k3s-backed execution."
+        ]
+      },
+      {
+        "id": "implementation",
+        "type": "implementation",
+        "label": "Implementation loop",
+        "enabled": false,
+        "reason": "Implementation retries are available, but the current config keeps this stage disabled.",
+        "details": [
+          "When QA is also enabled, failed verification can loop back into another implementation attempt."
+        ]
+      },
+      {
+        "id": "qa-verification",
+        "type": "qa-verification",
+        "label": "QA verification",
+        "enabled": false,
+        "reason": "QA verification is available, but the current config keeps this stage disabled.",
+        "details": [
+          "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
         ]
       },
       {
@@ -380,9 +624,45 @@
         "warnings": []
       },
       {
-        "stageId": "intentPlanning",
-        "label": "Intent Planning",
-        "description": "Refine the business intent, acceptance criteria, and BDD plan after bounded normalization.",
+        "stageId": "linearScoping",
+        "label": "Linear Scoping",
+        "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+        "model": "gemini-3.1-flash",
+        "status": "completed",
+        "source": "rules",
+        "warnings": []
+      },
+      {
+        "stageId": "bddPlanning",
+        "label": "BDD Planning",
+        "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+        "model": "gemini-3.1",
+        "status": "completed",
+        "source": "rules",
+        "warnings": []
+      },
+      {
+        "stageId": "tddPlanning",
+        "label": "TDD Planning",
+        "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+        "model": "gemini-3.1",
+        "status": "completed",
+        "source": "rules",
+        "warnings": []
+      },
+      {
+        "stageId": "implementation",
+        "label": "Implementation",
+        "description": "Apply the planned changes against the scoped source workspace.",
+        "model": "gemini-3.1",
+        "status": "skipped",
+        "source": "skipped",
+        "warnings": []
+      },
+      {
+        "stageId": "qaVerification",
+        "label": "QA Verification",
+        "description": "Verify implementation output, tests, and evidence before completion or retry.",
         "model": "gemini-3.1",
         "status": "skipped",
         "source": "skipped",

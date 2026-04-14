@@ -77,6 +77,15 @@ const captureSchema = z
     }
   });
 
+const playwrightTestOutputSchema = z.object({
+  enabled: z.boolean().default(false),
+  outputDir: z.string().min(1).default("tests/intent/generated")
+});
+
+const testingSchema = z.object({
+  playwright: playwrightTestOutputSchema.default({})
+});
+
 const sourcePlanningSchema = z.object({
   repoId: z.string().min(1).optional(),
   repoLabel: z.string().min(1).optional(),
@@ -86,8 +95,7 @@ const sourcePlanningSchema = z.object({
 });
 
 const sourceStudioSchema = z.object({
-  displayName: z.string().min(1).optional(),
-  visible: z.boolean().default(true)
+  displayName: z.string().min(1).optional()
 });
 
 const sourceSchema = z.object({
@@ -95,6 +103,7 @@ const sourceSchema = z.object({
   source: z.discriminatedUnion("type", [localSourceSchema, gitSourceSchema]),
   planning: sourcePlanningSchema.default({}),
   studio: sourceStudioSchema.default({}),
+  testing: testingSchema.default({}),
   workspace: z.object({
     checkoutMode: z.enum(["existing", "clone-if-missing", "fresh-clone"]).default("existing"),
     cloneRoot: z.string().default("./.workdirs"),
@@ -181,12 +190,20 @@ export const configSchema = z
       apiKeyEnv: z.string().optional(),
       apiVersion: z.string().optional(),
       allowPromptNormalization: z.boolean().default(true),
-      allowIntentPlanning: z.boolean().default(true),
+      allowLinearScoping: z.boolean().default(true),
+      allowBDDPlanning: z.boolean().default(true),
+      allowTDDPlanning: z.boolean().default(true),
+      allowImplementation: z.boolean().default(false),
+      allowQAVerification: z.boolean().default(false),
       fallbackToRules: z.boolean().default(true),
       stages: z
         .object({
           promptNormalization: agentStageSchema.default({}),
-          intentPlanning: agentStageSchema.default({})
+          linearScoping: agentStageSchema.default({}),
+          bddPlanning: agentStageSchema.default({}),
+          tddPlanning: agentStageSchema.default({}),
+          implementation: agentStageSchema.default({}),
+          qaVerification: agentStageSchema.default({})
         })
         .default({})
     }),

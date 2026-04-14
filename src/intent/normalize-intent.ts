@@ -16,10 +16,15 @@ import {
   AgentStageMeta,
   BDDScenario,
   NormalizedIntent,
-  NormalizationSource
+  NormalizationSource,
+  PlaywrightCheckpoint,
+  PlaywrightSpecArtifact,
+  TDDWorkItem
 } from "./intent-types";
 
 export type AvailableSourceDescriptor = PromptNormalizerSourceDescriptor;
+
+export type PlanningDepth = "scoping" | "full";
 
 export interface NormalizeIntentOptions {
   rawPrompt: string;
@@ -32,6 +37,7 @@ export interface NormalizeIntentOptions {
   publishToSourceWorkspace?: boolean;
   resumeIssue?: string;
   requestedSourceIds?: string[];
+  planningDepth?: PlanningDepth;
 }
 
 type SourceSelectionReason = "requested-scope" | "prompt-match" | "business-wide" | "default" | "llm";
@@ -396,32 +402,138 @@ function buildScenarios(input: {
   }));
 }
 
+function buildPlaywrightSpecRelativePath(sourceId: string, workItemId: string): string {
+  const sourceSegment = sanitizeFileSegment(sourceId) || "source";
+  const workItemSegment = sanitizeFileSegment(workItemId) || "work-item";
+  return `${sourceSegment}/${workItemSegment}.spec.ts`;
+}
+
+function buildPlaywrightCheckpoints(input: {
+  captureItems: CaptureItemConfig[];
+  workItemTitle: string;
+  desiredOutcome: string;
+}): PlaywrightCheckpoint[] {
+  if (input.captureItems.length === 0) {
+    const label = `Open the primary flow for ${input.workItemTitle}`;
+    return [
+      {
+        id: createPlanId("checkpoint", label, 0),
+        label,
+        action: "goto",
+        assertion: input.desiredOutcome,
+        screenshotId: createPlanId("shot", input.workItemTitle, 0),
+        path: "/"
+      }
+    ];
+  }
+
+  return input.captureItems.map((item, index) => ({
+    id: createPlanId("checkpoint", item.id, index),
+    label: item.name ?? item.id,
+    action: "goto",
+    assertion: item.locator
+      ? `The target '${item.locator}' is visible for ${item.name ?? item.id}.`
+      : `The page '${item.path}' is ready for evidence review.`,
+    screenshotId: createPlanId("shot", item.id, index),
+    path: item.path,
+    captureId: item.id,
+    locator: item.locator,
+    waitForSelector: item.waitForSelector,
+    target: item.locator
+  }));
+}
+
+function buildPlaywrightSpecs(input: {
+  workItemId: string;
+  title: string;
+  scenarioIds: string[];
+  sourceIds: string[];
+  desiredOutcome: string;
+  availableSources: Record<string, AvailableSourceDescriptor>;
+}): PlaywrightSpecArtifact[] {
+  return input.sourceIds.map((sourceId) => {
+    const source = input.availableSources[sourceId];
+    const captureItems = source?.capture.items ?? [];
+
+    return {
+      framework: "playwright",
+      sourceId,
+      relativeSpecPath: buildPlaywrightSpecRelativePath(sourceId, input.workItemId),
+      suiteName: `Intent-driven flow for ${sourceId}`,
+      testName: input.title,
+      scenarioIds: input.scenarioIds,
+      checkpoints: buildPlaywrightCheckpoints({
+        captureItems,
+        workItemTitle: input.title,
+        desiredOutcome: input.desiredOutcome
+      })
+    };
+  });
+}
+
 function buildWorkItems(input: {
   scenarios: NormalizedIntent["businessIntent"]["scenarios"];
   sourceIds: string[];
   desiredOutcome: string;
+  availableSources: Record<string, AvailableSourceDescriptor>;
 }): NormalizedIntent["businessIntent"]["workItems"] {
-  const scenarioItems = input.scenarios.map((scenario, index) => ({
-    id: createPlanId("work", scenario.title, index),
-    title: scenario.title,
-    description: scenario.goal,
-    scenarioIds: [scenario.id],
-    sourceIds: scenario.applicableSourceIds,
-    userVisibleOutcome: scenario.then[0] ?? input.desiredOutcome,
-    verification: scenario.then[scenario.then.length - 1] ?? input.desiredOutcome
-  }));
+  const scenarioItems: TDDWorkItem[] = input.scenarios.map((scenario, index) => {
+    const id = createPlanId("work", scenario.title, index);
+    const userVisibleOutcome = scenario.then[0] ?? input.desiredOutcome;
+    const verification = scenario.then[scenario.then.length - 1] ?? input.desiredOutcome;
 
-  const perSourceItems = input.sourceIds.map((sourceId, index) => ({
-    id: createPlanId("work", `visible-evidence-${sourceId}`, input.scenarios.length + index),
-    title: `Produce visible evidence for ${sourceId}`,
-    description: `Make the outcome of the intent inspectable through the evidence tools configured for ${sourceId}.`,
-    scenarioIds: input.scenarios
+    return {
+      id,
+      type: "playwright-spec",
+      title: scenario.title,
+      description: scenario.goal,
+      scenarioIds: [scenario.id],
+      sourceIds: scenario.applicableSourceIds,
+      userVisibleOutcome,
+      verification,
+      playwright: {
+        generatedBy: "rules",
+        specs: buildPlaywrightSpecs({
+          workItemId: id,
+          title: scenario.title,
+          scenarioIds: [scenario.id],
+          sourceIds: scenario.applicableSourceIds,
+          desiredOutcome: verification,
+          availableSources: input.availableSources
+        })
+      }
+    };
+  });
+
+  const perSourceItems: TDDWorkItem[] = input.sourceIds.map((sourceId, index) => {
+    const id = createPlanId("work", `visible-evidence-${sourceId}`, input.scenarios.length + index);
+    const scenarioIds = input.scenarios
       .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
-      .map((scenario) => scenario.id),
-    sourceIds: [sourceId],
-    userVisibleOutcome: `Users can verify the outcome for ${sourceId} without reading implementation details.`,
-    verification: `Evidence for ${sourceId} is linked back to the intent and its scenarios.`
-  }));
+      .map((scenario) => scenario.id);
+    const verification = `Evidence for ${sourceId} is linked back to the intent and its scenarios.`;
+
+    return {
+      id,
+      type: "playwright-spec",
+      title: `Produce visible evidence for ${sourceId}`,
+      description: `Make the outcome of the intent inspectable through the evidence tools configured for ${sourceId}.`,
+      scenarioIds,
+      sourceIds: [sourceId],
+      userVisibleOutcome: `Users can verify the outcome for ${sourceId} without reading implementation details.`,
+      verification,
+      playwright: {
+        generatedBy: "rules",
+        specs: buildPlaywrightSpecs({
+          workItemId: id,
+          title: `Produce visible evidence for ${sourceId}`,
+          scenarioIds,
+          sourceIds: [sourceId],
+          desiredOutcome: verification,
+          availableSources: input.availableSources
+        })
+      }
+    };
+  });
 
   return [...scenarioItems, ...perSourceItems];
 }
@@ -508,15 +620,59 @@ function buildToolPlans(input: {
   intentType: NormalizedIntent["intentType"];
   linearEnabled: boolean;
   sourceIds: string[];
+  planningDepth: PlanningDepth;
+  agent?: AgentConfig;
 }): NormalizedIntent["executionPlan"]["tools"] {
+  const implementationEnabled = resolveAgentStageConfig(input.agent, "implementation").enabled;
+  const qaVerificationEnabled = resolveAgentStageConfig(input.agent, "qaVerification").enabled;
+
   return [
     {
-      id: "intent-planning",
-      type: "intent-planning",
-      label: "Intent planning",
+      id: "linear-scoping",
+      type: "linear-scoping",
+      label: "Linear-first scoping",
       enabled: true,
-      reason: "The system converts the raw prompt into reviewable BDD and TDD structure before execution.",
-      details: ["Deterministic and human-reviewable until a real agent is introduced."]
+      reason:
+        input.planningDepth === "scoping"
+          ? "This pass is intentionally limited to creating resumable Linear business and source lanes first."
+          : "The runner creates resumable Linear business and source lanes before the detailed planner pass expands BDD and TDD output.",
+      details: [
+        input.planningDepth === "scoping"
+          ? "BDD and Playwright-first TDD planning are deferred until the detailed planner pass."
+          : "Detailed planner output is written back onto the same parent and source-lane issues after scoping completes."
+      ]
+    },
+    {
+      id: "bdd-planning",
+      type: "intent-planning",
+      label: "BDD planning",
+      enabled: input.planningDepth === "full",
+      reason:
+        input.planningDepth === "full"
+          ? "The system converts the raw prompt into reviewable acceptance criteria and scenarios after Linear scoping completes."
+          : "BDD planning is deferred until Linear scoping completes.",
+      details: [
+        input.planningDepth === "full"
+          ? "Deterministic by default, with optional Gemini refinement when configured."
+          : "The detailed planner pass will write acceptance criteria and scenarios back onto the scoped Linear lanes."
+      ]
+    },
+    {
+      id: "playwright-tdd",
+      type: "playwright-tdd",
+      label: "Playwright TDD generation",
+      enabled: input.planningDepth === "full" && input.sourceIds.length > 0,
+      reason:
+        input.planningDepth !== "full"
+          ? "Playwright-first TDD generation waits for the scoped Linear lanes."
+          : input.sourceIds.length > 0
+            ? "Applicable sources now produce Playwright-first executable test plans and checkpoint screenshots."
+            : "No sources were selected for Playwright-first test generation.",
+      details: [
+        input.planningDepth === "full"
+          ? "Generated specs are intended for checked-in repo storage with overwrite semantics."
+          : "The detailed planner pass will attach Playwright-first work items after scoping completes."
+      ]
     },
     {
       id: "screenshot-evidence",
@@ -538,6 +694,40 @@ function buildToolPlans(input: {
           ? "The intent requires comparing current evidence against a baseline."
           : "Comparison is not required for a baseline-only execution.",
       details: ["Uses pixel diff today; future tools can add non-visual verification."]
+    },
+    {
+      id: "environment-deployment",
+      type: "environment-deployment",
+      label: "Environment deployment",
+      enabled: false,
+      reason: "A generic local or Kubernetes deployment stage is planned but not yet wired into the runner.",
+      details: ["This will become the shared path for local, minikube, and k3s-backed execution."]
+    },
+    {
+      id: "implementation",
+      type: "implementation",
+      label: "Implementation loop",
+      enabled: implementationEnabled,
+      reason: implementationEnabled
+        ? "The runner can execute bounded implementation attempts against the prepared source workspace."
+        : "Implementation retries are available, but the current config keeps this stage disabled.",
+      details: [
+        qaVerificationEnabled
+          ? "QA failures can feed directly back into the next bounded implementation attempt."
+          : "When QA is also enabled, failed verification can loop back into another implementation attempt."
+      ]
+    },
+    {
+      id: "qa-verification",
+      type: "qa-verification",
+      label: "QA verification",
+      enabled: qaVerificationEnabled,
+      reason: qaVerificationEnabled
+        ? "The runner can now execute a bounded QA bundle before evidence capture completes the lane."
+        : "QA verification is available, but the current config keeps this stage disabled.",
+      details: [
+        "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
+      ]
     },
     {
       id: "reporting",
@@ -798,6 +988,14 @@ function buildSkippedStageMeta(stage: ResolvedAgentStageConfig): AgentStageMeta 
   return buildStageMeta(stage, "skipped", "skipped");
 }
 
+function buildRulesStageMeta(stage: ResolvedAgentStageConfig, warnings: string[] = []): AgentStageMeta {
+  return buildStageMeta(stage, "completed", "rules", warnings);
+}
+
+function buildDeferredStageMeta(stage: ResolvedAgentStageConfig, warning: string): AgentStageMeta {
+  return buildStageMeta(stage, "skipped", "skipped", [warning]);
+}
+
 function deriveNormalizationSource(
   resolutionSource: NormalizationSource,
   stageMetas: AgentStageMeta[]
@@ -1032,6 +1230,7 @@ function buildIntentDraft(
   resolution: NormalizationResolution,
   planningRefinement?: IntentPlanningRefinement
 ): IntentDraft {
+  const planningDepth = options.planningDepth ?? "full";
   const effectiveRunMode = mapIntentTypeToRunMode(resolution.intentType, options.runMode);
   const primarySourceId = resolution.sourceIds[0] ?? options.defaultSourceId;
   const sourcePlans = resolution.sourceIds.map((sourceId) => ({
@@ -1046,22 +1245,30 @@ function buildIntentDraft(
   const statement = planningRefinement?.statement ?? trimmedPrompt;
   const desiredOutcome = planningRefinement?.desiredOutcome ?? resolution.desiredOutcome;
   const acceptanceCriteria =
-    planningRefinement?.acceptanceCriteria ??
-    buildAcceptanceCriteria(trimmedPrompt, desiredOutcome, resolution.sourceIds, resolution.intentType);
+    planningDepth === "scoping"
+      ? []
+      : planningRefinement?.acceptanceCriteria ??
+        buildAcceptanceCriteria(trimmedPrompt, desiredOutcome, resolution.sourceIds, resolution.intentType);
   const scenarios =
-    planningRefinement?.scenarios ??
-    buildScenarios({
-      statement,
-      desiredOutcome,
-      sourceIds: resolution.sourceIds,
-      acceptanceCriteria,
-      runMode: effectiveRunMode
-    });
-  const workItems = buildWorkItems({
-    scenarios,
-    sourceIds: resolution.sourceIds,
-    desiredOutcome
-  });
+    planningDepth === "scoping"
+      ? []
+      : planningRefinement?.scenarios ??
+        buildScenarios({
+          statement,
+          desiredOutcome,
+          sourceIds: resolution.sourceIds,
+          acceptanceCriteria,
+          runMode: effectiveRunMode
+        });
+  const workItems =
+    planningDepth === "scoping"
+      ? []
+      : buildWorkItems({
+          scenarios,
+          sourceIds: resolution.sourceIds,
+          desiredOutcome,
+          availableSources: options.availableSources
+        });
   const destinations = buildDestinationPlans({
     prompt: trimmedPrompt,
     linearEnabled: options.linearEnabled ?? false,
@@ -1070,7 +1277,9 @@ function buildIntentDraft(
   const tools = buildToolPlans({
     intentType: resolution.intentType,
     linearEnabled: options.linearEnabled ?? false,
-    sourceIds: resolution.sourceIds
+    sourceIds: resolution.sourceIds,
+    planningDepth,
+    agent: options.agent
   });
   const repoCandidates = buildRepoCandidates({
     availableSources: options.availableSources,
@@ -1092,6 +1301,10 @@ function buildIntentDraft(
 
   if (!options.linearEnabled) {
     reviewNotes.push("Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on.");
+  }
+
+  if (planningDepth === "scoping") {
+    reviewNotes.push("BDD and Playwright-first TDD planning are deferred until Linear scoping creates the reusable business and source lanes.");
   }
 
   return {
@@ -1199,9 +1412,53 @@ function buildFallbackResolution(rulesResolution: NormalizationResolution, messa
 export function normalizeIntent(options: NormalizeIntentOptions): NormalizedIntent {
   const trimmedPrompt = options.rawPrompt.trim();
   ensurePrompt(trimmedPrompt);
+  const planningDepth = options.planningDepth ?? "full";
 
-  return buildNormalizedIntent(trimmedPrompt, options, buildRulesResolution(trimmedPrompt, options), {
-    stageMetas: AGENT_STAGE_SEQUENCE.map((stageId) => buildSkippedStageMeta(resolveAgentStageConfig(options.agent, stageId)))
+  const rulesResolution = buildRulesResolution(trimmedPrompt, options);
+  const promptStage = resolveAgentStageConfig(options.agent, "promptNormalization");
+  const linearStage = resolveAgentStageConfig(options.agent, "linearScoping");
+  const bddStage = resolveAgentStageConfig(options.agent, "bddPlanning");
+  const tddStage = resolveAgentStageConfig(options.agent, "tddPlanning");
+  const implementationStage = resolveAgentStageConfig(options.agent, "implementation");
+  const qaStage = resolveAgentStageConfig(options.agent, "qaVerification");
+
+  return buildNormalizedIntent(trimmedPrompt, options, rulesResolution, {
+    stageMetas: [
+      promptStage.enabled ? buildRulesStageMeta(promptStage) : buildSkippedStageMeta(promptStage),
+      linearStage.enabled ? buildRulesStageMeta(linearStage) : buildSkippedStageMeta(linearStage),
+      planningDepth === "full"
+        ? bddStage.enabled
+          ? buildRulesStageMeta(bddStage)
+          : buildSkippedStageMeta(bddStage)
+        : buildStageMeta(
+            bddStage,
+            "skipped",
+            "skipped",
+            ["BDD planning is deferred until Linear scoping completes."]
+          ),
+      planningDepth === "full"
+        ? tddStage.enabled
+          ? buildRulesStageMeta(tddStage)
+          : buildSkippedStageMeta(tddStage)
+        : buildStageMeta(
+            tddStage,
+            "skipped",
+            "skipped",
+            ["Playwright-first TDD planning is deferred until Linear scoping completes."]
+          ),
+      implementationStage.enabled
+        ? buildDeferredStageMeta(
+            implementationStage,
+            "Implementation stage configuration is recorded, but the runner has not wired the implementor loop yet."
+          )
+        : buildSkippedStageMeta(implementationStage),
+      qaStage.enabled
+        ? buildDeferredStageMeta(
+            qaStage,
+            "QA verification configuration is recorded, but the runner has not wired bounded QA retries yet."
+          )
+        : buildSkippedStageMeta(qaStage)
+    ]
   });
 }
 
@@ -1215,6 +1472,7 @@ export async function normalizeIntentWithAgent(
   };
   const trimmedPrompt = options.rawPrompt.trim();
   ensurePrompt(trimmedPrompt);
+  const planningDepth = options.planningDepth ?? "full";
 
   const rulesResolution = buildRulesResolution(trimmedPrompt, options);
   const requestedSourceIds = getRequestedSourceIds(options);
@@ -1260,19 +1518,71 @@ export async function normalizeIntentWithAgent(
     }
   }
 
+  const linearStage = resolveAgentStageConfig(options.agent, "linearScoping");
+  if (!linearStage.enabled) {
+    stageMetas.push(buildSkippedStageMeta(linearStage));
+  } else if (!linearStage.provider) {
+    stageMetas.push(buildRulesStageMeta(linearStage));
+  } else {
+    const message = `${linearStage.label} does not yet support provider-backed execution, so deterministic Linear lane scoping was used.`;
+    if (linearStage.fallbackToRules) {
+      stageMetas.push(buildRulesStageMeta(linearStage, [message]));
+    } else {
+      throw new Error(message);
+    }
+  }
+
+  if (planningDepth === "scoping") {
+    const bddStage = resolveAgentStageConfig(options.agent, "bddPlanning");
+    stageMetas.push(
+      buildStageMeta(bddStage, "skipped", "skipped", ["BDD planning is deferred until Linear scoping completes."])
+    );
+
+    const tddStage = resolveAgentStageConfig(options.agent, "tddPlanning");
+    stageMetas.push(
+      buildStageMeta(tddStage, "skipped", "skipped", ["Playwright-first TDD planning is deferred until Linear scoping completes."])
+    );
+
+    const implementationStage = resolveAgentStageConfig(options.agent, "implementation");
+    stageMetas.push(
+      implementationStage.enabled
+        ? buildDeferredStageMeta(
+            implementationStage,
+            "Implementation stage configuration is recorded, but the runner has not wired the implementor loop yet."
+          )
+        : buildSkippedStageMeta(implementationStage)
+    );
+
+    const qaStage = resolveAgentStageConfig(options.agent, "qaVerification");
+    stageMetas.push(
+      qaStage.enabled
+        ? buildDeferredStageMeta(
+            qaStage,
+            "QA verification configuration is recorded, but the runner has not wired bounded QA retries yet."
+          )
+        : buildSkippedStageMeta(qaStage)
+    );
+
+    return buildNormalizedIntent(trimmedPrompt, options, resolution, {
+      stageMetas
+    });
+  }
+
   const draft = buildIntentDraft(trimmedPrompt, options, resolution);
-  const planningStage = resolveAgentStageConfig(options.agent, "intentPlanning");
+  const planningStage = resolveAgentStageConfig(options.agent, "bddPlanning");
   let planningRefinement: IntentPlanningRefinement | undefined;
   const planningStageSources = Object.fromEntries(
     resolution.sourceIds.map((sourceId) => [sourceId, options.availableSources[sourceId]])
   );
 
-  if (!planningStage.enabled || !planningStage.provider) {
+  if (!planningStage.enabled) {
     stageMetas.push(buildSkippedStageMeta(planningStage));
+  } else if (!planningStage.provider) {
+    stageMetas.push(buildRulesStageMeta(planningStage));
   } else if (planningStage.provider !== "gemini") {
     const message = `Agent provider '${planningStage.provider}' is not supported for ${planningStage.label}. Supported providers: gemini.`;
     if (planningStage.fallbackToRules) {
-      stageMetas.push(buildStageMeta(planningStage, "fallback", "fallback", [message]));
+      stageMetas.push(buildRulesStageMeta(planningStage, [message]));
     } else {
       throw new Error(message);
     }
@@ -1315,6 +1625,40 @@ export async function normalizeIntentWithAgent(
       }
     }
   }
+
+  const tddStage = resolveAgentStageConfig(options.agent, "tddPlanning");
+  if (!tddStage.enabled) {
+    stageMetas.push(buildSkippedStageMeta(tddStage));
+  } else if (!tddStage.provider) {
+    stageMetas.push(buildRulesStageMeta(tddStage));
+  } else {
+    const message = `${tddStage.label} does not yet support provider-backed execution, so deterministic Playwright spec generation was used.`;
+    if (tddStage.fallbackToRules) {
+      stageMetas.push(buildRulesStageMeta(tddStage, [message]));
+    } else {
+      throw new Error(message);
+    }
+  }
+
+  const implementationStage = resolveAgentStageConfig(options.agent, "implementation");
+  stageMetas.push(
+    implementationStage.enabled
+      ? buildDeferredStageMeta(
+          implementationStage,
+          "Implementation stage configuration is recorded, but the runner has not wired the implementor loop yet."
+        )
+      : buildSkippedStageMeta(implementationStage)
+  );
+
+  const qaStage = resolveAgentStageConfig(options.agent, "qaVerification");
+  stageMetas.push(
+    qaStage.enabled
+      ? buildDeferredStageMeta(
+          qaStage,
+          "QA verification configuration is recorded, but the runner has not wired bounded QA retries yet."
+        )
+      : buildSkippedStageMeta(qaStage)
+  );
 
   return buildNormalizedIntent(trimmedPrompt, options, resolution, {
     planningRefinement,

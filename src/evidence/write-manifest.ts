@@ -8,6 +8,37 @@ import { ResolvedSourceWorkspace } from "../target/resolve-target";
 import { writeJsonFile } from "../shared/fs";
 import { RunPaths, SourceRunPaths, toRelativePath } from "./paths";
 
+export interface SourceStageCommandRecord {
+  label: string;
+  command: string;
+  cwd: string;
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  status: "completed" | "failed";
+  exitCode?: number;
+  timedOut?: boolean;
+  error?: string;
+  logPath?: string;
+}
+
+export interface SourceStageExecutionRecord {
+  status: "skipped" | "completed" | "failed";
+  summary: string;
+  error?: string;
+  commands: SourceStageCommandRecord[];
+}
+
+export interface SourceRunAttemptRecord {
+  attemptNumber: number;
+  startedAt: string;
+  finishedAt: string;
+  status: "completed" | "failed";
+  failureStage?: "implementation" | "qaVerification";
+  implementation: SourceStageExecutionRecord;
+  qaVerification: SourceStageExecutionRecord;
+}
+
 export interface SourceEvidenceRecord {
   sourceId: string;
   status: "planned" | "completed" | "failed";
@@ -18,6 +49,8 @@ export interface SourceEvidenceRecord {
   error?: string;
   linearIssue?: LinearIssueRef | null;
   publishedSourcePath?: string;
+  generatedPlaywrightTests?: string[];
+  attempts: SourceRunAttemptRecord[];
 }
 
 export interface BusinessLinearPublication {
@@ -42,7 +75,41 @@ export interface PlanLifecycleRecord {
     selectionReason?: string;
     runMode?: AppConfig["run"]["mode"];
     linearIssue?: LinearIssueRef | null;
+    attemptCount?: number;
+    attempts?: Array<{
+      attemptNumber: number;
+      status: SourceRunAttemptRecord["status"];
+      failureStage?: SourceRunAttemptRecord["failureStage"];
+      implementation: SourceStageExecutionRecord["status"];
+      qaVerification: SourceStageExecutionRecord["status"];
+    }>;
   }>;
+}
+
+function serializeSourceStageCommand(controllerRoot: string, command: SourceStageCommandRecord): Record<string, unknown> {
+  return {
+    ...command,
+    logPath: toRelativePath(controllerRoot, command.logPath)
+  };
+}
+
+function serializeSourceStageExecution(controllerRoot: string, stage: SourceStageExecutionRecord): Record<string, unknown> {
+  return {
+    ...stage,
+    commands: stage.commands.map((command) => serializeSourceStageCommand(controllerRoot, command))
+  };
+}
+
+function serializeSourceRunAttempts(controllerRoot: string, attempts: SourceRunAttemptRecord[]): Array<Record<string, unknown>> {
+  return attempts.map((attempt) => ({
+    attemptNumber: attempt.attemptNumber,
+    startedAt: attempt.startedAt,
+    finishedAt: attempt.finishedAt,
+    status: attempt.status,
+    failureStage: attempt.failureStage,
+    implementation: serializeSourceStageExecution(controllerRoot, attempt.implementation),
+    qaVerification: serializeSourceStageExecution(controllerRoot, attempt.qaVerification)
+  }));
 }
 
 function emptyComparisonCounts(): Record<ComparisonStatus, number> {
@@ -69,6 +136,8 @@ export async function writeSourceEvidenceFiles(input: {
   status: "planned" | "completed" | "failed";
   error?: string;
   publishedSourcePath?: string;
+  generatedPlaywrightTests?: string[];
+  attempts: SourceRunAttemptRecord[];
 }): Promise<void> {
   const sourcePlan = input.normalizedIntent.executionPlan.sources.find((source) => source.sourceId === input.paths.sourceId);
   const comparison = input.comparison;
@@ -94,8 +163,12 @@ export async function writeSourceEvidenceFiles(input: {
       baseUrl: input.workspace?.baseUrl,
       gitRef: input.workspace?.gitRef,
       gitCommit: input.workspace?.gitCommit,
-      publishedSourcePath: input.publishedSourcePath
+      publishedSourcePath: input.publishedSourcePath,
+      generatedPlaywrightTests: input.generatedPlaywrightTests?.map((filePath) =>
+        toRelativePath(input.paths.controllerRoot, filePath)
+      )
     },
+    attempts: serializeSourceRunAttempts(input.paths.controllerRoot, input.attempts),
     playwright: input.config.playwright,
     captures: input.captures,
     summary: comparison,
@@ -176,6 +249,11 @@ export async function writeBusinessEvidenceFiles(input: {
       error: sourceRun.error,
       linearIssue: sourceRun.linearIssue,
       publishedSourcePath: sourceRun.publishedSourcePath,
+      generatedPlaywrightTests: sourceRun.generatedPlaywrightTests?.map((filePath) =>
+        toRelativePath(input.paths.controllerRoot, filePath)
+      ),
+      attemptCount: sourceRun.attempts.length,
+      attempts: serializeSourceRunAttempts(input.paths.controllerRoot, sourceRun.attempts),
       workspace: sourceRun.workspace
         ? {
             sourceType: sourceRun.workspace.sourceType,
@@ -198,6 +276,7 @@ export async function writeBusinessEvidenceFiles(input: {
         comparisonPath: toRelativePath(input.paths.controllerRoot, sourceRun.paths.comparisonPath),
         summaryPath: toRelativePath(input.paths.controllerRoot, sourceRun.paths.summaryPath),
         appLogPath: toRelativePath(input.paths.controllerRoot, sourceRun.paths.appLogPath),
+        attemptsDir: toRelativePath(input.paths.controllerRoot, sourceRun.paths.attemptsDir),
         capturesDir: toRelativePath(input.paths.controllerRoot, sourceRun.paths.capturesDir),
         diffsDir: toRelativePath(input.paths.controllerRoot, sourceRun.paths.diffsDir)
       }
@@ -280,7 +359,15 @@ export async function writePlanLifecycleFile(input: {
         status: sourceRun.status,
         selectionReason: sourcePlan?.selectionReason,
         runMode: sourcePlan?.runMode,
-        linearIssue: sourceRun.linearIssue ?? input.linearPublication?.sourceIssues[sourceRun.sourceId] ?? null
+        linearIssue: sourceRun.linearIssue ?? input.linearPublication?.sourceIssues[sourceRun.sourceId] ?? null,
+        attemptCount: sourceRun.attempts.length,
+        attempts: sourceRun.attempts.map((attempt) => ({
+          attemptNumber: attempt.attemptNumber,
+          status: attempt.status,
+          failureStage: attempt.failureStage,
+          implementation: attempt.implementation.status,
+          qaVerification: attempt.qaVerification.status
+        }))
       };
     })
   };
@@ -300,6 +387,7 @@ export async function writeEvidenceFiles(input: {
   status: "planned" | "completed" | "failed";
   error?: string;
   publishedSourcePath?: string;
+  attempts: SourceRunAttemptRecord[];
 }): Promise<void> {
   await writeSourceEvidenceFiles(input);
 }

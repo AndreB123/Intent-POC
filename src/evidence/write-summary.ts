@@ -6,7 +6,12 @@ import { LinearIssueRef } from "../linear/linear-client";
 import { writeTextFile } from "../shared/fs";
 import { ResolvedSourceWorkspace } from "../target/resolve-target";
 import { RunPaths, SourceRunPaths, toRelativePath } from "./paths";
-import { BusinessLinearPublication, SourceEvidenceRecord } from "./write-manifest";
+import {
+  BusinessLinearPublication,
+  SourceEvidenceRecord,
+  SourceRunAttemptRecord,
+  SourceStageExecutionRecord
+} from "./write-manifest";
 
 function emptyComparisonCounts(): Record<ComparisonStatus, number> {
   return {
@@ -33,6 +38,59 @@ function buildAgentStageMarkdown(stages: NormalizedIntent["normalizationMeta"]["
     .join("\n");
 }
 
+function buildStageExecutionMarkdown(
+  label: string,
+  stage: SourceStageExecutionRecord,
+  controllerRoot: string
+): string[] {
+  const lines = [`- ${label}: ${stage.status} - ${stage.summary}`];
+
+  if (stage.error) {
+    lines.push(`  - Error: ${stage.error}`);
+  }
+
+  if (stage.commands.length === 0) {
+    lines.push(`  - Commands: none`);
+    return lines;
+  }
+
+  for (const command of stage.commands) {
+    const details = [command.label, `[${command.status}]`];
+
+    if (command.logPath) {
+      details.push(toRelativePath(controllerRoot, command.logPath) ?? command.logPath);
+    }
+
+    if (command.error) {
+      details.push(command.error);
+    }
+
+    lines.push(`  - ${details.join(" - ")}`);
+  }
+
+  return lines;
+}
+
+function buildRuntimeAttemptsMarkdown(controllerRoot: string, attempts: SourceRunAttemptRecord[]): string {
+  if (attempts.length === 0) {
+    return "- None";
+  }
+
+  return attempts
+    .map((attempt) => {
+      const lines = [
+        `### Attempt ${attempt.attemptNumber}`,
+        `- Status: ${attempt.status}`,
+        `- Failure stage: ${attempt.failureStage ?? "none"}`,
+        ...buildStageExecutionMarkdown("Implementation", attempt.implementation, controllerRoot),
+        ...buildStageExecutionMarkdown("QA verification", attempt.qaVerification, controllerRoot)
+      ];
+
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
 export function buildSourceSummaryMarkdown(input: {
   config: AppConfig;
   paths: SourceRunPaths;
@@ -43,6 +101,8 @@ export function buildSourceSummaryMarkdown(input: {
   comparison?: ComparisonSummary;
   status: "planned" | "completed" | "failed";
   error?: string;
+  generatedPlaywrightTests?: string[];
+  attempts: SourceRunAttemptRecord[];
 }): string {
   const comparison = input.comparison;
   const changedItems = comparison ? comparison.items.filter((item) => item.status === "changed") : [];
@@ -108,10 +168,22 @@ export function buildSourceSummaryMarkdown(input: {
           [
             `- ${workItem.title}`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
-            `  - Verification: ${workItem.verification}`
+            `  - Verification: ${workItem.verification}`,
+            `  - Playwright specs: ${workItem.playwright.specs.length}`,
+            `  - Checkpoints: ${workItem.playwright.specs.reduce((count, spec) => count + spec.checkpoints.length, 0)}`
           ].join("\n")
       )
       .join("\n") || "- None",
+    "",
+    `## Generated Playwright Specs`,
+    "",
+    input.generatedPlaywrightTests && input.generatedPlaywrightTests.length > 0
+      ? input.generatedPlaywrightTests.map((filePath) => `- ${toRelativePath(input.paths.controllerRoot, filePath)}`).join("\n")
+      : "- None",
+    "",
+    `## Runtime Attempts`,
+    "",
+    buildRuntimeAttemptsMarkdown(input.paths.controllerRoot, input.attempts),
     "",
     `## Counts`,
     "",
@@ -161,6 +233,8 @@ export async function writeSourceSummaryMarkdown(input: {
   comparison?: ComparisonSummary;
   status: "planned" | "completed" | "failed";
   error?: string;
+  generatedPlaywrightTests?: string[];
+  attempts: SourceRunAttemptRecord[];
 }): Promise<string> {
   const markdown = buildSourceSummaryMarkdown(input);
   await writeTextFile(input.paths.summaryPath, markdown);
@@ -230,7 +304,9 @@ export function buildBusinessSummaryMarkdown(input: {
             `- ${workItem.title}`,
             `  - Sources: ${workItem.sourceIds.join(", ")}`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
-            `  - Verification: ${workItem.verification}`
+            `  - Verification: ${workItem.verification}`,
+            `  - Playwright specs: ${workItem.playwright.specs.length}`,
+            `  - Checkpoints: ${workItem.playwright.specs.reduce((count, spec) => count + spec.checkpoints.length, 0)}`
           ].join("\n")
       )
       .join("\n"),
@@ -246,15 +322,21 @@ export function buildBusinessSummaryMarkdown(input: {
     "",
     input.sourceRuns
       .map(
-        (sourceRun) =>
-          [
+        (sourceRun) => {
+          const latestAttempt = sourceRun.attempts.at(-1);
+
+          return [
             `### ${sourceRun.sourceId}`,
             `- Status: ${sourceRun.status}`,
             `- Error: ${sourceRun.error ?? "none"}`,
             `- Linear issue: ${sourceRun.linearIssue?.url ?? sourceRun.linearIssue?.identifier ?? "not created"}`,
+            `- Generated Playwright specs: ${sourceRun.generatedPlaywrightTests?.length ?? 0}`,
+            `- Attempts: ${sourceRun.attempts.length}`,
+            `- Latest runtime result: ${latestAttempt ? `${latestAttempt.status}${latestAttempt.failureStage ? ` (${latestAttempt.failureStage})` : ""}` : "not run"}`,
             `- Summary: ${toRelativePath(input.paths.controllerRoot, sourceRun.paths.summaryPath)}`,
             `- Manifest: ${toRelativePath(input.paths.controllerRoot, sourceRun.paths.manifestPath)}`
-          ].join("\n")
+          ].join("\n");
+        }
       )
       .join("\n\n"),
     "",
@@ -308,6 +390,8 @@ export async function writeSummaryMarkdown(input: {
   comparison?: ComparisonSummary;
   status: "planned" | "completed" | "failed";
   error?: string;
+  generatedPlaywrightTests?: string[];
+  attempts: SourceRunAttemptRecord[];
 }): Promise<string> {
   return await writeSourceSummaryMarkdown(input);
 }

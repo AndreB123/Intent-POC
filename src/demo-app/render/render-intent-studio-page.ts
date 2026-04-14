@@ -296,12 +296,14 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
       textarea,
       select,
       button,
-      input[type="checkbox"] {
+      input[type="checkbox"],
+      input[type="text"] {
         font: inherit;
       }
 
       textarea,
-      select {
+      select,
+      input[type="text"] {
         width: 100%;
         border: 1px solid rgba(25, 54, 70, 0.18);
         border-radius: var(--radius-md);
@@ -355,6 +357,21 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
       .primary-button:disabled {
         opacity: 0.55;
         cursor: progress;
+      }
+
+      .ghost-button {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 13px 20px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .ghost-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
       }
 
       .status-pill,
@@ -598,6 +615,23 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         line-height: 1.5;
       }
 
+      .editor-form,
+      .editor-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .editor-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .editor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
       .selection-title,
       .target-status-row {
         display: flex;
@@ -691,7 +725,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         .prompt-grid,
         .plan-grid,
         .status-strip,
-        .results-grid {
+        .results-grid,
+        .editor-grid {
           grid-template-columns: 1fr;
         }
 
@@ -796,9 +831,9 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                       <a class="ghost-link" id="config-file-link" href="#">View YAML</a>
                     </div>
                   </div>
-                  <div class="field-note">These cards come from the <code>sources</code> block in the active YAML config. Start with Current app, then add more repos there when you need broader scope.</div>
+                  <div class="field-note">These cards come from the <code>sources</code> block in the active YAML config. Every configured source stays visible here. Use the metadata editor below for labels and context, and use YAML for structural source changes.</div>
                   <div class="scope-list" id="source-scope"></div>
-                  <div class="field-note" id="source-visibility-note">Scope changes appear after the config reloads.</div>
+                  <div class="field-note" id="source-visibility-note">All configured sources are visible in work scope.</div>
                 </div>
 ${agentStageFields}
                 <div class="field-wide">
@@ -808,7 +843,7 @@ ${agentStageFields}
                       <span class="target-badge target-ready">guide</span>
                     </div>
                     <div class="selection-summary"><strong>Work scope</strong> constrains which configured repos or apps can participate in the run. It does not change how screenshots are handled after capture.</div>
-                    <div class="selection-summary">Rename cards, hide automation-only sources, or add more repos by editing the YAML config. The Studio reloads those definitions into the next state update.</div>
+                    <div class="selection-summary">Rename cards and update repo context directly in the Source Metadata panel. Use the YAML config when you need to add, remove, or structurally rewire sources.</div>
                     <div class="selection-summary">When multiple sources are checked, the planner creates one evidence lane per selected source inside the same business run.</div>
                   </div>
                 </div>
@@ -834,6 +869,50 @@ ${agentStageFields}
                   <span class="notice" id="form-note">No run in progress.</span>
                   <button class="primary-button" id="submit-button" type="submit">Run intent</button>
                 </div>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Source Metadata</h2>
+                <div class="panel-copy">Edit the user-facing name and repo context for a configured source without leaving Studio. This writes back to the active YAML config; add or remove full sources in YAML when the source structure changes.</div>
+              </div>
+              <span class="notice" id="source-editor-status">Ready</span>
+            </div>
+
+            <form class="editor-form" id="source-editor-form">
+              <div class="editor-grid">
+                <div class="field">
+                  <label for="source-editor-select">Configured source</label>
+                  <select id="source-editor-select"></select>
+                  <div class="field-note">Pick the source whose Studio label and context you want to edit.</div>
+                </div>
+                <div class="field">
+                  <label for="source-editor-display-name">Display name</label>
+                  <input id="source-editor-display-name" type="text" placeholder="Current app" />
+                  <div class="field-note">Shown on work scope cards and plan summaries. Leave blank to fall back to the repo label or configured id.</div>
+                </div>
+                <div class="field">
+                  <label for="source-editor-repo-label">Repo label</label>
+                  <input id="source-editor-repo-label" type="text" placeholder="Intent POC" />
+                  <div class="field-note">Short repo or app label shown as secondary context.</div>
+                </div>
+                <div class="field">
+                  <label for="source-editor-role">Role</label>
+                  <input id="source-editor-role" type="text" placeholder="current app" />
+                  <div class="field-note">Describe why this source exists in the workflow.</div>
+                </div>
+                <div class="field-wide">
+                  <label for="source-editor-summary">Summary</label>
+                  <textarea id="source-editor-summary" placeholder="Explain what this source represents and when it should be used."></textarea>
+                  <div class="field-note" id="source-editor-location">Source metadata writes back to the active config file.</div>
+                </div>
+              </div>
+              <div class="editor-actions">
+                <button class="primary-button" id="source-editor-save" type="submit">Save source metadata</button>
+                <button class="ghost-button" id="source-editor-reset" type="button">Reload selected source</button>
               </div>
             </form>
           </section>
@@ -926,7 +1005,7 @@ ${agentStageFields}
             <div class="panel-head">
               <div>
                 <h2>Scope Sources</h2>
-                <div class="panel-copy">Visible repo and workspace sources loaded from YAML, with readiness details and setup notes.</div>
+                <div class="panel-copy">Configured repo and workspace sources loaded from YAML, with readiness details and setup notes.</div>
               </div>
             </div>
             <div class="target-list" id="sources"></div>
@@ -970,6 +1049,16 @@ ${agentStageFields}
         const captures = document.getElementById("captures");
         const sources = document.getElementById("sources");
         const recentRuns = document.getElementById("recent-runs");
+        const sourceEditorForm = document.getElementById("source-editor-form");
+        const sourceEditorSelect = document.getElementById("source-editor-select");
+        const sourceEditorDisplayName = document.getElementById("source-editor-display-name");
+        const sourceEditorRepoLabel = document.getElementById("source-editor-repo-label");
+        const sourceEditorRole = document.getElementById("source-editor-role");
+        const sourceEditorSummary = document.getElementById("source-editor-summary");
+        const sourceEditorStatus = document.getElementById("source-editor-status");
+        const sourceEditorLocation = document.getElementById("source-editor-location");
+        const sourceEditorSave = document.getElementById("source-editor-save");
+        const sourceEditorReset = document.getElementById("source-editor-reset");
         const selectionTitle = document.getElementById("selection-title");
         const selectionStatus = document.getElementById("selection-status");
         const selectionSummary = document.getElementById("selection-summary");
@@ -1003,6 +1092,9 @@ ${agentStageFields}
         let previewPlan = null;
         let planRequestId = 0;
         let planRequestTimer = null;
+        let editorSourceId = null;
+        let editorDirty = false;
+        let editorSaving = false;
 
         promptInput.addEventListener("input", function () {
           promptTouched = true;
@@ -1080,6 +1172,15 @@ ${agentStageFields}
         function formatSourceReference(state, sourceId) {
           const source = findSource(state, sourceId);
           return source ? source.label + " (" + source.id + ")" : sourceId;
+        }
+
+        function sourceEditorFields() {
+          return [
+            sourceEditorDisplayName,
+            sourceEditorRepoLabel,
+            sourceEditorRole,
+            sourceEditorSummary
+          ];
         }
 
         function selectedSourceIds() {
@@ -1213,6 +1314,104 @@ ${agentStageFields}
           });
         }
 
+        function resolveEditorSourceId(state, preferredSourceId) {
+          if (!state || !state.sources || state.sources.length === 0) {
+            return null;
+          }
+
+          if (preferredSourceId && findSource(state, preferredSourceId)) {
+            return preferredSourceId;
+          }
+
+          if (editorSourceId && findSource(state, editorSourceId)) {
+            return editorSourceId;
+          }
+
+          if (state.defaultSourceId && findSource(state, state.defaultSourceId)) {
+            return state.defaultSourceId;
+          }
+
+          return state.sources[0].id;
+        }
+
+        function populateSourceEditor(state, sourceId) {
+          const source = findSource(state, sourceId);
+
+          if (!source) {
+            editorSourceId = null;
+            sourceEditorSelect.value = "";
+            sourceEditorFields().forEach(function (field) {
+              field.value = "";
+              field.disabled = true;
+            });
+            sourceEditorSave.disabled = true;
+            sourceEditorReset.disabled = true;
+            sourceEditorStatus.textContent = "No sources loaded";
+            sourceEditorLocation.textContent = "Load a config with at least one source to edit metadata here.";
+            return;
+          }
+
+          editorSourceId = source.id;
+          sourceEditorSelect.value = source.id;
+          sourceEditorDisplayName.value = source.label === source.id ? "" : source.label;
+          sourceEditorRepoLabel.value = source.repoLabel || "";
+          sourceEditorRole.value = source.role || "";
+          sourceEditorSummary.value = source.summary || "";
+          sourceEditorFields().forEach(function (field) {
+            field.disabled = false;
+          });
+          sourceEditorSave.disabled = editorSaving;
+          sourceEditorReset.disabled = editorSaving;
+          sourceEditorStatus.textContent = editorSaving
+            ? "Saving…"
+            : editorDirty
+              ? "Unsaved changes"
+              : "Editing " + source.label;
+          sourceEditorLocation.textContent =
+            "Writes to sources." +
+            source.id +
+            ".studio.displayName and sources." +
+            source.id +
+            ".planning.{repoLabel, role, summary} in " +
+            state.configPath +
+            ".";
+        }
+
+        function renderSourceEditor(state, options) {
+          const renderOptions = options || {};
+          const preferredSourceId = renderOptions.preferredSourceId;
+          const forceReload = renderOptions.forceReload === true;
+          const sourceList = state && state.sources ? state.sources : [];
+          const nextSourceId = resolveEditorSourceId(state, preferredSourceId);
+
+          clear(sourceEditorSelect);
+          if (sourceList.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "No configured sources";
+            sourceEditorSelect.appendChild(option);
+            populateSourceEditor(state, null);
+            return;
+          }
+
+          sourceList.forEach(function (source) {
+            const option = document.createElement("option");
+            option.value = source.id;
+            option.textContent = source.label + " (" + source.id + ")";
+            sourceEditorSelect.appendChild(option);
+          });
+
+          const shouldReload = forceReload || !editorDirty || editorSourceId !== nextSourceId;
+          if (shouldReload) {
+            editorDirty = false;
+            populateSourceEditor(state, nextSourceId);
+            return;
+          }
+
+          sourceEditorSelect.value = editorSourceId;
+          sourceEditorStatus.textContent = editorSaving ? "Saving…" : "Unsaved changes";
+        }
+
         function updateConfigLinks(state) {
           if (state.configEditorUrl) {
             configEditorLink.href = state.configEditorUrl;
@@ -1230,21 +1429,10 @@ ${agentStageFields}
             configFileLink.style.display = "none";
           }
 
-          if (state.hiddenSourceCount > 0) {
-            sourceVisibilityNote.textContent =
-              state.hiddenSourceCount +
-              " internal automation source" +
-              (state.hiddenSourceCount === 1 ? " is" : "s are") +
-              " hidden from this scope list. Edit " +
-              state.configPath +
-              " to expose more repos.";
-            return;
-          }
-
           sourceVisibilityNote.textContent =
-            "Scope cards come from the sources block in " +
+            "Every configured source in " +
             state.configPath +
-            ". Edit that file to rename Current app or add more repos.";
+            " stays visible here. Use the Source Metadata panel for names and context, and use YAML to add or remove full sources.";
         }
 
         function updateSelectionGuidance(state) {
@@ -1258,9 +1446,7 @@ ${agentStageFields}
             selectionStatus.className = "target-badge target-ready";
             selectionSummary.textContent = "The runner can infer sources from your prompt by matching configured source ids or aliases, then fall back to the config default source if needed.";
             selectionDefaults.textContent = "Blank work scope falls back to prompt matching and business-wide expansion, then config default: " + defaultSourceText + ". Run behavior still falls back to config mode: " + defaultModeText + ".";
-            selectionDetails.textContent = state.hiddenSourceCount > 0
-              ? "Edit the active YAML config to expose more repos or rename the visible scope cards."
-              : "Leave every card clear when the prompt should decide. Check cards only when you want to constrain the run.";
+            selectionDetails.textContent = "Leave every card clear when the prompt should decide. Check cards only when you want to constrain the run.";
             return;
           }
 
@@ -1335,7 +1521,12 @@ ${agentStageFields}
             ["Prompt", run.prompt || "—"],
             ["Normalized summary", run.normalizedSummary || "Waiting for normalization…"],
             ["Run ID", run.runId || "Pending"],
-            ["Source lanes", run.sourceRuns && run.sourceRuns.length > 0 ? run.sourceRuns.map(function (sourceRun) { return sourceRun.sourceId + ": " + sourceRun.status; }).join(" | ") : "Waiting for source planning…"],
+            ["Source lanes", run.sourceRuns && run.sourceRuns.length > 0 ? run.sourceRuns.map(function (sourceRun) {
+              const attemptLabel = sourceRun.attemptCount && sourceRun.attemptCount > 0
+                ? " (" + sourceRun.attemptCount + " attempt" + (sourceRun.attemptCount === 1 ? "" : "s") + (sourceRun.latestFailureStage ? ", " + sourceRun.latestFailureStage : "") + ")"
+                : "";
+              return sourceRun.sourceId + ": " + sourceRun.status + attemptLabel;
+            }).join(" | ") : "Waiting for source planning…"],
             ["Result", run.error || (run.hasDrift ? "Drift detected" : run.status === "completed" ? "No blocking errors" : "In progress")]
           ];
 
@@ -1391,13 +1582,13 @@ ${agentStageFields}
           if (!activePlan) {
             planIntentText.textContent = "Type an intent to preview the plan.";
             planIntentOutcome.textContent = "Desired outcome will appear here.";
-            planPlanNotes.textContent = "The planner will show BDD, TDD, sources, destinations, and tools before execution starts.";
+            planPlanNotes.textContent = "The planner will show BDD, Playwright-first TDD, workflow stages, sources, destinations, and tools before execution starts.";
             renderPlanList(planCriteria, [], function () { return create("div", "empty-card", ""); }, "Acceptance criteria will appear once the planner has a prompt.");
             renderPlanList(planScenarios, [], function () { return create("div", "empty-card", ""); }, "BDD scenarios will appear once the planner has a prompt.");
-            renderPlanList(planWorkItems, [], function () { return create("div", "empty-card", ""); }, "TDD work items will appear once the planner has a prompt.");
+            renderPlanList(planWorkItems, [], function () { return create("div", "empty-card", ""); }, "Playwright-first TDD work items will appear once the planner has a prompt.");
             renderPlanList(planSources, [], function () { return create("div", "empty-card", ""); }, "Execution sources will appear once the planner has a prompt.");
             renderPlanList(planDestinations, [], function () { return create("div", "empty-card", ""); }, "Destinations will appear once the planner has a prompt.");
-            renderPlanList(planAiStages, [], function () { return create("div", "empty-card", ""); }, "AI stage details will appear once the planner has a prompt.");
+            renderPlanList(planAiStages, [], function () { return create("div", "empty-card", ""); }, "Workflow stage details will appear once the planner has a prompt.");
             renderPlanList(planTools, [], function () { return create("div", "empty-card", ""); }, "Tools will appear once the planner has a prompt.");
             return;
           }
@@ -1437,14 +1628,27 @@ ${agentStageFields}
             planWorkItems,
             activePlan.businessIntent.workItems,
             function (workItem) {
+              var checkpointCount = workItem.playwright.specs.reduce(function (count, spec) {
+                return count + spec.checkpoints.length;
+              }, 0);
+              var specPaths = workItem.playwright.specs.map(function (spec) {
+                return spec.sourceId + ":" + spec.relativeSpecPath;
+              });
               return renderPlanItem(
                 workItem.title,
-                ["Sources: " + workItem.sourceIds.join(", "), "Verification: " + workItem.verification],
-                [workItem.description, "Visible outcome: " + workItem.userVisibleOutcome],
+                [
+                  "Sources: " + workItem.sourceIds.join(", "),
+                  "Verification: " + workItem.verification,
+                  "Playwright specs: " + workItem.playwright.specs.length,
+                  "Checkpoints: " + checkpointCount
+                ],
+                [workItem.description, "Visible outcome: " + workItem.userVisibleOutcome].concat(
+                  specPaths.length > 0 ? ["Spec paths: " + specPaths.join(", ")] : []
+                ),
                 workItem.scenarioIds
               );
             },
-            "TDD work items will appear once the planner has a prompt."
+            "Playwright-first TDD work items will appear once the planner has a prompt."
           );
 
           renderPlanList(
@@ -1489,7 +1693,7 @@ ${agentStageFields}
                 []
               );
             },
-            "AI stage details will appear once the planner has a prompt."
+            "Workflow stage details will appear once the planner has a prompt."
           );
 
           renderPlanList(
@@ -1624,21 +1828,8 @@ ${agentStageFields}
           clear(sources);
 
           if (!state.sources || state.sources.length === 0) {
-            sources.appendChild(create("div", "empty-card", "No visible work-scope sources are available. Open the config and expose at least one source."));
+            sources.appendChild(create("div", "empty-card", "No configured sources are available. Open the config and add at least one source."));
             return;
-          }
-
-          if (state.hiddenSourceCount > 0) {
-            sources.appendChild(
-              create(
-                "div",
-                "empty-card",
-                state.hiddenSourceCount +
-                  " internal automation source" +
-                  (state.hiddenSourceCount === 1 ? " is" : "s are") +
-                  " hidden from this panel. Edit the config when you want them available as work scope."
-              )
-            );
           }
 
           state.sources.forEach(function (source) {
@@ -1756,6 +1947,7 @@ ${agentStageFields}
           const currentSelectedIds = hadPreviousState ? selectedSourceIds() : [];
           ensureScopeCards(state.sources || [], currentSelectedIds, state.defaultSourceId, !hadPreviousState);
           updateConfigLinks(state);
+          renderSourceEditor(state, { forceReload: !hadPreviousState });
           updateAgentStageNotes(state);
 
           updateTopLine(state);
@@ -1863,15 +2055,99 @@ ${agentStageFields}
           formNote.textContent = "Run accepted. Waiting for timeline events…";
         }
 
+        async function submitSourceMetadata(event) {
+          event.preventDefault();
+
+          if (!editorSourceId) {
+            sourceEditorStatus.textContent = "Select a source first.";
+            return;
+          }
+
+          editorSaving = true;
+          renderSourceEditor(lastState, { forceReload: false });
+
+          try {
+            const response = await fetch("/api/source-metadata", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                sourceId: editorSourceId,
+                displayName: sourceEditorDisplayName.value,
+                repoLabel: sourceEditorRepoLabel.value,
+                role: sourceEditorRole.value,
+                summary: sourceEditorSummary.value
+              })
+            });
+
+            const body = await response.json();
+            if (!response.ok) {
+              throw new Error(body.error || "Failed to save source metadata.");
+            }
+
+            editorDirty = false;
+            const state = await fetchState();
+            renderState(state);
+            sourceEditorStatus.textContent = "Saved";
+            schedulePlanPreview();
+          } catch (error) {
+            sourceEditorStatus.textContent = error instanceof Error ? error.message : String(error);
+          } finally {
+            editorSaving = false;
+            if (lastState) {
+              renderSourceEditor(lastState, { forceReload: false });
+            }
+          }
+        }
+
         form.addEventListener("submit", function (event) {
           submitRun(event).catch(function (error) {
             formNote.textContent = error instanceof Error ? error.message : String(error);
           });
         });
 
+        sourceEditorForm.addEventListener("submit", function (event) {
+          submitSourceMetadata(event).catch(function (error) {
+            sourceEditorStatus.textContent = error instanceof Error ? error.message : String(error);
+          });
+        });
+
+        sourceEditorSelect.addEventListener("change", function () {
+          editorDirty = false;
+          editorSourceId = sourceEditorSelect.value || null;
+          if (lastState) {
+            renderSourceEditor(lastState, { forceReload: true });
+          }
+        });
+
+        sourceEditorFields().forEach(function (field) {
+          field.addEventListener("input", function () {
+            editorDirty = true;
+            if (lastState) {
+              renderSourceEditor(lastState, { forceReload: false });
+            }
+          });
+        });
+
+        sourceEditorReset.addEventListener("click", function () {
+          editorDirty = false;
+          if (lastState) {
+            renderSourceEditor(lastState, { forceReload: true });
+          }
+        });
+
         sourceScope.addEventListener("change", function () {
           syncScopeCardSelection();
           if (lastState) {
+            const selectedIds = selectedSourceIds();
+            if (!editorDirty && selectedIds.length === 1) {
+              editorSourceId = selectedIds[0];
+            }
+            renderSourceEditor(lastState, {
+              forceReload: !editorDirty && selectedIds.length === 1,
+              preferredSourceId: selectedIds.length === 1 ? selectedIds[0] : undefined
+            });
             updateTopLine(lastState);
             updateSelectionGuidance(lastState);
           }
