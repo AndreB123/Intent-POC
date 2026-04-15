@@ -203,7 +203,7 @@ The Playwright integration tests validate:
 - baseline screenshot library creation for component-like pages
 - drift detection between baseline and comparison runs
 
-The tracked demo screenshot workflow is also part of the default test command, so `npm test` can leave pending PNG diffs under `evidence/baselines/demo-components/` when rendered output changes.
+The tracked demo screenshot workflow is also part of the default test command, so `npm test` can leave pending PNG diffs under `artifacts/library/demo-components/` when rendered output changes.
 
 `npm test` remains the authoritative full-coverage command. `npm run test:changed` is only a conservative local shortcut and defaults unknown paths to the full workflow.
 
@@ -249,27 +249,27 @@ Run bundles are written to `artifacts/runs/<runId>/` (gitignored). Each run capt
 
 Screenshot library is maintained at `artifacts/library/<sourceId>/` (Git-tracked):
 
-**Baseline images** (approved reference set):
-- `artifacts/library/<sourceId>/baseline/images/*.png`
-- `artifacts/library/<sourceId>/baseline/manifest.json` — metadata for baseline captures
-
-**Latest run images** (most recent captures):
-- `artifacts/library/<sourceId>/latest/images/*.png`
-- `artifacts/library/<sourceId>/latest/diffs/*.png` (for changed captures only)
-- `artifacts/library/<sourceId>/latest/manifest.json` — metadata: capture count, drift summary, intent
+**Source-of-truth images** (flat category folders):
+- `artifacts/library/<sourceId>/components/*.png`
+- `artifacts/library/<sourceId>/views/*.png`
+- `artifacts/library/<sourceId>/pages/*.png`
+- `artifacts/library/<sourceId>/bdd/*.png`
+- `artifacts/library/<sourceId>/userflows/*.png`
+- `artifacts/library/<sourceId>/manifest.json` — lightweight metadata: capture count, drift summary, intent
 
 The manifest files are lightweight metadata for potential future UI consumption. Hashes and full comparison data are intentionally excluded—Git handles SHA tracking, and comparison results are ephemeral run-scoped outputs.
 
 ### Demo Tracked Screenshots  
 
-Built-in demo surfaces use a canonical tracked root under `evidence/baselines/demo-components/`. These are updated by `npm test` and `npm run demo:library`:
+Built-in demo surfaces now write to the canonical source-of-truth root under `artifacts/library/demo-components/`. These are updated by `npm test` and `npm run demo:library`:
 
-- `evidence/baselines/demo-components/primitives/*.png`
-- `evidence/baselines/demo-components/components/*.png` 
-- `evidence/baselines/demo-components/views/*.png`
-- `evidence/baselines/demo-components/pages/*.png`
+
+- `artifacts/library/demo-components/components/*.png`
+- `artifacts/library/demo-components/views/*.png`
+- `artifacts/library/demo-components/pages/*.png`
+
 	- run manifests and hashes stay in `artifacts/runs/<runId>/` rather than cluttering the tracked screenshot tree
-	- the workflow stages captures in the run artifacts and upserts tracked screenshots only after validation succeeds; it does not clear the tracked screenshot tree up front
+	- the workflow stages captures in run artifacts and then upserts into the flat library tree
 	- the command does not generate demo diff PNGs; review image changes through Git
 - summaries are written as markdown and JSON artifacts
 
@@ -301,6 +301,6 @@ The demo library currently regenerates 46 tracked screenshots from the internal 
 - 12 views
 - 8 pages
 
-Each screenshot is written into the matching layer folder under `evidence/baselines/demo-components/`, so relationships stay obvious and Git can review the PNG changes directly.
+Each screenshot is written into the matching layer folder under `artifacts/library/demo-components/`, so relationships stay obvious and Git can review the PNG changes directly.
 
 All styling is driven by a single theme token file at `src/demo-app/theme/theme.ts`, so one edit to token values can restyle every surface in one commit.

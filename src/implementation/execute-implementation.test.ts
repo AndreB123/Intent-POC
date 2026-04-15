@@ -154,9 +154,7 @@ function buildSourcePaths(rootDir: string, sourceId: string): SourceRunPaths {
     comparisonPath: path.join(sourceDir, "comparison.json"),
     summaryPath: path.join(sourceDir, "summary.md"),
     appLogPath: path.join(sourceDir, "app.log"),
-    baselineSourceDir: path.join(rootDir, "evidence", "baselines", sourceId),
-    baselineManifestPath: path.join(rootDir, "evidence", "baselines", sourceId, "manifest.json"),
-    baselineHashesPath: path.join(rootDir, "evidence", "baselines", sourceId, "hashes.json")
+    baselineSourceDir: path.join(rootDir, "artifacts", "library", sourceId)
   };
 }
 

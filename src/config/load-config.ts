@@ -91,8 +91,7 @@ function resolveControllerRelativePaths(config: AppConfig, configDir: string): A
     artifacts: {
       ...config.artifacts,
       runRoot: path.resolve(configDir, config.artifacts.runRoot),
-      libraryRoot: path.resolve(configDir, config.artifacts.libraryRoot),
-      baselineRoot: path.resolve(configDir, config.artifacts.baselineRoot)
+      libraryRoot: path.resolve(configDir, config.artifacts.libraryRoot)
     }
   };
 }

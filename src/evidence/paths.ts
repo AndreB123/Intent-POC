@@ -19,8 +19,6 @@ export interface SourceRunPaths {
   summaryPath: string;
   appLogPath: string;
   baselineSourceDir: string;
-  baselineManifestPath: string;
-  baselineHashesPath: string;
 }
 
 export interface RunPaths {
@@ -56,7 +54,7 @@ export async function createRunPaths(
   const sourceRuns = Object.fromEntries(
     sourceIds.map((sourceId) => {
       const sourceDir = path.join(runDir, "sources", sourceId);
-      const baselineSourceDir = path.join(loadedConfig.config.artifacts.baselineRoot, sourceId);
+      const baselineSourceDir = path.join(loadedConfig.config.artifacts.libraryRoot, sourceId);
 
       return [
         sourceId,
@@ -74,9 +72,7 @@ export async function createRunPaths(
           comparisonPath: path.join(sourceDir, "comparison.json"),
           summaryPath: path.join(sourceDir, "summary.md"),
           appLogPath: path.join(sourceDir, "logs", "app.log"),
-          baselineSourceDir,
-          baselineManifestPath: path.join(baselineSourceDir, "manifest.json"),
-          baselineHashesPath: path.join(baselineSourceDir, "hashes.json")
+          baselineSourceDir
         } satisfies SourceRunPaths
       ];
     })
@@ -107,8 +103,7 @@ export async function createRunPaths(
       ensureDirectory(sourcePaths.sourceDir),
       ensureDirectory(sourcePaths.attemptsDir),
       ensureDirectory(sourcePaths.capturesDir),
-      ensureDirectory(sourcePaths.logsDir),
-      ensureDirectory(sourcePaths.baselineSourceDir)
+      ensureDirectory(sourcePaths.logsDir)
     ])
   );
 

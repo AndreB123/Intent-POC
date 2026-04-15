@@ -4,14 +4,11 @@ import { AppConfig } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
 import { ComparisonSummary } from "../compare/run-comparison";
 import { NormalizedIntent } from "../intent/intent-types";
-import { copyFile, ensureDirectory, removeDirectory, writeJsonFile } from "../shared/fs";
+import { copyFile, ensureDirectory, writeJsonFile } from "../shared/fs";
 
 export interface ScreenshotLibraryResult {
   libraryRoot: string;
   sourceLibraryRoot: string;
-  baselineImagesDir: string;
-  latestImagesDir: string;
-  latestDiffsDir: string;
 }
 
 export async function updateScreenshotLibrary(input: {
@@ -24,46 +21,21 @@ export async function updateScreenshotLibrary(input: {
   normalizedIntent: NormalizedIntent;
 }): Promise<ScreenshotLibraryResult> {
   const sourceLibraryRoot = path.join(input.config.artifacts.libraryRoot, input.sourceId);
-  const baselineImagesDir = path.join(sourceLibraryRoot, "baseline", "images");
-  const latestImagesDir = path.join(sourceLibraryRoot, "latest", "images");
-  const latestDiffsDir = path.join(sourceLibraryRoot, "latest", "diffs");
 
   await ensureDirectory(sourceLibraryRoot);
-  if (input.mode === "baseline" || input.mode === "approve-baseline") {
-    await removeDirectory(baselineImagesDir);
-  }
-  await ensureDirectory(baselineImagesDir);
-  await removeDirectory(latestImagesDir);
-  await removeDirectory(latestDiffsDir);
-  await ensureDirectory(latestImagesDir);
-  await ensureDirectory(latestDiffsDir);
 
   for (const capture of input.captures) {
     if (capture.status !== "captured") {
       continue;
     }
 
-    const latestPath = path.join(latestImagesDir, `${capture.captureId}.png`);
-    await copyFile(capture.outputPath, latestPath);
-
-    if (input.mode === "baseline" || input.mode === "approve-baseline") {
-      const baselinePath = path.join(baselineImagesDir, `${capture.captureId}.png`);
-      await copyFile(capture.outputPath, baselinePath);
-    }
+    const relativePath = capture.relativeOutputPath ?? `${capture.captureId}.png`;
+    const destinationPath = path.join(sourceLibraryRoot, relativePath);
+    await ensureDirectory(path.dirname(destinationPath));
+    await copyFile(capture.outputPath, destinationPath);
   }
 
-  for (const item of input.comparison.items) {
-    if (!item.diffImagePath || item.status !== "changed") {
-      continue;
-    }
-
-    const destination = path.join(latestDiffsDir, `${item.captureId}.png`);
-    await copyFile(item.diffImagePath, destination);
-  }
-
-  const latestManifestPath = path.join(sourceLibraryRoot, "latest", "manifest.json");
-
-  await writeJsonFile(latestManifestPath, {
+  await writeJsonFile(path.join(sourceLibraryRoot, "manifest.json"), {
     runId: input.runId,
     sourceId: input.sourceId,
     generatedAt: new Date().toISOString(),
@@ -77,24 +49,9 @@ export async function updateScreenshotLibrary(input: {
     }
   });
 
-  if (input.mode === "baseline" || input.mode === "approve-baseline") {
-    const baselineManifestPath = path.join(sourceLibraryRoot, "baseline", "manifest.json");
-
-    await writeJsonFile(baselineManifestPath, {
-      runId: input.runId,
-      sourceId: input.sourceId,
-      generatedAt: new Date().toISOString(),
-      mode: input.mode,
-      captureCount: input.captures.filter((c) => c.status === "captured").length
-    });
-  }
-
   return {
     libraryRoot: input.config.artifacts.libraryRoot,
-    sourceLibraryRoot,
-    baselineImagesDir,
-    latestImagesDir,
-    latestDiffsDir
+    sourceLibraryRoot
   };
 }
 

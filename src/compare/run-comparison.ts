@@ -45,9 +45,7 @@ function initializeCounts(): Record<ComparisonStatus, number> {
   };
 }
 
-async function copyCapturesToBaseline(captures: CaptureOutcome[], baselineImagesDir: string): Promise<ComparisonItem[]> {
-  await ensureDirectory(baselineImagesDir);
-
+async function copyCapturesToBaseline(captures: CaptureOutcome[], baselineRoot: string): Promise<ComparisonItem[]> {
   const items: ComparisonItem[] = [];
   for (const capture of captures) {
     if (capture.status !== "captured") {
@@ -60,7 +58,9 @@ async function copyCapturesToBaseline(captures: CaptureOutcome[], baselineImages
       continue;
     }
 
-    const baselinePath = path.join(baselineImagesDir, `${capture.captureId}.png`);
+    const relativePath = capture.relativeOutputPath ?? `${capture.captureId}.png`;
+    const baselinePath = path.join(baselineRoot, relativePath);
+    await ensureDirectory(path.dirname(baselinePath));
     await copyFile(capture.outputPath, baselinePath);
     items.push({
       captureId: capture.captureId,
@@ -82,11 +82,10 @@ export async function runComparison(
   baselineRoot: string,
   diffDir: string
 ): Promise<ComparisonSummary> {
-  const baselineImagesDir = path.join(baselineRoot, "images");
   const counts = initializeCounts();
 
   if (mode === "baseline" || mode === "approve-baseline") {
-    const items = await copyCapturesToBaseline(captures, baselineImagesDir);
+    const items = await copyCapturesToBaseline(captures, baselineRoot);
     for (const item of items) {
       counts[item.status] += 1;
     }
@@ -112,12 +111,12 @@ export async function runComparison(
       continue;
     }
 
-    const baselinePath = path.join(baselineImagesDir, `${capture.captureId}.png`);
+    const baselinePath = path.join(baselineRoot, capture.relativeOutputPath ?? `${capture.captureId}.png`);
     const baselineExists = await pathExists(baselinePath);
 
     if (!baselineExists) {
       if (config.comparison.onMissingBaseline === "bootstrap") {
-        await ensureDirectory(baselineImagesDir);
+        await ensureDirectory(path.dirname(baselinePath));
         await copyFile(capture.outputPath, baselinePath);
         items.push({
           captureId: capture.captureId,

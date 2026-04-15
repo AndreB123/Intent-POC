@@ -225,11 +225,6 @@ export async function writeSourceEvidenceFiles(input: {
   await writeJsonFile(input.paths.manifestPath, manifest);
   await writeJsonFile(input.paths.hashesPath, hashes);
   await writeJsonFile(input.paths.comparisonPath, comparisonJson);
-
-  if (input.writeBaselineRecords !== false && comparison && (comparison.mode === "baseline" || comparison.mode === "approve-baseline")) {
-    await writeJsonFile(input.paths.baselineManifestPath, manifest);
-    await writeJsonFile(input.paths.baselineHashesPath, hashes);
-  }
 }
 
 export async function writeBusinessEvidenceFiles(input: {

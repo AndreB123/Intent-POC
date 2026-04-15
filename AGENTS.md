@@ -15,16 +15,16 @@ Generic sources use the artifact pipeline:
 - captures under `artifacts/runs/<runId>/sources/<sourceId>/captures`
 - comparison output under the same run directory
 - screenshot library under `artifacts/library/<sourceId>/`
-- approved baselines under `evidence/baselines/<sourceId>/images`
+- approved baselines under `artifacts/library/<sourceId>/{components,views,pages,bdd,userflows}`
 
 The built-in demo surface catalog uses a tracked screenshot contract:
 - source id: `demo-components`
-- tracked root: `evidence/baselines/demo-components/{primitives,components,views,pages}`
+- tracked root: `artifacts/library/demo-components/{components,views,pages}`
 - review happens through Git image diffs, not generated demo diff PNGs
 - captures are staged under the run artifacts first and then upserted into the tracked root only after validation succeeds
 
 Do not introduce another screenshot pipeline for demo surfaces. If the behavior needs to change, extend the tracked-baseline branch in `runIntent` or promote that behavior into a reusable generic capability.
-Do not delete `evidence/baselines/demo-components/` before regeneration. Preserve existing tracked screenshots until staged captures and validation have succeeded.
+Do not delete `artifacts/library/demo-components/` before regeneration. Preserve existing tracked screenshots until staged captures and validation have succeeded.
 
 ## Config Conventions
 The sample config in `intent-poc.yaml` is the source of truth for runnable sources. If a built-in demo source needs many captures, prefer a config-declared catalog or helper-backed expansion over copying large inline capture lists into scripts.
@@ -39,7 +39,7 @@ When changing the demo surface catalog or screenshot path mapping:
 - update the catalog-driven helpers first
 - remember that `npm test` now refreshes the tracked demo screenshot set; use `npm run demo:library` when you want to force the refresh directly
 - use `npm run test:changed` only as a conservative local shortcut; it must escalate demo, theme, capture, evidence, config, and orchestrator changes to the full `npm test` workflow
-- verify Git shows the PNG changes under `evidence/baselines/demo-components/`
+- verify Git shows the PNG changes under `artifacts/library/demo-components/`
 - treat screenshot refresh as an upsert workflow: existing tracked screenshots should survive failed validation or failed captures
 
 ## Verification

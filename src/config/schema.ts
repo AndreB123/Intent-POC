@@ -139,7 +139,6 @@ const artifactsSchema = z.object({
   storageMode: z.enum(["controller", "both"]).default("controller"),
   runRoot: z.string().min(1),
   libraryRoot: z.string().min(1).default("./artifacts/library"),
-  baselineRoot: z.string().min(1),
   copyToSourcePath: z.string().optional(),
   writeMarkdownSummary: z.boolean().default(true),
   writeJsonSummary: z.boolean().default(true),

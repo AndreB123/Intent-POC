@@ -75,7 +75,6 @@ test("startIntentStudioServer exposes all configured sources and saves source me
       "artifacts:",
       "  storageMode: controller",
       "  runRoot: ./artifacts/runs",
-      "  baselineRoot: ./evidence/baselines",
       "comparison:",
       "  hashAlgorithm: sha256",
       "run:",

@@ -145,7 +145,6 @@ artifacts:
   storageMode: controller
   runRoot: ./artifacts/runs
   libraryRoot: ./artifacts/library
-  baselineRoot: ./evidence/baselines
   copyToSourcePath: .intent-poc/artifacts
   writeMarkdownSummary: true
   writeJsonSummary: true

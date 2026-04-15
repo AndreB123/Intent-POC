@@ -88,7 +88,7 @@ sources:
       role: tracked demo screenshot source
       summary: Built-in demo surface catalog used to regenerate tracked screenshots through the shared runner path.
       notes:
-        - Use this source for tracked screenshot refreshes under evidence/baselines/demo-components.
+        - Use this source for tracked screenshot refreshes under artifacts/library/demo-components.
         - Keep demo screenshot regeneration on runIntent rather than adding a parallel capture implementation.
     studio:
       displayName: Demo components
@@ -136,7 +136,6 @@ artifacts:
   storageMode: controller
   runRoot: ./artifacts/runs
   libraryRoot: ./artifacts/library
-  baselineRoot: ./evidence/baselines
   copyToSourcePath: .intent-poc/artifacts
   writeMarkdownSummary: true
   writeJsonSummary: true

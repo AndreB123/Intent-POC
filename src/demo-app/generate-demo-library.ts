@@ -12,7 +12,6 @@ function shouldSkipPreflightChecks(): boolean {
 
 function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
   return [
-    path.join(workspaceRoot, "artifacts", "library", "demo-components"),
     path.join(workspaceRoot, "artifacts", "runs", "demo-baseline-captures"),
     path.join(workspaceRoot, "artifacts", "runs", "demo-baseline-diffs"),
     path.join(workspaceRoot, "artifacts", "runs", "demo-compare-captures"),

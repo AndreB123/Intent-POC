@@ -73,8 +73,7 @@ function buildConfig(baseUrl: string) {
     },
     artifacts: {
       storageMode: "controller",
-      runRoot: "./artifacts/runs",
-      baselineRoot: "./evidence/baselines"
+      runRoot: "./artifacts/runs"
     },
     comparison: {
       enabled: true,
@@ -172,9 +171,9 @@ test("creates a component screenshot baseline library via Playwright", async (t)
     assert.equal(comparison.counts.changed, 0);
     assert.equal(comparison.hasDrift, false);
 
-    await fs.access(path.join(baselineDir, "images", "component-button-primary.png"));
-    await fs.access(path.join(baselineDir, "images", "view-list-overview.png"));
-    await fs.access(path.join(baselineDir, "images", "page-analytics-overview.png"));
+    await fs.access(path.join(baselineDir, "components", "component-button-primary.png"));
+    await fs.access(path.join(baselineDir, "views", "view-list-overview.png"));
+    await fs.access(path.join(baselineDir, "pages", "page-analytics-overview.png"));
   } finally {
     await server.close();
     await fs.rm(tmpRoot, { recursive: true, force: true });
