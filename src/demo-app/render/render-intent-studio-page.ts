@@ -19,7 +19,10 @@ function renderAgentStageFields(): string {
     return `
                 <div class="field">
                   <div class="field-head">
-                    <label for="${stage.id}-model-select">${escapeHtml(stage.label)} model</label>
+                    <label for="${stage.id}-model-select">
+                      ${escapeHtml(stage.label)}
+                      <span class="info-icon" id="${stage.id}-info" data-tooltip="${escapeHtml(stage.description)}">ⓘ</span>
+                    </label>
                     <label class="field-toggle">
                       <input
                         id="${stage.id}-enabled"
@@ -27,15 +30,13 @@ function renderAgentStageFields(): string {
                         data-default-enabled="${stage.defaultEnabled ? "true" : "false"}"
                         ${stage.defaultEnabled ? "checked" : ""}
                       />
-                      <span>Enable this stage for this run</span>
+                      <span>Enable stage</span>
                     </label>
                   </div>
                   <select id="${stage.id}-model-select">
                     <option value="">Use config default</option>
                     ${modelOptions}
                   </select>
-                  <input id="${stage.id}-model-custom" placeholder="Optional custom Gemini model id" />
-                  <div class="field-note" id="${stage.id}-model-note">${escapeHtml(stage.description)}</div>
                 </div>`;
   }).join("");
 }
@@ -728,9 +729,229 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         font-weight: 700;
       }
 
+      .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: rgba(25, 54, 70, 0.1);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: bold;
+        cursor: help;
+        margin-left: 6px;
+        vertical-align: middle;
+        position: relative;
+      }
+
+      .info-icon:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1.4;
+        width: 240px;
+        text-align: center;
+        white-space: normal;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+        pointer-events: none;
+      }
+
+      .info-icon:hover::before {
+        content: "";
+        position: absolute;
+        bottom: 110%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #1e293b;
+        z-index: 100;
+        pointer-events: none;
+      }
+
+      .agent-stages-section {
+        grid-column: 1 / -1;
+        display: grid;
+        gap: 14px;
+        margin-top: 14px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+      }
+
+      .agent-stages-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr;
+      }
+
+      .run-snapshot-mini {
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+        display: grid;
+        gap: 8px;
+      }
+
+      .mini-metric {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 12px;
+      }
+
+      .mini-label {
+        color: var(--muted);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .mini-value {
+        font-weight: 700;
+        text-align: right;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       .muted-link {
         font-size: 13px;
         color: var(--muted);
+      }
+
+      .lifecycle-stack {
+        display: grid;
+        gap: 0;
+        position: relative;
+        margin-top: 8px;
+      }
+
+      .lifecycle-step {
+        position: relative;
+        padding-bottom: 22px;
+        padding-left: 28px;
+        border-left: 2px solid var(--line);
+      }
+
+      .lifecycle-step:last-child {
+        border-left-color: transparent;
+        padding-bottom: 0;
+      }
+
+      .lifecycle-step::before {
+        content: "";
+        position: absolute;
+        left: -9px;
+        top: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--panel-strong);
+        border: 2px solid var(--line);
+        z-index: 1;
+        transition: all 160ms ease;
+      }
+
+      .lifecycle-step.active::before {
+        border-color: var(--accent);
+        background: var(--accent);
+        box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.14);
+      }
+
+      .lifecycle-step.completed::before {
+        border-color: var(--success);
+        background: var(--success);
+      }
+
+      .lifecycle-step-title {
+        font-family: var(--font-heading);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .lifecycle-step.active .lifecycle-step-title {
+        color: var(--accent-strong);
+      }
+
+      .lifecycle-step-content {
+        display: grid;
+        gap: 12px;
+      }
+
+      .lifecycle-step-content .plan-item {
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--line);
+      }
+
+      .lifecycle-step-content .plan-item-title {
+        font-size: 13px;
+      }
+
+      .lifecycle-step-content .empty-card {
+        padding: 10px;
+        font-size: 12px;
+        background: transparent;
+        border: 1px dashed var(--line);
+        color: var(--muted);
+      }
+
+      .tabs-nav {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 12px;
+      }
+
+      .tab-link {
+        padding: 10px 20px;
+        border-radius: var(--radius-md);
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--muted);
+        cursor: pointer;
+        background: transparent;
+        border: 1px solid transparent;
+        transition: all 160ms ease;
+      }
+
+      .tab-link:hover {
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      .tab-link.active {
+        background: var(--panel-strong);
+        border-color: var(--line);
+        color: var(--accent-strong);
+        box-shadow: 0 4px 12px rgba(19, 35, 44, 0.05);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: grid;
+        gap: 18px;
+        animation: rise 280ms ease-out;
       }
 
       @keyframes rise {
@@ -808,7 +1029,10 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           <div class="error-banner" id="config-error"></div>
         </section>
         <aside class="meta">
-          <h2>Session</h2>
+          <div class="panel-head">
+            <h2>Session</h2>
+            <span class="muted-link" id="run-id">No active run</span>
+          </div>
           <div class="meta-grid">
             <div class="meta-card">
               <span class="meta-label">Runner status</span>
@@ -827,40 +1051,147 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               <span class="meta-value" id="last-update">—</span>
             </div>
           </div>
+          <div class="run-snapshot-mini" id="metrics"></div>
         </aside>
       </header>
 
       <main class="layout">
         <div class="main-stack">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Prompt Run</h2>
-                <div class="panel-copy">Define the business intent first. The system will turn it into BDD, TDD, execution sources, and run behavior before anything launches. Use work scope when you need to keep the run inside the current app or a specific set of configured repos.</div>
-              </div>
-              <span class="status-pill status-ready" id="current-status-pill">Ready</span>
-            </div>
+          <nav class="tabs-nav">
+            <button type="button" class="tab-link active" data-tab="tab-run">Run Workspace</button>
+            <button type="button" class="tab-link" data-tab="tab-guide">Studio Guide</button>
+          </nav>
 
-            <form id="run-form">
-              <div class="prompt-grid">
-                <div class="field-wide">
-                  <label for="prompt-input">Intent prompt</label>
-                  <textarea id="prompt-input" placeholder="Describe the business intent, what sources or tools it should touch, and what outcome should be verified."></textarea>
-                  <div class="field-note">Work scope is config-backed. Leave every checkbox clear when the planner should infer sources from your prompt, or keep the default scope checked when the run should stay inside the current app. Run behavior is inferred from prompt phrases such as &quot;create baseline&quot; or &quot;approve baseline&quot;, then falls back to <code>run.mode</code>.</div>
+          <div id="tab-run" class="tab-content active">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Prompt Run</h2>
+                  <div class="panel-copy">Define the business intent first. The system will turn it into BDD, TDD, execution sources, and run behavior before anything launches. Use work scope when you need to keep the run inside the current app or a specific set of configured repos.</div>
                 </div>
-                <div class="field">
-                  <div class="field-head">
-                    <label>Work scope</label>
-                    <div class="field-actions">
-                      <a class="ghost-link" id="config-editor-link" href="#">Open config in editor</a>
-                      <a class="ghost-link" id="config-file-link" href="#">View YAML</a>
-                    </div>
+                <span class="status-pill status-ready" id="current-status-pill">Ready</span>
+              </div>
+
+              <form id="run-form">
+                <div class="prompt-grid">
+                  <div class="field-wide">
+                    <label for="prompt-input">Intent prompt</label>
+                    <textarea id="prompt-input" placeholder="Describe the business intent, what sources or tools it should touch, and what outcome should be verified."></textarea>
+                    <div class="field-note">Work scope is config-backed. Leave every checkbox clear when the planner should infer sources from your prompt, or keep the default scope checked when the run should stay inside the current app. Run behavior is inferred from prompt phrases such as &quot;create baseline&quot; or &quot;approve baseline&quot;, then falls back to <code>run.mode</code>.</div>
                   </div>
-                  <div class="field-note">These cards come from the <code>sources</code> block in the active YAML config. Every configured source stays visible here. Use the metadata editor below for labels and context, and use YAML for structural source changes.</div>
-                  <div class="scope-list" id="source-scope"></div>
-                  <div class="field-note" id="source-visibility-note">All configured sources are visible in work scope.</div>
+                  <div class="field">
+                    <div class="field-head">
+                      <label>Work scope</label>
+                      <div class="field-actions">
+                        <button type="button" class="ghost-link" id="toggle-source-editor">Edit Source Metadata</button>
+                        <a class="ghost-link" id="config-editor-link" href="#">Open config in editor</a>
+                        <a class="ghost-link" id="config-file-link" href="#">View YAML</a>
+                      </div>
+                    </div>
+                    <div class="field-note">These cards come from the <code>sources</code> block in the active YAML config. Every configured source stays visible here. Use the Source Metadata editor for labels and context, and use YAML for structural source changes.</div>
+                    <div class="scope-list" id="source-scope"></div>
+                    <div class="field-note" id="source-visibility-note">All configured sources are visible in work scope.</div>
+                  </div>
                 </div>
-${agentStageFields}
+
+                <div class="agent-stages-section">
+                  <div class="field-head">
+                    <label>AI Orchestration Stages</label>
+                  </div>
+                  <div class="agent-stages-grid">
+                    ${agentStageFields}
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <label class="toggle">
+                    <input id="dry-run-input" type="checkbox" />
+                    Dry run only
+                  </label>
+                  <div class="submit-row">
+                    <span class="notice" id="form-note">No run in progress.</span>
+                    <button class="primary-button" id="submit-button" type="submit">Run intent</button>
+                  </div>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel" id="source-metadata-panel" style="display: none;">
+              <div class="panel-head">
+                <div>
+                  <h2>Source Metadata</h2>
+                  <div class="panel-copy">Edit the user-facing name and repo context for a configured source without leaving Studio. This writes back to the active YAML config; add or remove full sources in YAML when the source structure changes.</div>
+                </div>
+                <span class="notice" id="source-editor-status">Ready</span>
+              </div>
+
+              <form class="editor-form" id="source-editor-form">
+                <div class="editor-grid">
+                  <div class="field">
+                    <label for="source-editor-select">Configured source</label>
+                    <select id="source-editor-select"></select>
+                    <div class="field-note">Pick the source whose Studio label and context you want to edit.</div>
+                  </div>
+                  <div class="field">
+                    <label for="source-editor-display-name">Display name</label>
+                    <input id="source-editor-display-name" type="text" placeholder="Current app" />
+                    <div class="field-note">Shown on work scope cards and plan summaries. Leave blank to fall back to the repo label or configured id.</div>
+                  </div>
+                  <div class="field">
+                    <label for="source-editor-repo-label">Repo label</label>
+                    <input id="source-editor-repo-label" type="text" placeholder="Intent POC" />
+                    <div class="field-note">Short repo or app label shown as secondary context.</div>
+                  </div>
+                  <div class="field">
+                    <label for="source-editor-role">Role</label>
+                    <input id="source-editor-role" type="text" placeholder="current app" />
+                    <div class="field-note">Describe why this source exists in the workflow.</div>
+                  </div>
+                  <div class="field-wide">
+                    <label for="source-editor-summary">Summary</label>
+                    <textarea id="source-editor-summary" placeholder="Explain what this source represents and when it should be used."></textarea>
+                    <div class="field-note" id="source-editor-location">Source metadata writes back to the active config file.</div>
+                  </div>
+                </div>
+                <div class="editor-actions">
+                  <button class="primary-button" id="source-editor-save" type="submit">Save source metadata</button>
+                  <button class="ghost-button" id="source-editor-reset" type="button">Reload selected source</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Activity Timeline</h2>
+                  <div class="panel-copy">Live orchestration events from config load through artifacts and Linear updates.</div>
+                </div>
+                <span class="muted-link" id="event-count">0 events</span>
+              </div>
+              <div class="timeline" id="timeline"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Artifacts & Captures</h2>
+                  <div class="panel-copy">Direct links to generated summaries, manifests, logs, and the latest image outputs.</div>
+                </div>
+              </div>
+              <div class="results-grid" id="artifacts"></div>
+              <div class="capture-grid" id="captures"></div>
+            </section>
+          </div>
+
+          <div id="tab-guide" class="tab-content">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Studio Guide</h2>
+                  <div class="panel-copy">How to use the Intent Studio to manage your development workflow.</div>
+                </div>
+              </div>
+              <div class="prompt-grid">
                 <div class="field-wide">
                   <div class="selection-card">
                     <div class="selection-title">
@@ -868,7 +1199,7 @@ ${agentStageFields}
                       <span class="target-badge target-ready">guide</span>
                     </div>
                     <div class="selection-summary"><strong>Work scope</strong> constrains which configured repos or apps can participate in the run. It does not change how screenshots are handled after capture.</div>
-                    <div class="selection-summary">Rename cards and update repo context directly in the Source Metadata panel. Use the YAML config when you need to add, remove, or structurally rewire sources.</div>
+                    <div class="selection-summary">Rename cards and update repo context directly in the Source Metadata editor. Use the YAML config when you need to add, remove, or structurally rewire sources.</div>
                     <div class="selection-summary">When multiple sources are checked, the planner creates one evidence lane per selected source inside the same business run.</div>
                   </div>
                 </div>
@@ -880,160 +1211,63 @@ ${agentStageFields}
                     </div>
                     <div class="selection-summary" id="selection-summary">The runner can choose sources from your prompt, then fall back to the config default if needed.</div>
                     <div class="selection-summary" id="selection-defaults">Blank work scope falls back to prompt matching, business-wide expansion, then config default.</div>
-                    <div class="selection-summary" id="selection-details">Use the Scope Sources panel on the right to understand what each source actually does before you constrain the run.</div>
+                    <div class="selection-summary" id="selection-details">Use the Work Scope selector in the Run Workspace tab to understand what each source actually does before you constrain the run.</div>
                   </div>
                 </div>
               </div>
-
-              <div class="form-actions">
-                <label class="toggle">
-                  <input id="dry-run-input" type="checkbox" />
-                  Dry run only
-                </label>
-                <div class="submit-row">
-                  <span class="notice" id="form-note">No run in progress.</span>
-                  <button class="primary-button" id="submit-button" type="submit">Run intent</button>
-                </div>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Source Metadata</h2>
-                <div class="panel-copy">Edit the user-facing name and repo context for a configured source without leaving Studio. This writes back to the active YAML config; add or remove full sources in YAML when the source structure changes.</div>
-              </div>
-              <span class="notice" id="source-editor-status">Ready</span>
-            </div>
-
-            <form class="editor-form" id="source-editor-form">
-              <div class="editor-grid">
-                <div class="field">
-                  <label for="source-editor-select">Configured source</label>
-                  <select id="source-editor-select"></select>
-                  <div class="field-note">Pick the source whose Studio label and context you want to edit.</div>
-                </div>
-                <div class="field">
-                  <label for="source-editor-display-name">Display name</label>
-                  <input id="source-editor-display-name" type="text" placeholder="Current app" />
-                  <div class="field-note">Shown on work scope cards and plan summaries. Leave blank to fall back to the repo label or configured id.</div>
-                </div>
-                <div class="field">
-                  <label for="source-editor-repo-label">Repo label</label>
-                  <input id="source-editor-repo-label" type="text" placeholder="Intent POC" />
-                  <div class="field-note">Short repo or app label shown as secondary context.</div>
-                </div>
-                <div class="field">
-                  <label for="source-editor-role">Role</label>
-                  <input id="source-editor-role" type="text" placeholder="current app" />
-                  <div class="field-note">Describe why this source exists in the workflow.</div>
-                </div>
-                <div class="field-wide">
-                  <label for="source-editor-summary">Summary</label>
-                  <textarea id="source-editor-summary" placeholder="Explain what this source represents and when it should be used."></textarea>
-                  <div class="field-note" id="source-editor-location">Source metadata writes back to the active config file.</div>
-                </div>
-              </div>
-              <div class="editor-actions">
-                <button class="primary-button" id="source-editor-save" type="submit">Save source metadata</button>
-                <button class="ghost-button" id="source-editor-reset" type="button">Reload selected source</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Intent Lifecycle</h2>
-                <div class="panel-copy">This preview shows how the current prompt is translated into business intent, BDD scenarios, TDD work items, execution sources, and distribution outputs.</div>
-              </div>
-            </div>
-            <div class="plan-grid">
-              <div class="plan-column">
-                <div class="plan-card">
-                  <span class="artifact-label">Business intent</span>
-                  <div class="plan-intent-text" id="plan-intent-text">Type an intent to preview the plan.</div>
-                  <div class="plan-intent-outcome" id="plan-intent-outcome">Desired outcome will appear here.</div>
-                  <div class="plan-note" id="plan-plan-notes">Planner notes and orchestration strategy will appear here.</div>
-                </div>
-                <div class="plan-card">
-                  <span class="artifact-label">Acceptance criteria</span>
-                  <div class="plan-list" id="plan-criteria"></div>
-                </div>
-                <div class="plan-card">
-                  <span class="artifact-label">BDD scenarios</span>
-                  <div class="plan-list" id="plan-scenarios"></div>
-                </div>
-              </div>
-              <div class="plan-column">
-                <div class="plan-card">
-                  <span class="artifact-label">TDD work items</span>
-                  <div class="plan-list" id="plan-work-items"></div>
-                </div>
-                <div class="plan-card">
-                  <span class="artifact-label">Execution sources</span>
-                  <div class="plan-list" id="plan-sources"></div>
-                </div>
-                <div class="plan-card">
-                  <span class="artifact-label">Destinations</span>
-                  <div class="plan-list" id="plan-destinations"></div>
-                </div>
-                <div class="plan-card">
-                  <span class="artifact-label">AI stages</span>
-                  <div class="plan-list" id="plan-ai-stages"></div>
-                </div>
-                <div class="plan-card">
-                  <span class="artifact-label">Tools</span>
-                  <div class="plan-list" id="plan-tools"></div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Run Snapshot</h2>
-                <div class="panel-copy">Current run metadata and high-level result counters.</div>
-              </div>
-              <span class="muted-link" id="run-id">No active run</span>
-            </div>
-            <div class="status-strip" id="metrics"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Activity Timeline</h2>
-                <div class="panel-copy">Live orchestration events from config load through artifacts and Linear updates.</div>
-              </div>
-              <span class="muted-link" id="event-count">0 events</span>
-            </div>
-            <div class="timeline" id="timeline"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Artifacts & Captures</h2>
-                <div class="panel-copy">Direct links to generated summaries, manifests, logs, and the latest image outputs.</div>
-              </div>
-            </div>
-            <div class="results-grid" id="artifacts"></div>
-            <div class="capture-grid" id="captures"></div>
-          </section>
+            </section>
+          </div>
         </div>
 
         <aside class="side-stack">
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h2>Scope Sources</h2>
-                <div class="panel-copy">Configured repo and workspace sources loaded from YAML, with readiness details and setup notes.</div>
+                <h2>Intent Lifecycle</h2>
+                <div class="panel-copy">Business run stages from prompt to delivery.</div>
               </div>
             </div>
-            <div class="target-list" id="sources"></div>
+            <div class="lifecycle-stack">
+              <div class="lifecycle-step" id="step-normalization">
+                <div class="lifecycle-step-title">1. Prompt Interpretation</div>
+                <div class="lifecycle-step-content">
+                  <div class="plan-intent-text" id="plan-intent-text"></div>
+                  <div class="plan-intent-outcome" id="plan-intent-outcome"></div>
+                  <div class="plan-note" id="plan-plan-notes"></div>
+                </div>
+              </div>
+              <div class="lifecycle-step" id="step-linear">
+                <div class="lifecycle-step-title">2. Linear Scoping</div>
+                <div class="lifecycle-step-content" id="plan-linear"></div>
+              </div>
+              <div class="lifecycle-step" id="step-bdd">
+                <div class="lifecycle-step-title">3. BDD Planning</div>
+                <div class="lifecycle-step-content">
+                  <div id="plan-criteria"></div>
+                  <div id="plan-scenarios"></div>
+                </div>
+              </div>
+              <div class="lifecycle-step" id="step-tdd">
+                <div class="lifecycle-step-title">4. TDD Planning</div>
+                <div class="lifecycle-step-content" id="plan-work-items"></div>
+              </div>
+              <div class="lifecycle-step" id="step-plan">
+                <div class="lifecycle-step-title">5. Execution Plan</div>
+                <div class="lifecycle-step-content">
+                  <div id="plan-sources"></div>
+                  <div id="plan-tools"></div>
+                  <div id="plan-destinations"></div>
+                </div>
+              </div>
+              <div class="lifecycle-step" id="step-implementation">
+                <div class="lifecycle-step-title">6. Implementation</div>
+                <div class="lifecycle-step-content" id="plan-implementation"></div>
+              </div>
+              <div class="lifecycle-step" id="step-qa">
+                <div class="lifecycle-step-title">7. QA Verification</div>
+                <div class="lifecycle-step-content" id="plan-qa"></div>
+              </div>
+            </div>
           </section>
 
           <section class="panel">
@@ -1072,7 +1306,6 @@ ${agentStageFields}
         const timeline = document.getElementById("timeline");
         const artifacts = document.getElementById("artifacts");
         const captures = document.getElementById("captures");
-        const sources = document.getElementById("sources");
         const recentRuns = document.getElementById("recent-runs");
         const sourceEditorForm = document.getElementById("source-editor-form");
         const sourceEditorSelect = document.getElementById("source-editor-select");
@@ -1097,8 +1330,10 @@ ${agentStageFields}
         const planWorkItems = document.getElementById("plan-work-items");
         const planSources = document.getElementById("plan-sources");
         const planDestinations = document.getElementById("plan-destinations");
-        const planAiStages = document.getElementById("plan-ai-stages");
         const planTools = document.getElementById("plan-tools");
+        const planLinear = document.getElementById("plan-linear");
+        const planImplementation = document.getElementById("plan-implementation");
+        const planQa = document.getElementById("plan-qa");
         const form = document.getElementById("run-form");
         const stageIds = ${stageIdsJson};
         const stageControls = Object.fromEntries(stageIds.map(function (stageId) {
@@ -1107,8 +1342,7 @@ ${agentStageFields}
             {
               enabled: document.getElementById(stageId + "-enabled"),
               select: document.getElementById(stageId + "-model-select"),
-              custom: document.getElementById(stageId + "-model-custom"),
-              note: document.getElementById(stageId + "-model-note")
+              info: document.getElementById(stageId + "-info")
             }
           ];
         }));
@@ -1224,9 +1458,7 @@ ${agentStageFields}
               return;
             }
 
-            const customModel = controls.custom.value.trim();
-            const selectedModel = controls.select.value || undefined;
-            const model = customModel || selectedModel;
+            const model = controls.select.value || undefined;
             const defaultEnabled = controls.enabled.dataset.defaultEnabled === "true";
             const stageOverride = {};
 
@@ -1530,9 +1762,9 @@ ${agentStageFields}
               controls.enabled.checked = stage.enabled;
             }
 
-            controls.note.textContent = stage.provider
-              ? stage.description + " Config default: " + stage.provider + " / " + stage.model + ". " + (stage.enabled ? "Enabled by config." : "Disabled by config.") + " Use the toggle to override this run."
-              : stage.description + " No provider is configured in the current YAML, so this stage stays deterministic until Gemini is enabled.";
+            const status = stage.enabled ? "Enabled by config." : "Disabled by config.";
+            const configInfo = stage.provider ? " Config default: " + stage.provider + " / " + stage.model + ". " + status : " No provider configured. Deterministic until Gemini enabled.";
+            controls.info.setAttribute("data-tooltip", stage.description + configInfo);
           });
         }
 
@@ -1540,48 +1772,25 @@ ${agentStageFields}
           clear(metrics);
 
           if (!run) {
-            const empty = create("div", "empty-card", "No run has started in this studio session yet.");
-            metrics.appendChild(empty);
             return;
           }
 
-          const requestedScope = run.requestedSourceIds && run.requestedSourceIds.length > 0
-            ? run.requestedSourceIds.map(function (sourceId) {
-                return formatSourceReference(lastState, sourceId);
-              }).join(", ")
-            : "Prompt/config decides";
           const primarySource = run.sourceId ? formatSourceReference(lastState, run.sourceId) : "—";
+          const aiStages = run.intentPlan ? run.intentPlan.normalizationMeta.stages.map(function (s) {
+            return s.label + ": " + s.status;
+          }).join(", ") : "Planning…";
 
           const items = [
-            ["Requested scope", requestedScope],
-            ["Primary source", primarySource],
+            ["Primary", primarySource],
             ["Mode", run.mode || "—"],
-            ["AI stages", run.intentPlan ? run.intentPlan.normalizationMeta.stages.map(function (stage) {
-              return stage.label + ": " + stage.status + (stage.model ? " (" + stage.model + ")" : "");
-            }).join(" | ") : "Waiting for planning…"],
-            ["Prompt", run.prompt || "—"],
-            ["Normalized summary", run.normalizedSummary || "Waiting for normalization…"],
-            ["Run ID", run.runId || "Pending"],
-            ["Source lanes", run.sourceRuns && run.sourceRuns.length > 0 ? run.sourceRuns.map(function (sourceRun) {
-              const attemptLabel = sourceRun.attemptCount && sourceRun.attemptCount > 0
-                ? " (" + sourceRun.attemptCount + " attempt" + (sourceRun.attemptCount === 1 ? "" : "s") + (sourceRun.latestFailureStage ? ", " + sourceRun.latestFailureStage : "") + ")"
-                : "";
-              const fileOperationLabel = sourceRun.latestImplementationFileOperations && sourceRun.latestImplementationFileOperations.length > 0
-                ? " -> " + sourceRun.latestImplementationFileOperations.slice(0, 2).map(function (fileOperation) {
-                    return fileOperation.operation + " " + fileOperation.filePath;
-                  }).join(", ") + (sourceRun.latestImplementationFileOperations.length > 2 ? " +" + (sourceRun.latestImplementationFileOperations.length - 2) + " more" : "")
-                : sourceRun.latestImplementationSummary
-                  ? " -> " + sourceRun.latestImplementationSummary
-                  : "";
-              return formatSourceReference(lastState, sourceRun.sourceId) + ": " + sourceRun.status + attemptLabel + fileOperationLabel;
-            }).join(" | ") : "Waiting for source planning…"],
-            ["Result", run.error || (run.hasDrift ? "Drift detected" : run.status === "completed" ? "No blocking errors" : "In progress")]
+            ["AI Stages", aiStages],
+            ["Result", run.error || (run.hasDrift ? "Drift" : run.status === "completed" ? "Success" : run.status)]
           ];
 
           items.forEach(function (item) {
-            const card = create("div", "metric");
-            card.appendChild(create("span", "metric-label", item[0]));
-            card.appendChild(create("span", "metric-value", item[1]));
+            const card = create("div", "mini-metric");
+            card.appendChild(create("span", "mini-label", item[0]));
+            card.appendChild(create("span", "mini-value", item[1]));
             metrics.appendChild(card);
           });
         }
@@ -1623,135 +1832,150 @@ ${agentStageFields}
         }
 
         function renderPlan(state) {
-          const activePlan = state && state.currentRun && state.currentRun.intentPlan
-            ? state.currentRun.intentPlan
-            : previewPlan;
+          const run = state && state.currentRun;
+          const activePlan = run && run.intentPlan ? run.intentPlan : previewPlan;
+
+          updateLifecycleProgress(activePlan, run);
 
           if (!activePlan) {
             planIntentText.textContent = "Type an intent to preview the plan.";
-            planIntentOutcome.textContent = "Desired outcome will appear here.";
-            planPlanNotes.textContent = "The planner will show BDD, Playwright-first TDD, workflow stages, sources, destinations, and tools before execution starts.";
-            renderPlanList(planCriteria, [], function () { return create("div", "empty-card", ""); }, "Acceptance criteria will appear once the planner has a prompt.");
-            renderPlanList(planScenarios, [], function () { return create("div", "empty-card", ""); }, "BDD scenarios will appear once the planner has a prompt.");
-            renderPlanList(planWorkItems, [], function () { return create("div", "empty-card", ""); }, "Playwright-first TDD work items will appear once the planner has a prompt.");
-            renderPlanList(planSources, [], function () { return create("div", "empty-card", ""); }, "Execution sources will appear once the planner has a prompt.");
-            renderPlanList(planDestinations, [], function () { return create("div", "empty-card", ""); }, "Destinations will appear once the planner has a prompt.");
-            renderPlanList(planAiStages, [], function () { return create("div", "empty-card", ""); }, "Workflow stage details will appear once the planner has a prompt.");
-            renderPlanList(planTools, [], function () { return create("div", "empty-card", ""); }, "Tools will appear once the planner has a prompt.");
+            planIntentOutcome.textContent = "";
+            planPlanNotes.textContent = "";
+            renderPlanList(planLinear, [], null, "Pending prompt…");
+            renderPlanList(planCriteria, [], null, "Pending prompt…");
+            renderPlanList(planScenarios, [], null, "Pending prompt…");
+            renderPlanList(planWorkItems, [], null, "Pending prompt…");
+            renderPlanList(planSources, [], null, "Pending prompt…");
+            renderPlanList(planDestinations, [], null, "Pending prompt…");
+            renderPlanList(planTools, [], null, "Pending prompt…");
+            renderPlanList(planImplementation, [], null, "Pending prompt…");
+            renderPlanList(planQa, [], null, "Pending prompt…");
             return;
           }
 
-          planIntentText.textContent = activePlan.businessIntent.statement;
-          planIntentOutcome.textContent = "Desired outcome: " + activePlan.businessIntent.desiredOutcome;
-          planPlanNotes.textContent = "Strategy: " + activePlan.executionPlan.orchestrationStrategy + " • " + (activePlan.executionPlan.reviewNotes.length > 0 ? activePlan.executionPlan.reviewNotes.join(" ") : "No planner warnings.");
+          // 1. Prompt Interpretation
+          planIntentText.textContent = activePlan.summary || activePlan.businessIntent.statement;
+          planIntentOutcome.textContent = "Type: " + activePlan.intentType + " • Source: " + formatSourceLabel(state, activePlan.sourceId);
+          planPlanNotes.textContent = activePlan.planning.reviewNotes.length > 0 ? "Notes: " + activePlan.planning.reviewNotes.join(" ") : "";
 
+          // 2. Linear Scoping
+          const linearItems = [];
+          if (activePlan.linear.createIssue) {
+            linearItems.push({ title: "Target: Create new issue", meta: [activePlan.linear.issueTitle] });
+          } else if (activePlan.planning.linearPlan.issueReference) {
+            linearItems.push({ title: "Target: Resume issue", meta: [activePlan.planning.linearPlan.issueReference] });
+          }
+          renderPlanList(planLinear, linearItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "No Linear link planned.");
+
+          // 3. BDD Planning
           renderPlanList(
             planCriteria,
             activePlan.businessIntent.acceptanceCriteria,
             function (criterion) {
-              return renderPlanItem(criterion.description, ["Origin: " + criterion.origin], [], []);
+              return renderPlanItem(criterion.description, [], [], []);
             },
-            "Acceptance criteria will appear once the planner has a prompt."
+            "No criteria defined."
           );
 
           renderPlanList(
             planScenarios,
             activePlan.businessIntent.scenarios,
             function (scenario) {
-              return renderPlanItem(
-                scenario.title,
-                ["Goal: " + scenario.goal, "Sources: " + scenario.applicableSourceIds.join(", ")],
-                [].concat(
-                  scenario.given.map(function (entry) { return "Given " + entry; }),
-                  scenario.when.map(function (entry) { return "When " + entry; }),
-                  scenario.then.map(function (entry) { return "Then " + entry; })
-                ),
-                []
-              );
+              return renderPlanItem(scenario.title, ["Sources: " + scenario.applicableSourceIds.join(", ")], [], []);
             },
-            "BDD scenarios will appear once the planner has a prompt."
+            "No scenarios defined."
           );
 
+          // 4. TDD Planning
           renderPlanList(
             planWorkItems,
             activePlan.businessIntent.workItems,
             function (workItem) {
-              var checkpointCount = workItem.playwright.specs.reduce(function (count, spec) {
-                return count + spec.checkpoints.length;
-              }, 0);
-              var specPaths = workItem.playwright.specs.map(function (spec) {
-                return spec.sourceId + ":" + spec.relativeSpecPath;
-              });
-              return renderPlanItem(
-                workItem.title,
-                [
-                  "Sources: " + workItem.sourceIds.join(", "),
-                  "Verification: " + workItem.verification,
-                  "Playwright specs: " + workItem.playwright.specs.length,
-                  "Checkpoints: " + checkpointCount
-                ],
-                [workItem.description, "Visible outcome: " + workItem.userVisibleOutcome].concat(
-                  specPaths.length > 0 ? ["Spec paths: " + specPaths.join(", ")] : []
-                ),
-                workItem.scenarioIds
-              );
+              return renderPlanItem(workItem.title, ["Verification: " + workItem.verification], [], []);
             },
-            "Playwright-first TDD work items will appear once the planner has a prompt."
+            "No work items defined."
           );
 
+          // 5. Execution Plan
           renderPlanList(
             planSources,
             activePlan.executionPlan.sources,
             function (source) {
-              const sourceRecord = findSource(state, source.sourceId);
-              const captureDescription = source.captureScope.mode === "subset"
-                ? "Captures: " + source.captureScope.captureIds.join(", ")
-                : "Captures: all configured captures";
-              return renderPlanItem(
-                formatSourceLabel(state, source.sourceId),
-                [
-                  "Configured id: " + source.sourceId,
-                  "Run mode: " + source.runMode
-                ].concat(sourceRecord && sourceRecord.role ? ["Role: " + sourceRecord.role] : []),
-                [source.selectionReason, captureDescription].concat(source.warnings || []),
-                source.sourceId === activePlan.executionPlan.primarySourceId ? ["primary"] : []
-              );
+              return renderPlanItem(formatSourceLabel(state, source.sourceId), [source.runMode], [], source.sourceId === activePlan.executionPlan.primarySourceId ? ["primary"] : []);
             },
-            "Execution sources will appear once the planner has a prompt."
-          );
-
-          renderPlanList(
-            planDestinations,
-            activePlan.executionPlan.destinations,
-            function (destination) {
-              return renderPlanItem(destination.label, ["Status: " + destination.status, "Type: " + destination.type], [destination.reason].concat(destination.details || []), []);
-            },
-            "Destinations will appear once the planner has a prompt."
-          );
-
-          renderPlanList(
-            planAiStages,
-            activePlan.normalizationMeta.stages,
-            function (stage) {
-              const executionSource = stage.provider ? stage.provider + " / " + (stage.model || "default-model") : "deterministic";
-              return renderPlanItem(
-                stage.label,
-                ["Status: " + stage.status, "Execution: " + executionSource],
-                [stage.description].concat(stage.warnings || []),
-                []
-              );
-            },
-            "Workflow stage details will appear once the planner has a prompt."
+            "No sources planned."
           );
 
           renderPlanList(
             planTools,
-            activePlan.executionPlan.tools,
+            activePlan.executionPlan.tools.filter(function(t) { return t.enabled; }),
             function (tool) {
-              return renderPlanItem(tool.label, ["State: " + (tool.enabled ? "enabled" : "planned"), "Type: " + tool.type], [tool.reason].concat(tool.details || []), []);
+              return renderPlanItem(tool.label, [tool.type], [], []);
             },
-            "Tools will appear once the planner has a prompt."
+            "No tools enabled."
           );
+
+          renderPlanList(
+            planDestinations,
+            activePlan.executionPlan.destinations.filter(function(d) { return d.status !== "inactive"; }),
+            function (destination) {
+              return renderPlanItem(destination.label, [destination.status], [], []);
+            },
+            "No active destinations."
+          );
+
+          // 6. Implementation
+          const implItems = [];
+          if (run && run.sourceRuns) {
+            run.sourceRuns.forEach(function(sr) {
+              implItems.push({ title: formatSourceLabel(state, sr.sourceId), meta: [sr.status, sr.latestImplementationSummary || "Waiting…"] });
+            });
+          }
+          renderPlanList(planImplementation, implItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "Implementation will show here during run.");
+
+          // 7. QA Verification
+          const qaItems = [];
+          if (run) {
+            if (run.captures && run.captures.length > 0) {
+              qaItems.push({ title: "Captures", meta: [run.captures.length + " screenshots"] });
+            }
+            if (run.hasDrift) {
+              qaItems.push({ title: "Status", meta: ["Drift detected"] });
+            } else if (run.status === "completed") {
+              qaItems.push({ title: "Status", meta: ["Verified"] });
+            }
+          }
+          renderPlanList(planQa, qaItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "QA results will show here after capture.");
+        }
+
+        function updateLifecycleProgress(activePlan, run) {
+          const steps = [
+            { id: "step-normalization", data: activePlan && activePlan.summary },
+            { id: "step-linear", data: activePlan && (activePlan.linear.createIssue || activePlan.planning.linearPlan.issueReference) },
+            { id: "step-bdd", data: activePlan && (activePlan.businessIntent.acceptanceCriteria.length > 0 || activePlan.businessIntent.scenarios.length > 0) },
+            { id: "step-tdd", data: activePlan && activePlan.businessIntent.workItems.length > 0 },
+            { id: "step-plan", data: activePlan && activePlan.executionPlan.sources.length > 0 },
+            { id: "step-implementation", data: run && run.sourceRuns && run.sourceRuns.some(function(sr) { return sr.status === "completed" || sr.status === "running"; }) },
+            { id: "step-qa", data: run && (run.status === "completed" || run.captures.length > 0) }
+          ];
+
+          let foundActive = false;
+          steps.forEach(function (step) {
+            const node = document.getElementById(step.id);
+            if (!node) return;
+
+            const isCompleted = Boolean(step.data);
+            node.classList.toggle("completed", isCompleted);
+            
+            let isActive = !isCompleted && !foundActive;
+            if (step.id === "step-implementation" && run && run.status === "running") {
+               isActive = true;
+               foundActive = true;
+            }
+
+            node.classList.toggle("active", isActive);
+            if (isActive) foundActive = true;
+          });
         }
 
         function renderTimeline(run) {
@@ -1872,52 +2096,6 @@ ${agentStageFields}
           });
         }
 
-        function renderSources(state) {
-          clear(sources);
-
-          if (!state.sources || state.sources.length === 0) {
-            sources.appendChild(create("div", "empty-card", "No configured sources are available. Open the config and add at least one source."));
-            return;
-          }
-
-          state.sources.forEach(function (source) {
-            const card = create("div", "target-card");
-            const statusRow = create("div", "target-status-row");
-            statusRow.appendChild(create("div", "target-title", source.label));
-            statusRow.appendChild(create("span", "target-badge " + (source.status === "attention" ? "target-attention" : "target-ready"), source.status));
-            card.appendChild(statusRow);
-            if (source.defaultScope) {
-              card.appendChild(create("div", "target-note", "Default Studio scope from the current config."));
-            }
-            card.appendChild(create("div", "target-summary", source.summary));
-            card.appendChild(create("div", "target-detail", "Configured id: " + source.id));
-            if (source.repoLabel || source.repoId) {
-              card.appendChild(create("div", "target-detail", "Repo: " + (source.repoLabel || source.repoId)));
-            }
-            if (source.role) {
-              card.appendChild(create("div", "target-detail", "Role: " + source.role));
-            }
-            card.appendChild(create("div", "target-detail", "Source: " + source.sourceLocation));
-            card.appendChild(create("div", "target-detail", "Startup: " + source.startCommand));
-            card.appendChild(create("div", "target-detail", "Readiness: " + source.readiness));
-            card.appendChild(create("div", "target-detail", source.sourceType + " source • " + source.captureCount + " captures • Aliases: " + (source.aliases.length > 0 ? source.aliases.join(", ") : "none")));
-
-            if (source.notes && source.notes.length > 0) {
-              source.notes.forEach(function (note) {
-                card.appendChild(create("div", "target-note", note));
-              });
-            }
-
-            if (source.issues && source.issues.length > 0) {
-              source.issues.forEach(function (issue) {
-                card.appendChild(create("div", "target-issue", issue));
-              });
-            }
-
-            sources.appendChild(card);
-          });
-        }
-
         function renderRecent(state) {
           clear(recentRuns);
 
@@ -2005,9 +2183,36 @@ ${agentStageFields}
           renderTimeline(state.currentRun);
           renderArtifacts(state.currentRun);
           renderCaptures(state.currentRun);
-          renderSources(state);
           renderRecent(state);
         }
+
+        // Tab Switching Logic
+        const tabLinks = document.querySelectorAll(".tab-link");
+        const tabContents = document.querySelectorAll(".tab-content");
+        const toggleSourceEditor = document.getElementById("toggle-source-editor");
+        const sourceMetadataPanel = document.getElementById("source-metadata-panel");
+
+        toggleSourceEditor.addEventListener("click", function () {
+          const isHidden = sourceMetadataPanel.style.display === "none";
+          sourceMetadataPanel.style.display = isHidden ? "block" : "none";
+          toggleSourceEditor.textContent = isHidden ? "Close Source Editor" : "Edit Source Metadata";
+        });
+
+        tabLinks.forEach(function (link) {
+          link.addEventListener("click", function () {
+            const targetTab = link.dataset.tab;
+
+            tabLinks.forEach(function (l) {
+              l.classList.remove("active");
+            });
+            tabContents.forEach(function (c) {
+              c.classList.remove("active");
+            });
+
+            link.classList.add("active");
+            document.getElementById(targetTab).classList.add("active");
+          });
+        });
 
         async function fetchState() {
           const response = await fetch("/api/state");
@@ -2214,10 +2419,6 @@ ${agentStageFields}
           });
 
           controls.select.addEventListener("change", function () {
-            schedulePlanPreview();
-          });
-
-          controls.custom.addEventListener("input", function () {
             schedulePlanPreview();
           });
         });
