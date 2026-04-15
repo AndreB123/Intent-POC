@@ -2,9 +2,7 @@ node_modules/
 dist/
 .env
 .workdirs/
-artifacts/runs/
-artifacts/tmp/
-artifacts/library/
+
 *.log
 
 !artifacts/.gitkeep

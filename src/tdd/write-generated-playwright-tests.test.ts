@@ -84,6 +84,11 @@ test("writeGeneratedPlaywrightTests overwrites the generated source subtree", as
   const generatedContent = await fs.readFile(firstGeneratedFile, "utf8");
   assert.equal(generatedContent.includes('import { expect, test } from "playwright/test";'), true);
   assert.equal(generatedContent.includes('const baseUrl = process.env.INTENT_POC_BASE_URL ?? "http://127.0.0.1:3000";'), true);
+  assert.equal(
+    generatedContent.includes(`const screenshotRoot = process.env.INTENT_POC_E2E_SCREENSHOT_ROOT ?? ${JSON.stringify(path.join(rootDir, "artifacts", "library"))};`),
+    true
+  );
+  assert.equal(generatedContent.includes("await mkdir(path.dirname(screenshotPath), { recursive: true });"), true);
 
   await fs.rm(rootDir, { recursive: true, force: true });
 });

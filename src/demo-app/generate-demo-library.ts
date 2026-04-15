@@ -21,7 +21,7 @@ function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
 }
 
 async function runPreflightChecks(workspaceRoot: string): Promise<void> {
-  log.info("Running preflight validation before tracked screenshot regeneration.", {
+  log.info("Running preflight validation before deterministic screenshot regeneration.", {
     commands: ["npm run typecheck", "npm run test:code"]
   });
 
@@ -62,7 +62,7 @@ async function runDemoLibrary(): Promise<void> {
   const configPath = path.join(workspaceRoot, "intent-poc.yaml");
 
   if (shouldSkipPreflightChecks()) {
-    log.info("Skipping preflight validation before tracked screenshot regeneration.", {
+    log.info("Skipping preflight validation before deterministic screenshot regeneration.", {
       reason: "--skip-preflight"
     });
   } else {
@@ -72,8 +72,7 @@ async function runDemoLibrary(): Promise<void> {
   const result = await runIntent({
     configPath,
     sourceIds: ["demo-components"],
-    trackedBaseline: true,
-    intent: "Create a baseline for the tracked screenshot library for the built-in demo surface catalog."
+    intent: "Create a baseline for the deterministic screenshot library for the built-in demo surface catalog."
   });
 
   await Promise.all(getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));
@@ -82,7 +81,7 @@ async function runDemoLibrary(): Promise<void> {
     path.relative(workspaceRoot, filePath)
   );
 
-  log.info("Demo screenshot library generated through runIntent.", {
+  log.info("Demo screenshot library generated through the unified runIntent workflow.", {
     runId: result.paths.runId,
     sourceId: result.sourceId,
     screenshotRoot: path.relative(workspaceRoot, screenshotRoot),

@@ -161,7 +161,6 @@ test("runIntent Given a successful source lane When compare execution finishes T
       loadConfig: async () => loadedConfig,
       executeSourceRun: async (input) => {
         executedSources.push(input.sourcePlan.sourceId);
-        assert.equal(input.trackedBaseline, false);
 
         return buildSourceRunResult(input, {
           captures: [buildCapturedOutcome(tmpRoot, "roach-statements")],
@@ -356,32 +355,6 @@ test("runIntent Given a requested source scope When dry run executes Then it pla
   }
 });
 
-test("runIntent Given tracked baseline output When the mode is not baseline Then it rejects the run before execution", async () => {
-  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-tracked-"));
-  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
-
-  try {
-    const runIntent = createRunIntentRunner({
-      loadConfig: async () => loadedConfig,
-      executeSourceRun: async () => {
-        throw new Error("Tracked baseline guard should stop the run before source execution.");
-      }
-    });
-
-    await assert.rejects(
-      async () =>
-        await runIntent({
-          configPath: loadedConfig.configPath,
-          intent: "Compare drift only for cockroach statements on client-systems",
-          trackedBaseline: true
-        }),
-      /Tracked baseline runs currently require baseline mode\./
-    );
-  } finally {
-    await fs.rm(tmpRoot, { recursive: true, force: true });
-  }
-});
-
 test("runIntent Given Gemini stage config and runtime overrides When dry run executes Then the merged stage settings are passed into normalization", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-agent-"));
   const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
@@ -401,16 +374,16 @@ test("runIntent Given Gemini stage config and runtime overrides When dry run exe
     allowTDDPlanning: true,
     stages: {
       promptNormalization: {
-        model: "gemini-3.1-flash"
+        model: "models/gemini-3.1-flash-lite-preview"
       },
       linearScoping: {
-        model: "gemini-3.1-flash"
+        model: "models/gemini-3.1-flash-lite-preview"
       },
       bddPlanning: {
-        model: "gemini-3.1"
+        model: "models/gemini-3.1-flash-lite-preview"
       },
       tddPlanning: {
-        model: "gemini-3.1"
+        model: "models/gemini-3.1-flash-lite-preview"
       },
       implementation: {},
       qaVerification: {}
@@ -436,7 +409,7 @@ test("runIntent Given Gemini stage config and runtime overrides When dry run exe
       agentOverrides: {
         stages: {
           bddPlanning: {
-            model: "gemini-3"
+            model: "models/gemini-3-pro-preview"
           }
         }
       },
@@ -446,8 +419,8 @@ test("runIntent Given Gemini stage config and runtime overrides When dry run exe
     assert.equal(result.status, "completed");
     assert.equal(capturedProvider, "gemini");
     assert.equal(capturedApiKeyEnv, "GEMINI_API_KEY");
-    assert.equal(capturedPromptModel, "gemini-3.1-flash");
-    assert.equal(capturedPlanningModel, "gemini-3");
+    assert.equal(capturedPromptModel, "models/gemini-3.1-flash-lite-preview");
+    assert.equal(capturedPlanningModel, "models/gemini-3-pro-preview");
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }

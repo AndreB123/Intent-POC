@@ -17,16 +17,16 @@ const geminiAgent = {
   allowQAVerification: false,
   stages: {
     promptNormalization: {
-      model: "gemini-3.1-flash"
+      model: "models/gemini-3.1-flash-lite-preview"
     },
     linearScoping: {
-      model: "gemini-3.1-flash"
+      model: "models/gemini-3.1-flash-lite-preview"
     },
     bddPlanning: {
-      model: "gemini-3.1"
+      model: "models/gemini-3.1-flash-lite-preview"
     },
     tddPlanning: {
-      model: "gemini-3.1"
+      model: "models/gemini-3.1-flash-lite-preview"
     },
     implementation: {},
     qaVerification: {}
@@ -150,12 +150,12 @@ test("normalizeIntent infers baseline mode from free-text prompt", () => {
   assert.deepEqual(
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
-      ["promptNormalization", "completed", "rules", "gemini-3.1-flash"],
-      ["linearScoping", "completed", "rules", "gemini-3.1-flash"],
-      ["bddPlanning", "completed", "rules", "gemini-3.1"],
-      ["tddPlanning", "completed", "rules", "gemini-3.1"],
-      ["implementation", "skipped", "skipped", "gemini-3.1"],
-      ["qaVerification", "skipped", "skipped", "gemini-3.1"]
+      ["promptNormalization", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["linearScoping", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["bddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["tddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["implementation", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
+      ["qaVerification", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"]
     ]
   );
   assert.equal(normalized.businessIntent.workItems[0]?.type, "playwright-spec");
@@ -318,12 +318,12 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
   assert.deepEqual(
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
-      ["promptNormalization", "completed", "llm", "gemini-3.1-flash"],
-      ["linearScoping", "completed", "rules", "gemini-3.1-flash"],
-      ["bddPlanning", "skipped", "skipped", "gemini-3.1"],
-      ["tddPlanning", "completed", "rules", "gemini-3.1"],
-      ["implementation", "skipped", "skipped", "gemini-3.1"],
-      ["qaVerification", "skipped", "skipped", "gemini-3.1"]
+      ["promptNormalization", "completed", "llm", "models/gemini-3.1-flash-lite-preview"],
+      ["linearScoping", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["bddPlanning", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
+      ["tddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["implementation", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
+      ["qaVerification", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"]
     ]
   );
   assert.ok(
@@ -393,12 +393,12 @@ test("normalizeIntentWithAgent applies Gemini planning refinement when the plann
   assert.deepEqual(
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
-      ["promptNormalization", "completed", "llm", "gemini-3.1-flash"],
-      ["linearScoping", "completed", "rules", "gemini-3.1-flash"],
-      ["bddPlanning", "completed", "llm", "gemini-3.1"],
-      ["tddPlanning", "completed", "rules", "gemini-3.1"],
-      ["implementation", "skipped", "skipped", "gemini-3.1"],
-      ["qaVerification", "skipped", "skipped", "gemini-3.1"]
+      ["promptNormalization", "completed", "llm", "models/gemini-3.1-flash-lite-preview"],
+      ["linearScoping", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["bddPlanning", "completed", "llm", "models/gemini-3.1-flash-lite-preview"],
+      ["tddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["implementation", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
+      ["qaVerification", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"]
     ]
   );
   assert.ok(

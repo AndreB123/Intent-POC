@@ -128,7 +128,7 @@ function buildImplementationStage(overrides: Partial<ResolvedAgentStageConfig> =
     description: "Apply bounded source changes.",
     enabled: true,
     provider: "gemini",
-    model: "gemini-2.5-pro",
+    model: "models/gemini-3.1-flash-lite-preview",
     temperature: 0.1,
     maxTokens: 8192,
     apiKeyEnv: "TEST_GEMINI_API_KEY",
@@ -311,6 +311,47 @@ test("executeImplementationStage Given a planned bounded change set When generat
     assert.equal(newContent, "export const created = true;\n");
     assert.equal(removedExists, false);
     assert.equal(result.commands.every((command) => command.logPath && command.status === "completed"), true);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given a hallucinated replace target When the file does not exist Then it fails before materialization", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+  let materializeCalls = 0;
+
+  try {
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "replace",
+            filePath: "src/demo-app/library/page-analytics-overview.tsx",
+            rationale: "Update the rendered analytics page."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => {
+        materializeCalls += 1;
+        return {
+          files: [],
+          warnings: []
+        };
+      }
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /does not exist/);
+    assert.equal(materializeCalls, 0);
   } finally {
     if (previousApiKey === undefined) {
       delete process.env.TEST_GEMINI_API_KEY;

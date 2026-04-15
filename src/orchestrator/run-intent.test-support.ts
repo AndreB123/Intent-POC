@@ -10,7 +10,6 @@ interface BehaviorTestConfigOptions {
   sources?: AppConfig["sources"];
   defaultSourceId?: string;
   mode?: RunMode;
-  trackedBaseline?: boolean;
   linearEnabled?: boolean;
   storageMode?: AppConfig["artifacts"]["storageMode"];
 }
@@ -26,7 +25,6 @@ interface BehaviorSourceInput {
   defaultFullPage?: boolean;
   waitAfterLoadMs?: number;
   injectCss?: string[];
-  trackedRoot?: string;
   catalog?: SourceConfig["capture"]["catalog"];
   source?: SourceConfig["source"];
 }
@@ -77,7 +75,6 @@ export function buildBehaviorSource(input: BehaviorSourceInput): SourceConfig {
     },
     capture: {
       catalog: input.catalog,
-      trackedRoot: input.trackedRoot,
       basePathPrefix: "",
       waitAfterLoadMs: input.waitAfterLoadMs ?? 0,
       injectCss: input.injectCss ?? [],
@@ -237,8 +234,7 @@ export function buildBehaviorTestConfig(rootDir: string, options: BehaviorTestCo
       continueOnCaptureError: false,
       allowBaselinePromotion: false,
       metadata: {},
-      dryRun: false,
-      trackedBaseline: options.trackedBaseline ?? false
+      dryRun: false
     }
   });
 }

@@ -74,10 +74,7 @@ function resolveControllerRelativePaths(config: AppConfig, configDir: string): A
           ...configuredSource,
           source: resolvedSource,
           capture: {
-            ...configuredSource.capture,
-            trackedRoot: configuredSource.capture.trackedRoot
-              ? path.resolve(configDir, configuredSource.capture.trackedRoot)
-              : undefined
+            ...configuredSource.capture
           },
           workspace: {
             ...configuredSource.workspace,

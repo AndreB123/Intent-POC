@@ -33,11 +33,12 @@ npm run install:browsers
 cp .env.example .env
 ```
 
-To enable live Gemini planning, set `GEMINI_KEY`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` in `.env` or the process environment and configure the `agent` block with `provider: gemini` plus per-stage models under `agent.stages`. The checked-in `intent-poc.yaml` intentionally stays rules-backed by default so dry runs, tests, and canonical snapshots remain deterministic. `intent-poc.local-no-linear.yaml` is the live Gemini example config in this repo, and it is scoped to the built-in Intent Driven Development POC demo sources rather than `client-systems`.
+To enable live Gemini planning, set `GEMINI_KEY`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` in `.env` or the process environment and configure the `agent` block with `provider: gemini` plus per-stage models under `agent.stages`. The checked-in `intent-poc.yaml` intentionally stays rules-backed by default so dry runs, tests, and canonical snapshots remain deterministic. `intent-poc.local-no-linear.yaml` is the live Gemini example config in this repo, uses current `models/...` Gemini ids, and enables implementation plus QA for the built-in Intent Driven Development POC demo sources rather than `client-systems`.
 
 The current Gemini stage split is:
-- `promptNormalization`: bounded prompt interpretation, source scope hints, and capture hints. Recommended models: `gemini-3.1-flash` or `gemini-3-flash`.
-- `intentPlanning`: business-intent refinement, acceptance criteria cleanup, and scenario shaping. Recommended models: `gemini-3.1` or `gemini-3`.
+- `promptNormalization`: bounded prompt interpretation, source scope hints, and capture hints. Default in this repo: `models/gemini-3.1-flash-lite-preview`. Alternate fast preview: `models/gemini-3-flash-preview`.
+- `linearScoping`: issue and lane shaping before implementation planning expands. Default in this repo: `models/gemini-3.1-flash-lite-preview`.
+- `bddPlanning`, `tddPlanning`, `implementation`, and `qaVerification`: deeper planning and execution passes. Default in this repo: `models/gemini-3.1-flash-lite-preview`. Alternate preview options: `models/gemini-3.1-pro-preview` and `models/gemini-3-pro-preview`.
 
 This path uses the Gemini API key directly. A Google Cloud service account is not used for Gemini Developer API authentication.
 
@@ -233,20 +234,40 @@ These files are intentionally checked in because `artifacts/runs/` is gitignored
 
 ## Output
 
-- run bundles are written to `artifacts/runs/<runId>/`
-- per-source evidence is written to `artifacts/runs/<runId>/sources/<sourceId>/`
-- plan lifecycle metadata is written to `artifacts/runs/<runId>/plan-lifecycle.json`
-- screenshot library is maintained at `artifacts/library/<sourceId>/`
-	- `baseline/images/*.png`
-	- `latest/images/*.png`
-	- `latest/diffs/*.png` (for changed captures)
-	- manifests and hash indexes under both baseline/latest folders
-- approved baselines are written to `evidence/baselines/<sourceId>/`
-- `npm test` now includes the tracked demo refresh workflow, and `npm run demo:library` remains the direct command that rewrites screenshots under `evidence/baselines/demo-components/`
-	- `primitives/*.png`
-	- `components/*.png`
-	- `views/*.png`
-	- `pages/*.png`
+### Transient Run Artifacts
+
+Run bundles are written to `artifacts/runs/<runId>/` (gitignored). Each run captures:
+- per-source evidence: `sources/<sourceId>/`
+  - `manifest.json` — run metadata: captures array, comparison summary, intent intent
+  - `hashes.json` — SHA256 fingerprints for each captured image (for fast comparison)
+  - `comparison.json` — full pixel-diff results: status, counts, baseline/current/diff paths  
+  - `sources/<sourceId>/captures/*` — raw captured images
+  - `sources/<sourceId>/diffs/*` — pixel-diff visualizations (for changed captures only)
+- plan lifecycle metadata: `plan-lifecycle.json` — normalized intent, source selection, Linear issue refs, execution transcript
+
+### Deterministic Screenshot Library
+
+Screenshot library is maintained at `artifacts/library/<sourceId>/` (Git-tracked):
+
+**Baseline images** (approved reference set):
+- `artifacts/library/<sourceId>/baseline/images/*.png`
+- `artifacts/library/<sourceId>/baseline/manifest.json` — metadata for baseline captures
+
+**Latest run images** (most recent captures):
+- `artifacts/library/<sourceId>/latest/images/*.png`
+- `artifacts/library/<sourceId>/latest/diffs/*.png` (for changed captures only)
+- `artifacts/library/<sourceId>/latest/manifest.json` — metadata: capture count, drift summary, intent
+
+The manifest files are lightweight metadata for potential future UI consumption. Hashes and full comparison data are intentionally excluded—Git handles SHA tracking, and comparison results are ephemeral run-scoped outputs.
+
+### Demo Tracked Screenshots  
+
+Built-in demo surfaces use a canonical tracked root under `evidence/baselines/demo-components/`. These are updated by `npm test` and `npm run demo:library`:
+
+- `evidence/baselines/demo-components/primitives/*.png`
+- `evidence/baselines/demo-components/components/*.png` 
+- `evidence/baselines/demo-components/views/*.png`
+- `evidence/baselines/demo-components/pages/*.png`
 	- run manifests and hashes stay in `artifacts/runs/<runId>/` rather than cluttering the tracked screenshot tree
 	- the workflow stages captures in the run artifacts and upserts tracked screenshots only after validation succeeds; it does not clear the tracked screenshot tree up front
 	- the command does not generate demo diff PNGs; review image changes through Git

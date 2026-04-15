@@ -71,6 +71,11 @@ interface StudioSourceRunSummary {
   attemptCount?: number;
   latestAttemptStatus?: "completed" | "failed";
   latestFailureStage?: "implementation" | "qaVerification";
+  latestImplementationSummary?: string;
+  latestImplementationFileOperations?: Array<{
+    operation: "create" | "replace" | "delete";
+    filePath: string;
+  }>;
   summaryPath?: string;
   appLogPath?: string;
 }
@@ -475,14 +480,22 @@ function normalizeAgentOverrides(value: unknown): RunAgentConfigOverride | undef
       continue;
     }
 
+    const enabled =
+      typeof (rawStageOverride as { enabled?: unknown }).enabled === "boolean"
+        ? (rawStageOverride as { enabled: boolean }).enabled
+        : undefined;
+
     const model =
       typeof (rawStageOverride as { model?: unknown }).model === "string" &&
       (rawStageOverride as { model?: string }).model!.trim().length > 0
         ? (rawStageOverride as { model: string }).model.trim()
         : undefined;
 
-    if (model) {
-      stages[stageId] = { model };
+    if (enabled !== undefined || model) {
+      stages[stageId] = {
+        ...(enabled !== undefined ? { enabled } : {}),
+        ...(model ? { model } : {})
+      };
     }
   }
 
@@ -591,6 +604,11 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
       attemptCount: sourceRun.attempts.length,
       latestAttemptStatus: latestAttempt?.status,
       latestFailureStage: latestAttempt?.failureStage,
+      latestImplementationSummary: latestAttempt?.implementation.summary,
+      latestImplementationFileOperations: latestAttempt?.implementation.fileOperations.map((fileOperation) => ({
+        operation: fileOperation.operation,
+        filePath: fileOperation.filePath
+      })),
       summaryPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.summaryPath),
       appLogPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.appLogPath)
     };

@@ -538,6 +538,27 @@ function buildWorkItems(input: {
   return [...scenarioItems, ...perSourceItems];
 }
 
+function assertMinimumE2ECoverage(input: {
+  sourceIds: string[];
+  workItems: TDDWorkItem[];
+}): void {
+  const uncoveredSourceIds = input.sourceIds.filter((sourceId) => {
+    return !input.workItems.some((workItem) => {
+      if (!workItem.sourceIds.includes(sourceId)) {
+        return false;
+      }
+
+      return workItem.playwright.specs.some((spec) => spec.sourceId === sourceId);
+    });
+  });
+
+  if (uncoveredSourceIds.length > 0) {
+    throw new Error(
+      `Each selected source requires at least one E2E Playwright spec. Missing coverage for: ${uncoveredSourceIds.join(", ")}.`
+    );
+  }
+}
+
 function buildDestinationPlans(input: {
   prompt: string;
   linearEnabled: boolean;
@@ -1269,6 +1290,14 @@ function buildIntentDraft(
           desiredOutcome,
           availableSources: options.availableSources
         });
+
+  if (planningDepth === "full") {
+    assertMinimumE2ECoverage({
+      sourceIds: resolution.sourceIds,
+      workItems
+    });
+  }
+
   const destinations = buildDestinationPlans({
     prompt: trimmedPrompt,
     linearEnabled: options.linearEnabled ?? false,

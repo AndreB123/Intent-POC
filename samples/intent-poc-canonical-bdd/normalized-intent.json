@@ -618,7 +618,7 @@
         "stageId": "promptNormalization",
         "label": "Prompt Interpretation",
         "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
-        "model": "gemini-3.1-flash",
+        "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
         "warnings": []
@@ -627,7 +627,7 @@
         "stageId": "linearScoping",
         "label": "Linear Scoping",
         "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
-        "model": "gemini-3.1-flash",
+        "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
         "source": "rules",
         "warnings": []
@@ -636,7 +636,7 @@
         "stageId": "bddPlanning",
         "label": "BDD Planning",
         "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
-        "model": "gemini-3.1",
+        "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
         "source": "rules",
         "warnings": []
@@ -645,7 +645,7 @@
         "stageId": "tddPlanning",
         "label": "TDD Planning",
         "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
-        "model": "gemini-3.1",
+        "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
         "source": "rules",
         "warnings": []
@@ -654,7 +654,7 @@
         "stageId": "implementation",
         "label": "Implementation",
         "description": "Apply the planned changes against the scoped source workspace.",
-        "model": "gemini-3.1",
+        "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
         "warnings": []
@@ -663,7 +663,7 @@
         "stageId": "qaVerification",
         "label": "QA Verification",
         "description": "Verify implementation output, tests, and evidence before completion or retry.",
-        "model": "gemini-3.1",
+        "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
         "warnings": []

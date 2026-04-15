@@ -11,6 +11,7 @@ import {
 import { emitImplementationEvent } from "./implementation-events";
 import {
   buildImplementationPromptContext,
+  collectRelevantImplementationFiles,
   collectImplementationWorkspaceFiles,
   ImplementationExistingFileContext,
   planImplementationChanges,
@@ -26,6 +27,7 @@ function captureErrorMessage(error: unknown): string {
 
 export interface ExecuteImplementationStageDependencies {
   collectWorkspaceFiles: typeof collectImplementationWorkspaceFiles;
+  collectRelevantFiles: typeof collectRelevantImplementationFiles;
   readGeneratedSpecs: typeof readGeneratedSpecContexts;
   readPackageContext: typeof readWorkspacePackageContext;
   planChanges: typeof planImplementationChanges;
@@ -36,6 +38,7 @@ export interface ExecuteImplementationStageDependencies {
 function createDefaultDependencies(): ExecuteImplementationStageDependencies {
   return {
     collectWorkspaceFiles: collectImplementationWorkspaceFiles,
+    collectRelevantFiles: collectRelevantImplementationFiles,
     readGeneratedSpecs: readGeneratedSpecContexts,
     readPackageContext: readWorkspacePackageContext,
     planChanges: planImplementationChanges,
@@ -126,6 +129,29 @@ function buildImplementationSummary(fileOperations: SourceStageFileOperationReco
   return `Applied ${fileOperations.length} file operation${fileOperations.length === 1 ? "" : "s"} (${counts.create} create, ${counts.replace} replace, ${counts.delete} delete).`;
 }
 
+function validatePlannedOperations(input: {
+  operations: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
+  workspaceFiles: Array<{ relativePath: string }>;
+  generatedSpecs: Array<{ relativePath: string }>;
+}): void {
+  const existingPaths = new Set(input.workspaceFiles.map((file) => file.relativePath));
+  const generatedSpecPaths = new Set(input.generatedSpecs.map((file) => file.relativePath));
+
+  for (const operation of input.operations) {
+    if (generatedSpecPaths.has(operation.filePath)) {
+      throw new Error(`Implementation cannot modify generated Playwright specs: ${operation.filePath}`);
+    }
+
+    if (operation.operation === "create" && existingPaths.has(operation.filePath)) {
+      throw new Error(`Implementation planned to create an existing file: ${operation.filePath}`);
+    }
+
+    if (operation.operation !== "create" && !existingPaths.has(operation.filePath)) {
+      throw new Error(`Implementation planned to ${operation.operation} a file that does not exist: ${operation.filePath}`);
+    }
+  }
+}
+
 function assertImplementationStageSupported(input: ExecuteImplementationStageInput): void {
   if (!input.stage.provider) {
     throw new Error("Implementation stage requires an explicit provider when the stage is enabled.");
@@ -167,6 +193,18 @@ export async function executeImplementationStage(
     const workItems = input.normalizedIntent.businessIntent.workItems.filter((workItem) =>
       workItem.sourceIds.includes(input.sourcePlan.sourceId)
     );
+    const relevantFiles = await activeDependencies.collectRelevantFiles({
+      rootDir: input.workspace.rootDir,
+      rawPrompt: input.normalizedIntent.rawPrompt,
+      summary: input.normalizedIntent.summary,
+      sourceId: input.sourcePlan.sourceId,
+      desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
+      acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
+      scenarios,
+      workItems,
+      workspaceFiles,
+      generatedSpecs
+    });
     const context = buildImplementationPromptContext({
       rawPrompt: input.normalizedIntent.rawPrompt,
       summary: input.normalizedIntent.summary,
@@ -177,6 +215,7 @@ export async function executeImplementationStage(
       workItems,
       workspaceFiles,
       generatedSpecs,
+      relevantFiles,
       packageContext
     });
 
@@ -210,6 +249,12 @@ export async function executeImplementationStage(
     emitImplementationEvent(input, "Implementation change set planned.", {
       operationCount: plannedChangeSet.operations.length,
       warnings: plannedChangeSet.warnings
+    });
+
+    validatePlannedOperations({
+      operations: plannedChangeSet.operations,
+      workspaceFiles,
+      generatedSpecs
     });
 
     if (plannedChangeSet.operations.length === 0) {

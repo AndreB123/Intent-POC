@@ -14,15 +14,15 @@ test("maps demo surfaces into layer-based screenshot paths", () => {
   assert.ok(view);
   assert.ok(page);
 
-  assert.equal(getDemoSurfaceScreenshotPath(primitive), "primitives/primitive-color-chip.png");
+  assert.equal(getDemoSurfaceScreenshotPath(primitive), "components/primitive-color-chip.png");
   assert.equal(getDemoSurfaceScreenshotPath(component), "components/component-button-primary.png");
   assert.equal(getDemoSurfaceScreenshotPath(view), "views/view-list-overview.png");
   assert.equal(getDemoSurfaceScreenshotPath(page), "pages/page-analytics-overview.png");
 });
 
-test("builds the tracked demo screenshot root under evidence baselines", () => {
+test("builds the demo screenshot root under artifacts library", () => {
   assert.equal(
     getDemoScreenshotRoot("/repo"),
-    "/repo/evidence/baselines/demo-components"
+    "/repo/artifacts/library"
   );
 });

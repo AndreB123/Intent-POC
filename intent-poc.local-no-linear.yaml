@@ -18,13 +18,25 @@ agent:
   apiVersion: v1alpha
   temperature: 0.1
   allowPromptNormalization: true
-  allowIntentPlanning: true
+  allowLinearScoping: true
+  allowBDDPlanning: true
+  allowTDDPlanning: true
+  allowImplementation: true
+  allowQAVerification: true
   fallbackToRules: true
   stages:
     promptNormalization:
-      model: gemini-3.1-flash
-    intentPlanning:
-      model: gemini-3.1
+      model: models/gemini-3.1-flash-lite-preview
+    linearScoping:
+      model: models/gemini-3.1-flash-lite-preview
+    bddPlanning:
+      model: models/gemini-3.1-flash-lite-preview
+    tddPlanning:
+      model: models/gemini-3.1-flash-lite-preview
+    implementation:
+      model: models/gemini-3.1-flash-lite-preview
+    qaVerification:
+      model: models/gemini-3.1-flash-lite-preview
 sources:
   demo-catalog:
     aliases:
@@ -113,7 +125,6 @@ sources:
         intervalMs: 500
     capture:
       catalog: demo-surface-catalog
-      trackedRoot: ./evidence/baselines/demo-components
       waitAfterLoadMs: 300
       injectCss:
         - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"

@@ -24,6 +24,12 @@ export interface ImplementationGeneratedSpecContext {
   content: string;
 }
 
+export interface ImplementationRelevantFileContext {
+  relativePath: string;
+  content: string;
+  reason: string;
+}
+
 export interface ImplementationScenarioContext {
   title: string;
   goal: string;
@@ -51,6 +57,7 @@ export interface ImplementationPromptContext {
   workItems: ImplementationWorkItemContext[];
   workspaceFiles: ImplementationWorkspaceFileDescriptor[];
   generatedSpecs: ImplementationGeneratedSpecContext[];
+  relevantFiles: ImplementationRelevantFileContext[];
   packageContext: ImplementationPackageContext;
 }
 
@@ -191,6 +198,7 @@ const EXCLUDED_WORKSPACE_DIRECTORIES = new Set([
   ".idea",
   ".next",
   ".turbo",
+  ".workdirs",
   "artifacts",
   "coverage",
   "dist",
@@ -200,6 +208,41 @@ const EXCLUDED_WORKSPACE_DIRECTORIES = new Set([
 ]);
 const MAX_WORKSPACE_FILE_COUNT = 200;
 const MAX_FILE_BYTES = 64_000;
+const MAX_RELEVANT_FILE_COUNT = 6;
+const MAX_RELEVANT_FILE_CHARACTERS = 5_000;
+const RELEVANT_FILE_STOP_WORDS = new Set([
+  "about",
+  "after",
+  "before",
+  "build",
+  "change",
+  "changes",
+  "compare",
+  "create",
+  "current",
+  "dashboard",
+  "default",
+  "drift",
+  "ensure",
+  "evidence",
+  "files",
+  "intent",
+  "implementation",
+  "library",
+  "planned",
+  "prompt",
+  "requested",
+  "runner",
+  "source",
+  "stage",
+  "stages",
+  "tests",
+  "that",
+  "this",
+  "through",
+  "users",
+  "with"
+]);
 
 function dedupeStrings(values: string[] | undefined): string[] {
   return Array.from(new Set((values ?? []).map((value) => value.trim()).filter((value) => value.length > 0)));
@@ -398,6 +441,134 @@ export async function readWorkspacePackageContext(input: {
   }
 }
 
+function tokenizeRelevantFileTerms(values: string[]): string[] {
+  return Array.from(
+    new Set(
+      values
+        .flatMap((value) => value.toLowerCase().split(/[^a-z0-9]+/g))
+        .map((value) => value.trim())
+        .filter((value) => value.length >= 4 && !RELEVANT_FILE_STOP_WORDS.has(value))
+    )
+  ).slice(0, 32);
+}
+
+function truncateRelevantFileContent(content: string): string {
+  if (content.length <= MAX_RELEVANT_FILE_CHARACTERS) {
+    return content;
+  }
+
+  return `${content.slice(0, MAX_RELEVANT_FILE_CHARACTERS)}\n/* truncated for prompt context */`;
+}
+
+function scoreRelevantFile(input: {
+  relativePath: string;
+  content: string;
+  keywords: string[];
+}): { score: number; matchedKeywords: string[] } {
+  const relativePath = input.relativePath.toLowerCase();
+  const content = input.content.toLowerCase();
+  const matchedKeywords: string[] = [];
+  let score = 0;
+
+  if (relativePath.startsWith("src/")) {
+    score += 4;
+  }
+
+  if (/(render|page|view|component|route|screen|layout|app)/.test(relativePath)) {
+    score += 3;
+  }
+
+  for (const keyword of input.keywords) {
+    let matched = false;
+
+    if (relativePath.includes(keyword)) {
+      score += 5;
+      matched = true;
+    }
+
+    if (content.includes(keyword)) {
+      score += 3;
+      matched = true;
+    }
+
+    if (matched) {
+      matchedKeywords.push(keyword);
+    }
+  }
+
+  return {
+    score,
+    matchedKeywords: Array.from(new Set(matchedKeywords)).slice(0, 6)
+  };
+}
+
+export async function collectRelevantImplementationFiles(input: {
+  rootDir: string;
+  rawPrompt: string;
+  summary: string;
+  sourceId: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+  scenarios: BDDScenario[];
+  workItems: TDDWorkItem[];
+  workspaceFiles: ImplementationWorkspaceFileDescriptor[];
+  generatedSpecs: ImplementationGeneratedSpecContext[];
+  readFile?: typeof fs.readFile;
+}): Promise<ImplementationRelevantFileContext[]> {
+  const readFile = input.readFile ?? fs.readFile;
+  const generatedSpecPaths = new Set(input.generatedSpecs.map((spec) => spec.relativePath));
+  const keywords = tokenizeRelevantFileTerms([
+    input.rawPrompt,
+    input.summary,
+    input.sourceId,
+    input.desiredOutcome,
+    ...input.acceptanceCriteria,
+    ...input.scenarios.flatMap((scenario) => [scenario.title, scenario.goal, ...scenario.given, ...scenario.when, ...scenario.then]),
+    ...input.workItems.flatMap((workItem) => [
+      workItem.title,
+      workItem.description,
+      workItem.userVisibleOutcome,
+      workItem.verification,
+      ...workItem.playwright.specs.map((spec) => spec.relativeSpecPath)
+    ]),
+    ...input.generatedSpecs.map((spec) => spec.content)
+  ]);
+
+  const scoredFiles = await Promise.all(
+    input.workspaceFiles
+      .filter((descriptor) => !generatedSpecPaths.has(descriptor.relativePath))
+      .map(async (descriptor) => {
+        const absolutePath = path.join(input.rootDir, descriptor.relativePath);
+        const content = await readFile(absolutePath, "utf8");
+        const score = scoreRelevantFile({
+          relativePath: descriptor.relativePath,
+          content,
+          keywords
+        });
+
+        return {
+          relativePath: descriptor.relativePath,
+          content,
+          score: score.score,
+          matchedKeywords: score.matchedKeywords
+        };
+      })
+  );
+
+  return scoredFiles
+    .filter((file) => file.score > 0)
+    .sort((left, right) => right.score - left.score || left.relativePath.localeCompare(right.relativePath))
+    .slice(0, MAX_RELEVANT_FILE_COUNT)
+    .map((file) => ({
+      relativePath: file.relativePath,
+      content: truncateRelevantFileContent(file.content),
+      reason:
+        file.matchedKeywords.length > 0
+          ? `Matched prompt and plan terms: ${file.matchedKeywords.join(", ")}`
+          : "Likely source entrypoint for the requested behavior."
+    }));
+}
+
 function buildPlanningPrompt(input: ImplementationPromptContext): string {
   return [
     "You are selecting the minimal bounded file operations needed to implement one source lane for an intent-driven development runner.",
@@ -428,6 +599,8 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
       null,
       2
     ),
+    "Relevant existing source files:",
+    JSON.stringify(input.relevantFiles, null, 2),
     "Workspace file manifest:",
     JSON.stringify(input.workspaceFiles, null, 2),
     "Original user prompt:",
@@ -452,6 +625,8 @@ function buildMaterializationPrompt(input: {
     JSON.stringify(input.operations, null, 2),
     "Existing file contents for replace targets:",
     JSON.stringify(input.existingFiles, null, 2),
+    "Relevant existing source files:",
+    JSON.stringify(input.context.relevantFiles, null, 2),
     "Generated Playwright specs:",
     JSON.stringify(input.context.generatedSpecs, null, 2),
     "Relevant work items:",
@@ -506,6 +681,7 @@ export function buildImplementationPromptContext(input: {
   workItems: TDDWorkItem[];
   workspaceFiles: ImplementationWorkspaceFileDescriptor[];
   generatedSpecs: ImplementationGeneratedSpecContext[];
+  relevantFiles: ImplementationRelevantFileContext[];
   packageContext: ImplementationPackageContext;
 }): ImplementationPromptContext {
   return {
@@ -518,6 +694,7 @@ export function buildImplementationPromptContext(input: {
     workItems: buildWorkItemContext(input.workItems),
     workspaceFiles: input.workspaceFiles,
     generatedSpecs: input.generatedSpecs,
+    relevantFiles: input.relevantFiles,
     packageContext: input.packageContext
   };
 }

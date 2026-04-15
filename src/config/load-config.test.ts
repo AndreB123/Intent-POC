@@ -34,10 +34,10 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "  allowTDDPlanning: true",
       "  stages:",
       "    promptNormalization:",
-      "      model: gemini-3.1-flash",
+      "      model: models/gemini-3.1-flash-lite-preview",
       "      apiVersion: v1alpha",
       "    bddPlanning:",
-      "      model: gemini-3.1",
+      "      model: models/gemini-3.1-flash-lite-preview",
       "      apiKeyEnv:",
       "sources:",
       "  s1:",
@@ -98,9 +98,9 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.agent.apiVersion, undefined);
   assert.equal(loaded.config.agent.allowBDDPlanning, true);
   assert.equal(loaded.config.agent.allowTDDPlanning, true);
-  assert.equal(loaded.config.agent.stages.promptNormalization.model, "gemini-3.1-flash");
+  assert.equal(loaded.config.agent.stages.promptNormalization.model, "models/gemini-3.1-flash-lite-preview");
   assert.equal(loaded.config.agent.stages.promptNormalization.apiVersion, "v1alpha");
-  assert.equal(loaded.config.agent.stages.bddPlanning.model, "gemini-3.1");
+  assert.equal(loaded.config.agent.stages.bddPlanning.model, "models/gemini-3.1-flash-lite-preview");
   assert.equal(loaded.config.agent.stages.bddPlanning.apiKeyEnv, undefined);
   assert.equal(loaded.config.linear.defaultStateIds.started, undefined);
   assert.equal(loaded.config.sources.s1.planning.repoId, "intent-poc");
@@ -143,7 +143,6 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
       "        url: http://127.0.0.1:3000",
       "    capture:",
       "      catalog: demo-surface-catalog",
-      "      trackedRoot: ./tracked/demo-components",
       "playwright:",
       "  browser: chromium",
       "artifacts:",
@@ -155,7 +154,6 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
       "run:",
       "  sourceId: demo-components",
       "  mode: baseline",
-      "  trackedBaseline: true",
       "  captureIds: []",
       "  continueOnCaptureError: false",
       "  allowBaselinePromotion: false",
@@ -168,11 +166,7 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
   const loaded = await loadConfig(configPath);
   assert.equal(loaded.config.sources["demo-components"].capture.catalog, "demo-surface-catalog");
   assert.equal(loaded.config.sources["demo-components"].capture.items.length, 46);
-  assert.equal(
-    loaded.config.sources["demo-components"].capture.trackedRoot,
-    path.join(tmpDir, "tracked", "demo-components")
-  );
-  assert.equal(loaded.config.run.trackedBaseline, true);
+  assert.equal(loaded.config.sources["demo-components"].capture.items[0]?.relativeOutputPath?.startsWith("components/"), true);
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });

@@ -18,7 +18,18 @@ function renderAgentStageFields(): string {
     const stage = AGENT_STAGE_DEFINITIONS[stageId];
     return `
                 <div class="field">
-                  <label for="${stage.id}-model-select">${escapeHtml(stage.label)} model</label>
+                  <div class="field-head">
+                    <label for="${stage.id}-model-select">${escapeHtml(stage.label)} model</label>
+                    <label class="field-toggle">
+                      <input
+                        id="${stage.id}-enabled"
+                        type="checkbox"
+                        data-default-enabled="${stage.defaultEnabled ? "true" : "false"}"
+                        ${stage.defaultEnabled ? "checked" : ""}
+                      />
+                      <span>Enable this stage for this run</span>
+                    </label>
+                  </div>
                   <select id="${stage.id}-model-select">
                     <option value="">Use config default</option>
                     ${modelOptions}
@@ -285,6 +296,20 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
+      }
+
+      .field-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .field-toggle input {
+        margin: 0;
+        accent-color: var(--accent);
       }
 
       label {
@@ -1080,6 +1105,7 @@ ${agentStageFields}
           return [
             stageId,
             {
+              enabled: document.getElementById(stageId + "-enabled"),
               select: document.getElementById(stageId + "-model-select"),
               custom: document.getElementById(stageId + "-model-custom"),
               note: document.getElementById(stageId + "-model-note")
@@ -1201,9 +1227,19 @@ ${agentStageFields}
             const customModel = controls.custom.value.trim();
             const selectedModel = controls.select.value || undefined;
             const model = customModel || selectedModel;
+            const defaultEnabled = controls.enabled.dataset.defaultEnabled === "true";
+            const stageOverride = {};
+
+            if (controls.enabled.checked !== defaultEnabled) {
+              stageOverride.enabled = controls.enabled.checked;
+            }
 
             if (model) {
-              stages[stageId] = { model: model };
+              stageOverride.model = model;
+            }
+
+            if (Object.keys(stageOverride).length > 0) {
+              stages[stageId] = stageOverride;
             }
           });
 
@@ -1489,8 +1525,13 @@ ${agentStageFields}
               return;
             }
 
+            controls.enabled.dataset.defaultEnabled = stage.enabled ? "true" : "false";
+            if (!controls.enabled.dataset.dirty) {
+              controls.enabled.checked = stage.enabled;
+            }
+
             controls.note.textContent = stage.provider
-              ? stage.description + " Config default: " + stage.provider + " / " + stage.model + ". " + (stage.enabled ? "Enabled." : "Disabled.")
+              ? stage.description + " Config default: " + stage.provider + " / " + stage.model + ". " + (stage.enabled ? "Enabled by config." : "Disabled by config.") + " Use the toggle to override this run."
               : stage.description + " No provider is configured in the current YAML, so this stage stays deterministic until Gemini is enabled.";
           });
         }
@@ -1525,7 +1566,14 @@ ${agentStageFields}
               const attemptLabel = sourceRun.attemptCount && sourceRun.attemptCount > 0
                 ? " (" + sourceRun.attemptCount + " attempt" + (sourceRun.attemptCount === 1 ? "" : "s") + (sourceRun.latestFailureStage ? ", " + sourceRun.latestFailureStage : "") + ")"
                 : "";
-              return sourceRun.sourceId + ": " + sourceRun.status + attemptLabel;
+              const fileOperationLabel = sourceRun.latestImplementationFileOperations && sourceRun.latestImplementationFileOperations.length > 0
+                ? " -> " + sourceRun.latestImplementationFileOperations.slice(0, 2).map(function (fileOperation) {
+                    return fileOperation.operation + " " + fileOperation.filePath;
+                  }).join(", ") + (sourceRun.latestImplementationFileOperations.length > 2 ? " +" + (sourceRun.latestImplementationFileOperations.length - 2) + " more" : "")
+                : sourceRun.latestImplementationSummary
+                  ? " -> " + sourceRun.latestImplementationSummary
+                  : "";
+              return formatSourceReference(lastState, sourceRun.sourceId) + ": " + sourceRun.status + attemptLabel + fileOperationLabel;
             }).join(" | ") : "Waiting for source planning…"],
             ["Result", run.error || (run.hasDrift ? "Drift detected" : run.status === "completed" ? "No blocking errors" : "In progress")]
           ];
@@ -2159,6 +2207,11 @@ ${agentStageFields}
           if (!controls) {
             return;
           }
+
+          controls.enabled.addEventListener("change", function () {
+            controls.enabled.dataset.dirty = "true";
+            schedulePlanPreview();
+          });
 
           controls.select.addEventListener("change", function () {
             schedulePlanPreview();

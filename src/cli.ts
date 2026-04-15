@@ -53,7 +53,6 @@ program
     parseSourceScope,
     [] as string[]
   )
-  .option("--tracked-baseline", "Stage captures for upsert into the configured tracked screenshot root for the selected source.")
   .option("--resume-issue <id-or-key>", "Attach the run to an existing Linear parent issue by id or identifier.")
   .option("--dry-run", "Validate config and intent normalization without launching the source app.")
   .action(async (options) => {
@@ -62,7 +61,6 @@ program
         configPath: options.config,
         intent: options.intent,
         sourceIds: options.source.length > 0 ? options.source : undefined,
-        trackedBaseline: options.trackedBaseline,
         resumeIssue: options.resumeIssue,
         dryRun: options.dryRun
       });

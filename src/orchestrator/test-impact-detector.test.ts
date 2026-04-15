@@ -10,9 +10,9 @@ test("classifyChangedPaths escalates demo theme changes to the full workflow", (
   assert.equal(decision.matchedPaths.includes("src/demo-app/theme/theme.ts"), true);
 });
 
-test("classifyChangedPaths escalates tracked baseline png changes to the full workflow", () => {
+test("classifyChangedPaths escalates deterministic screenshot artifact changes to the full workflow", () => {
   const decision = classifyChangedPaths([
-    "evidence/baselines/demo-components/primitives/primitive-color-chip.png"
+    "artifacts/library/components/primitive-color-chip.png"
   ]);
 
   assert.equal(decision.scope, "full");

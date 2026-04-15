@@ -20,28 +20,28 @@ export interface GeminiModelOption {
 
 export const GEMINI_MODEL_OPTIONS: GeminiModelOption[] = [
   {
-    id: "gemini-3",
-    label: "Gemini 3",
-    description: "Highest-quality Gemini 3 option for deeper planning passes.",
-    recommendedStages: ["bddPlanning", "tddPlanning", "implementation", "qaVerification"]
+    id: "models/gemini-3.1-flash-lite-preview",
+    label: "Gemini 3.1 Flash Lite Preview",
+    description: "Repo-verified structured-output default for bounded planning, implementation, and QA.",
+    recommendedStages: [...AGENT_STAGE_SEQUENCE]
   },
   {
-    id: "gemini-3-flash",
-    label: "Gemini 3 Flash",
-    description: "Fast Gemini 3 option for lightweight prompt interpretation.",
+    id: "models/gemini-3-flash-preview",
+    label: "Gemini 3 Flash Preview",
+    description: "Faster preview option for prompt interpretation and lighter planning passes.",
     recommendedStages: ["promptNormalization", "linearScoping"]
   },
   {
-    id: "gemini-3.1",
-    label: "Gemini 3.1",
-    description: "Latest high-reasoning Gemini option for intent planning and refinement.",
+    id: "models/gemini-3.1-pro-preview",
+    label: "Gemini 3.1 Pro Preview",
+    description: "Higher-latency preview option for deeper planning experiments.",
     recommendedStages: ["bddPlanning", "tddPlanning", "implementation", "qaVerification"]
   },
   {
-    id: "gemini-3.1-flash",
-    label: "Gemini 3.1 Flash",
-    description: "Latest fast Gemini option for prompt interpretation and bounded extraction.",
-    recommendedStages: ["promptNormalization", "linearScoping"]
+    id: "models/gemini-3-pro-preview",
+    label: "Gemini 3 Pro Preview",
+    description: "Alternative deeper reasoning preview option for longer intent passes.",
+    recommendedStages: ["bddPlanning", "tddPlanning", "implementation", "qaVerification"]
   }
 ];
 
@@ -66,7 +66,7 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     id: "promptNormalization",
     label: "Prompt Interpretation",
     description: "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
-    defaultModel: "gemini-3.1-flash",
+    defaultModel: "models/gemini-3.1-flash-lite-preview",
     defaultEnabled: true,
     enabledFlag: "allowPromptNormalization"
   },
@@ -74,7 +74,7 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     id: "linearScoping",
     label: "Linear Scoping",
     description: "Shape the work into resumable Linear-owned lanes before execution planning expands.",
-    defaultModel: "gemini-3.1-flash",
+    defaultModel: "models/gemini-3.1-flash-lite-preview",
     defaultEnabled: true,
     enabledFlag: "allowLinearScoping"
   },
@@ -82,7 +82,7 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     id: "bddPlanning",
     label: "BDD Planning",
     description: "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
-    defaultModel: "gemini-3.1",
+    defaultModel: "models/gemini-3.1-flash-lite-preview",
     defaultEnabled: true,
     enabledFlag: "allowBDDPlanning"
   },
@@ -90,7 +90,7 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     id: "tddPlanning",
     label: "TDD Planning",
     description: "Translate the accepted scenarios into Playwright-first executable test artifacts.",
-    defaultModel: "gemini-3.1",
+    defaultModel: "models/gemini-3.1-flash-lite-preview",
     defaultEnabled: true,
     enabledFlag: "allowTDDPlanning"
   },
@@ -98,7 +98,7 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     id: "implementation",
     label: "Implementation",
     description: "Apply the planned changes against the scoped source workspace.",
-    defaultModel: "gemini-3.1",
+    defaultModel: "models/gemini-3.1-flash-lite-preview",
     defaultEnabled: false,
     enabledFlag: "allowImplementation"
   },
@@ -106,7 +106,7 @@ export const AGENT_STAGE_DEFINITIONS: Record<
     id: "qaVerification",
     label: "QA Verification",
     description: "Verify implementation output, tests, and evidence before completion or retry.",
-    defaultModel: "gemini-3.1",
+    defaultModel: "models/gemini-3.1-flash-lite-preview",
     defaultEnabled: false,
     enabledFlag: "allowQAVerification"
   }

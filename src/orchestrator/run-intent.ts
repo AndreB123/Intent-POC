@@ -37,7 +37,6 @@ import { sanitizeFileSegment, writeJsonFile, writeTextFile } from "../shared/fs"
 import { log } from "../shared/log";
 import { prepareSourceWorkspace } from "../target/prepare-workspace";
 import { ResolvedSourceWorkspace, resolveSourceWorkspace } from "../target/resolve-target";
-import { upsertTrackedScreenshots } from "../demo-app/capture/upsert-tracked-screenshots";
 import { writeGeneratedPlaywrightTests } from "../tdd/write-generated-playwright-tests";
 
 export interface RunIntentEvent {
@@ -85,7 +84,6 @@ export interface RunIntentOptions {
   intent?: string;
   sourceIds?: string[];
   agentOverrides?: RunAgentConfigOverride;
-  trackedBaseline?: boolean;
   resumeIssue?: string;
   dryRun?: boolean;
   onEvent?: (event: RunIntentEvent) => void;
@@ -115,7 +113,6 @@ export interface ExecuteSourceRunInput {
   sourcePlan: ExecutionSourcePlan;
   runPaths: RunPaths;
   sourcePaths: SourceRunPaths;
-  trackedBaseline: boolean;
   options: RunIntentOptions;
   linearClient: LinearClientLike | null;
   parentIssue: LinearIssueRef | null;
@@ -188,39 +185,6 @@ export interface RunIntentDependencies {
 const MAX_SOURCE_ATTEMPTS = 3;
 const QA_COMMAND_TIMEOUT_MS = 600_000;
 type RunningAppHandle = Awaited<ReturnType<typeof startApp>>;
-
-function buildTrackedBaselineSummary(mode: RunMode, captures: CaptureOutcome[]): ComparisonSummary {
-  const counts = emptyComparisonCounts();
-  const items = captures.map((capture) => {
-    if (capture.status !== "captured") {
-      counts["capture-failed"] += 1;
-      return {
-        captureId: capture.captureId,
-        status: "capture-failed" as const,
-        currentPath: capture.outputPath,
-        note: capture.error
-      };
-    }
-
-    counts["baseline-written"] += 1;
-    return {
-      captureId: capture.captureId,
-      status: "baseline-written" as const,
-      baselinePath: capture.outputPath,
-      currentPath: capture.outputPath,
-      baselineHash: capture.hash,
-      currentHash: capture.hash,
-      note: "Capture staged for tracked screenshot upsert."
-    };
-  });
-
-  return {
-    mode,
-    hasDrift: false,
-    counts,
-    items
-  };
-}
 
 function emitRunEvent(
   options: RunIntentOptions,
@@ -1137,7 +1101,6 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
   let generatedPlaywrightTests: string[] = [];
   let attempts: SourceRunAttemptRecord[] = [];
   let appHandle: RunningAppHandle | null = null;
-  let trackedScreenshotRoot: string | undefined;
   const sourceErrors: string[] = [];
 
   try {
@@ -1435,25 +1398,6 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
         : input.config.run.captureIds
     );
 
-    if (input.trackedBaseline) {
-      trackedScreenshotRoot = workspace.source.capture.trackedRoot;
-
-      if (input.sourcePlan.runMode !== "baseline") {
-        throw new Error("Tracked baseline runs currently require baseline mode.");
-      }
-
-      if (!trackedScreenshotRoot) {
-        throw new Error(
-          `Source '${input.sourcePlan.sourceId}' does not define capture.trackedRoot for tracked baseline output.`
-        );
-      }
-
-      emitRunEvent(input.options, "artifacts", "Tracked baseline output enabled.", {
-        sourceId: input.sourcePlan.sourceId,
-        trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot)
-      });
-    }
-
     const captureResult = await runCapture(
       input.config,
       workspace,
@@ -1499,126 +1443,74 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
     captures = captureResult.outcomes;
 
-    if (input.trackedBaseline) {
-      comparison = buildTrackedBaselineSummary(input.sourcePlan.runMode, captures);
+    emitRunEvent(input.options, "comparison", "Running comparison.", {
+      sourceId: input.sourcePlan.sourceId,
+      mode: input.sourcePlan.runMode,
+      captureCount: captures.length
+    });
 
-      emitRunEvent(input.options, "comparison", "Tracked baseline capture complete.", {
-        sourceId: input.sourcePlan.sourceId,
-        trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot),
-        counts: comparison.counts
-      });
-    } else {
-      emitRunEvent(input.options, "comparison", "Running comparison.", {
-        sourceId: input.sourcePlan.sourceId,
-        mode: input.sourcePlan.runMode,
-        captureCount: captures.length
-      });
+    comparison = await runComparison(
+      input.config,
+      input.sourcePlan.runMode,
+      captures,
+      input.sourcePaths.baselineSourceDir,
+      input.sourcePaths.diffsDir
+    );
 
-      comparison = await runComparison(
-        input.config,
-        input.sourcePlan.runMode,
-        captures,
-        input.sourcePaths.baselineSourceDir,
-        input.sourcePaths.diffsDir
-      );
-
-      emitRunEvent(input.options, "comparison", "Comparison complete.", {
-        sourceId: input.sourcePlan.sourceId,
-        hasDrift: comparison.hasDrift,
-        counts: comparison.counts
-      });
-    }
+    emitRunEvent(input.options, "comparison", "Comparison complete.", {
+      sourceId: input.sourcePlan.sourceId,
+      hasDrift: comparison.hasDrift,
+      counts: comparison.counts
+    });
 
     if (captureResult.abortedDueToError) {
       sourceErrors.push("Capture run stopped early because continueOnCaptureError is disabled.");
     }
 
-    const failedCaptureCount = captures.filter((capture) => capture.status === "failed").length;
-    if (input.trackedBaseline && failedCaptureCount > 0) {
-      sourceErrors.push(
-        `${failedCaptureCount} tracked screenshot capture${failedCaptureCount === 1 ? "" : "s"} failed; existing tracked screenshots were left untouched.`
-      );
-    }
-
-    if (!input.trackedBaseline && comparison.counts["missing-baseline"] > 0 && input.config.comparison.onMissingBaseline === "error") {
+    if (comparison.counts["missing-baseline"] > 0 && input.config.comparison.onMissingBaseline === "error") {
       sourceErrors.push("One or more captures are missing a baseline image.");
     }
 
-    if (!input.trackedBaseline && comparison.hasDrift && input.config.comparison.failOnChange) {
+    if (comparison.hasDrift && input.config.comparison.failOnChange) {
       sourceErrors.push("Visual drift detected and comparison.failOnChange is enabled.");
     }
 
-    if (input.trackedBaseline) {
-      if (sourceErrors.length === 0) {
-        try {
-          const updatedFiles = await upsertTrackedScreenshots({
-            captures,
-            captureItems: selectedCaptureItems,
-            trackedRoot: trackedScreenshotRoot!
-          });
+    try {
+      const libraryResult = await updateScreenshotLibrary({
+        config: input.config,
+        sourceId: input.sourcePlan.sourceId,
+        runId: input.runPaths.runId,
+        mode: input.sourcePlan.runMode,
+        captures,
+        comparison,
+        normalizedIntent: input.normalizedIntent
+      });
 
-          publishedSourcePath = toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot);
+      emitRunEvent(input.options, "artifacts", "Screenshot library updated.", {
+        sourceId: input.sourcePlan.sourceId,
+        screenshotLibrary: toRelativePath(input.runPaths.controllerRoot, libraryResult.sourceLibraryRoot)
+      });
+    } catch (error) {
+      sourceErrors.push(`Failed to update the screenshot library: ${captureErrorMessage(error)}`);
+    }
 
-          emitRunEvent(input.options, "artifacts", "Tracked screenshots upserted from staged captures.", {
-            sourceId: input.sourcePlan.sourceId,
-            trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot),
-            stagedCapturesDir: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.capturesDir),
-            updatedCount: updatedFiles.length
-          });
-        } catch (error) {
-          sourceErrors.push(`Failed to upsert tracked screenshots: ${captureErrorMessage(error)}`);
-        }
-      } else {
-        emitRunEvent(
-          input.options,
-          "artifacts",
-          "Tracked screenshots were not upserted because validation or capture failed.",
-          {
-            sourceId: input.sourcePlan.sourceId,
-            trackedRoot: toRelativePath(input.runPaths.controllerRoot, trackedScreenshotRoot),
-            errors: sourceErrors
-          },
-          "warn"
-        );
-      }
-    } else {
-      try {
-        const libraryResult = await updateScreenshotLibrary({
-          config: input.config,
+    try {
+      const publishResult = await publishArtifactsToSourceIfConfigured({
+        config: input.config,
+        workspace,
+        paths: input.runPaths,
+        sourcePaths: input.sourcePaths
+      });
+
+      if (publishResult) {
+        publishedSourcePath = toRelativePath(input.runPaths.controllerRoot, publishResult.sourceOutputDir);
+        emitRunEvent(input.options, "artifacts", "Artifacts published to source workspace.", {
           sourceId: input.sourcePlan.sourceId,
-          runId: input.runPaths.runId,
-          mode: input.sourcePlan.runMode,
-          captures,
-          comparison,
-          normalizedIntent: input.normalizedIntent
+          sourceOutputDir: publishedSourcePath
         });
-
-        emitRunEvent(input.options, "artifacts", "Screenshot library updated.", {
-          sourceId: input.sourcePlan.sourceId,
-          screenshotLibrary: toRelativePath(input.runPaths.controllerRoot, libraryResult.sourceLibraryRoot)
-        });
-      } catch (error) {
-        sourceErrors.push(`Failed to update the screenshot library: ${captureErrorMessage(error)}`);
       }
-
-      try {
-        const publishResult = await publishArtifactsToSourceIfConfigured({
-          config: input.config,
-          workspace,
-          paths: input.runPaths,
-          sourcePaths: input.sourcePaths
-        });
-
-        if (publishResult) {
-          publishedSourcePath = toRelativePath(input.runPaths.controllerRoot, publishResult.sourceOutputDir);
-          emitRunEvent(input.options, "artifacts", "Artifacts published to source workspace.", {
-            sourceId: input.sourcePlan.sourceId,
-            sourceOutputDir: publishedSourcePath
-          });
-        }
-      } catch (error) {
-        sourceErrors.push(`Failed to publish artifacts to the source workspace: ${captureErrorMessage(error)}`);
-      }
+    } catch (error) {
+      sourceErrors.push(`Failed to publish artifacts to the source workspace: ${captureErrorMessage(error)}`);
     }
 
     const status = sourceErrors.length > 0 ? "failed" : "completed";
@@ -1635,7 +1527,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       linearIssue: input.sourceIssue,
       captures,
       comparison,
-      writeBaselineRecords: !input.trackedBaseline,
+      writeBaselineRecords: true,
       status,
       error,
       publishedSourcePath,
@@ -1883,7 +1775,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     const requestedSourceIds = options.sourceIds?.length ? Array.from(new Set(options.sourceIds)) : undefined;
     const mode = config.run.mode;
     const rawPrompt = options.intent ?? config.run.intent;
-    const trackedBaseline = options.trackedBaseline ?? config.run.trackedBaseline;
     const resumeIssue = options.resumeIssue ?? config.run.resumeIssue;
     const dryRun = options.dryRun ?? config.run.dryRun;
 
@@ -1894,7 +1785,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       sourceCount: Object.keys(config.sources).length,
       requestedSourceIds,
       agentOverrides: options.agentOverrides,
-      trackedBaseline,
       resumeIssue
     });
 
@@ -1927,11 +1817,10 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       createIssueOnStart: config.linear.createIssueOnStart,
       commentOnProgress: config.linear.commentOnProgress,
       commentOnCompletion: config.linear.commentOnCompletion,
-      trackedBaseline,
       resumeIssue
     });
 
-    const shouldManageLinearPlan = Boolean(!trackedBaseline && linearClient && (config.linear.createIssueOnStart || resumeIssue));
+    const shouldManageLinearPlan = Boolean(linearClient && (config.linear.createIssueOnStart || resumeIssue));
     let scopingIntent: NormalizedIntent | null = null;
 
     if (linearClient && shouldManageLinearPlan) {
@@ -2054,10 +1943,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       }
     }
 
-    if (trackedBaseline && normalizedIntent.execution.runMode !== "baseline") {
-      throw new Error("Tracked baseline runs currently require baseline mode.");
-    }
-
     const sourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
     const paths = await dependencies.createRunPaths(loadedConfig, sourceIds, normalizedIntent.execution.runMode);
     await dependencies.writeJsonFile(paths.normalizedIntentPath, normalizedIntent);
@@ -2148,7 +2033,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
         sourcePlan,
         runPaths: paths,
         sourcePaths: paths.sourceRuns[sourcePlan.sourceId],
-        trackedBaseline,
         options,
         linearClient,
         parentIssue: linearPublication.parentIssue,

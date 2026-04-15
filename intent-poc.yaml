@@ -15,7 +15,11 @@ agent:
   mode: bounded-runner
   temperature: 0.1
   allowPromptNormalization: true
-  allowIntentPlanning: true
+  allowLinearScoping: true
+  allowBDDPlanning: true
+  allowTDDPlanning: true
+  allowImplementation: false
+  allowQAVerification: false
   fallbackToRules: true
 sources:
   demo-catalog:
@@ -112,7 +116,6 @@ sources:
         intervalMs: 500
     capture:
       catalog: demo-surface-catalog
-      trackedRoot: ./evidence/baselines/demo-components
       waitAfterLoadMs: 300
       injectCss:
         - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
@@ -152,7 +155,6 @@ run:
   mode: baseline
   intent: Create a baseline screenshot library for the built-in demo catalog.
   resumeIssue:
-  trackedBaseline: false
   captureIds: []
   continueOnCaptureError: false
   allowBaselinePromotion: false

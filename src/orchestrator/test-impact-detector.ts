@@ -40,9 +40,9 @@ const FULL_TEST_GROUPS: PathGroup[] = [
       normalizedPath === "package.json"
   },
   {
-    reason: "Tracked baseline and runnable config changes must be validated by the full workflow.",
+    reason: "Deterministic screenshot artifacts and runnable config changes must be validated by the full workflow.",
     matches: (normalizedPath) =>
-      normalizedPath.startsWith("evidence/baselines/") ||
+      normalizedPath.startsWith("artifacts/library/") ||
       normalizedPath === "intent-poc.yaml" ||
       normalizedPath === "intent-poc.local-no-linear.yaml"
   }

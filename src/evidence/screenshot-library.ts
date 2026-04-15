@@ -62,16 +62,6 @@ export async function updateScreenshotLibrary(input: {
   }
 
   const latestManifestPath = path.join(sourceLibraryRoot, "latest", "manifest.json");
-  const latestHashesPath = path.join(sourceLibraryRoot, "latest", "hashes.json");
-  const latestComparisonPath = path.join(sourceLibraryRoot, "latest", "comparison.json");
-
-  const hashItems = input.captures
-    .filter((capture) => capture.status === "captured" && capture.hash)
-    .map((capture) => ({
-      captureId: capture.captureId,
-      relativePath: path.join("latest", "images", `${capture.captureId}.png`),
-      sha256: capture.hash
-    }));
 
   await writeJsonFile(latestManifestPath, {
     runId: input.runId,
@@ -79,50 +69,23 @@ export async function updateScreenshotLibrary(input: {
     generatedAt: new Date().toISOString(),
     mode: input.mode,
     intentSummary: input.normalizedIntent.summary,
-    captures: input.captures,
-    comparison: input.comparison
-  });
-
-  await writeJsonFile(latestHashesPath, {
-    algorithm: "sha256",
-    generatedAt: new Date().toISOString(),
-    items: hashItems
-  });
-
-  await writeJsonFile(latestComparisonPath, {
-    runId: input.runId,
-    sourceId: input.sourceId,
-    mode: input.mode,
+    captureCount: input.captures.filter((c) => c.status === "captured").length,
     hasDrift: input.comparison.hasDrift,
-    counts: input.comparison.counts,
-    items: input.comparison.items.map((item) => ({
-      ...item,
-      diffImagePath:
-        item.status === "changed" && item.diffImagePath
-          ? path.join("latest", "diffs", `${item.captureId}.png`)
-          : undefined
-    }))
+    comparisonSummary: {
+      counts: input.comparison.counts,
+      itemCount: input.comparison.items.length
+    }
   });
 
   if (input.mode === "baseline" || input.mode === "approve-baseline") {
     const baselineManifestPath = path.join(sourceLibraryRoot, "baseline", "manifest.json");
-    const baselineHashesPath = path.join(sourceLibraryRoot, "baseline", "hashes.json");
 
     await writeJsonFile(baselineManifestPath, {
       runId: input.runId,
       sourceId: input.sourceId,
       generatedAt: new Date().toISOString(),
       mode: input.mode,
-      captures: input.captures
-    });
-
-    await writeJsonFile(baselineHashesPath, {
-      algorithm: "sha256",
-      generatedAt: new Date().toISOString(),
-      items: hashItems.map((item) => ({
-        ...item,
-        relativePath: item.relativePath.replace("latest/images", "baseline/images")
-      }))
+      captureCount: input.captures.filter((c) => c.status === "captured").length
     });
   }
 

@@ -2,7 +2,7 @@ import path from "node:path";
 import { SurfaceDefinition, SurfaceLayer } from "../model/types";
 
 const LAYER_DIRECTORIES: Record<SurfaceLayer, string> = {
-  primitive: "primitives",
+  primitive: "components",
   component: "components",
   view: "views",
   page: "pages"
@@ -17,5 +17,5 @@ export function getDemoSurfaceScreenshotPath(surface: SurfaceDefinition): string
 }
 
 export function getDemoScreenshotRoot(workspaceRoot: string): string {
-  return path.join(workspaceRoot, "evidence", "baselines", "demo-components");
+  return path.join(workspaceRoot, "artifacts", "library");
 }

@@ -60,7 +60,6 @@ const captureCatalogSchema = z.enum(["demo-surface-catalog"]);
 const captureSchema = z
   .object({
     catalog: captureCatalogSchema.optional(),
-    trackedRoot: z.string().min(1).optional(),
     basePathPrefix: z.string().default(""),
     waitAfterLoadMs: z.number().int().nonnegative().default(500),
     injectCss: z.array(z.string()).default([]),
@@ -153,7 +152,6 @@ const runSchema = z.object({
   mode: z.enum(["baseline", "compare", "approve-baseline"]).default("compare"),
   intent: z.string().optional(),
   resumeIssue: z.string().min(1).optional(),
-  trackedBaseline: z.boolean().default(false),
   captureIds: z.array(z.string()).default([]),
   continueOnCaptureError: z.boolean().default(false),
   allowBaselinePromotion: z.boolean().default(false),

@@ -6,7 +6,7 @@ export function renderPage(id: string, variant: LibraryVariant): string {
 
   switch (id) {
     case "page-analytics-overview":
-      return `<div class="layout-stack"><h2>${changed ? "Analytics + Alerts" : "Analytics Overview"}</h2>${renderView("view-revenue-kpis", variant)}${renderView("view-dashboard-summary", variant)}${renderView("view-campaign-table", variant)}</div>`;
+      return `<div class="layout-stack"><h2>${changed ? "Analytics + Alerts" : "Analytics Overview"} <span class="chip success">QA Ready</span></h2>${renderView("view-revenue-kpis", variant)}${renderView("view-dashboard-summary", variant)}${renderView("view-campaign-table", variant)}</div>`;
     case "page-account-list":
       return `<div class="layout-stack"><h2>Account List</h2>${renderView("view-user-directory", variant)}${renderView("view-list-overview", variant)}</div>`;
     case "page-campaign-editor":
