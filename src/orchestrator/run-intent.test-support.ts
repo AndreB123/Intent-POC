@@ -309,6 +309,7 @@ export function buildSourceStageExecutionRecord(
     status: "skipped",
     summary: "Stage skipped.",
     commands: [],
+    fileOperations: [],
     ...overrides
   };
 }

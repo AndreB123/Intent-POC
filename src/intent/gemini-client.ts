@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-function resolveGeminiApiKey(input: { apiKeyEnv?: string }): { apiKey: string; envName: string } {
+export function resolveGeminiApiKey(input: { apiKeyEnv?: string }): { apiKey: string; envName: string } {
   const candidateEnvNames = Array.from(
     new Set([input.apiKeyEnv, "GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"].filter((value): value is string => Boolean(value)))
   );

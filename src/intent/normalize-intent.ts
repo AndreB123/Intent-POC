@@ -1449,13 +1449,13 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
       implementationStage.enabled
         ? buildDeferredStageMeta(
             implementationStage,
-            "Implementation stage configuration is recorded, but the runner has not wired the implementor loop yet."
+            "Implementation stage configuration is recorded and executes during source runs before QA verification."
           )
         : buildSkippedStageMeta(implementationStage),
       qaStage.enabled
         ? buildDeferredStageMeta(
             qaStage,
-            "QA verification configuration is recorded, but the runner has not wired bounded QA retries yet."
+            "QA verification configuration is recorded and executes during source runs after implementation completes."
           )
         : buildSkippedStageMeta(qaStage)
     ]
@@ -1548,7 +1548,7 @@ export async function normalizeIntentWithAgent(
       implementationStage.enabled
         ? buildDeferredStageMeta(
             implementationStage,
-            "Implementation stage configuration is recorded, but the runner has not wired the implementor loop yet."
+            "Implementation stage configuration is recorded and executes during source runs before QA verification."
           )
         : buildSkippedStageMeta(implementationStage)
     );
@@ -1558,7 +1558,7 @@ export async function normalizeIntentWithAgent(
       qaStage.enabled
         ? buildDeferredStageMeta(
             qaStage,
-            "QA verification configuration is recorded, but the runner has not wired bounded QA retries yet."
+            "QA verification configuration is recorded and executes during source runs after implementation completes."
           )
         : buildSkippedStageMeta(qaStage)
     );
@@ -1645,7 +1645,7 @@ export async function normalizeIntentWithAgent(
     implementationStage.enabled
       ? buildDeferredStageMeta(
           implementationStage,
-          "Implementation stage configuration is recorded, but the runner has not wired the implementor loop yet."
+          "Implementation stage configuration is recorded and executes during source runs before QA verification."
         )
       : buildSkippedStageMeta(implementationStage)
   );
@@ -1655,7 +1655,7 @@ export async function normalizeIntentWithAgent(
     qaStage.enabled
       ? buildDeferredStageMeta(
           qaStage,
-          "QA verification configuration is recorded, but the runner has not wired bounded QA retries yet."
+          "QA verification configuration is recorded and executes during source runs after implementation completes."
         )
       : buildSkippedStageMeta(qaStage)
   );

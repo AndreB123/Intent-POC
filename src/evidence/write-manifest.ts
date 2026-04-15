@@ -22,11 +22,19 @@ export interface SourceStageCommandRecord {
   logPath?: string;
 }
 
+export interface SourceStageFileOperationRecord {
+  operation: "create" | "replace" | "delete";
+  filePath: string;
+  rationale: string;
+  status: "applied";
+}
+
 export interface SourceStageExecutionRecord {
   status: "skipped" | "completed" | "failed";
   summary: string;
   error?: string;
   commands: SourceStageCommandRecord[];
+  fileOperations: SourceStageFileOperationRecord[];
 }
 
 export interface SourceRunAttemptRecord {
@@ -96,7 +104,10 @@ function serializeSourceStageCommand(controllerRoot: string, command: SourceStag
 function serializeSourceStageExecution(controllerRoot: string, stage: SourceStageExecutionRecord): Record<string, unknown> {
   return {
     ...stage,
-    commands: stage.commands.map((command) => serializeSourceStageCommand(controllerRoot, command))
+    commands: stage.commands.map((command) => serializeSourceStageCommand(controllerRoot, command)),
+    fileOperations: stage.fileOperations.map((fileOperation) => ({
+      ...fileOperation
+    }))
   };
 }
 

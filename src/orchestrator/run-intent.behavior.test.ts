@@ -32,13 +32,15 @@ test("runSourceAttemptLoop Given a retryable QA failure When a later attempt pas
           implementation: {
             status: "completed",
             summary: "Implementation pass completed.",
-            commands: []
+            commands: [],
+            fileOperations: []
           },
           qaVerification: {
             status: "failed",
             summary: "QA verification failed while running 'test-code'.",
             error: "Command failed (1).",
-            commands: []
+            commands: [],
+            fileOperations: []
           }
         };
       }
@@ -47,12 +49,14 @@ test("runSourceAttemptLoop Given a retryable QA failure When a later attempt pas
         implementation: {
           status: "completed",
           summary: "Retry implementation pass completed.",
-          commands: []
+          commands: [],
+          fileOperations: []
         },
         qaVerification: {
           status: "completed",
           summary: "QA verification passed 2 commands.",
-          commands: []
+          commands: [],
+          fileOperations: []
         },
         resource: "ready-app"
       };
@@ -81,13 +85,15 @@ test("runSourceAttemptLoop Given repeated QA failures When retries are exhausted
       implementation: {
         status: "completed",
         summary: "Implementation pass completed.",
-        commands: []
+        commands: [],
+        fileOperations: []
       },
       qaVerification: {
         status: "failed",
         summary: "QA verification failed while running 'generated-playwright'.",
         error: "Command failed (1).",
-        commands: []
+        commands: [],
+        fileOperations: []
       }
     }),
     onRetry: ({ nextAttemptNumber }) => {
@@ -164,12 +170,14 @@ test("runIntent Given a successful source lane When compare execution finishes T
               implementation: {
                 status: "completed",
                 summary: "Implementation completed.",
-                commands: []
+                commands: [],
+                fileOperations: []
               },
               qaVerification: {
                 status: "completed",
                 summary: "QA verification passed 2 commands.",
-                commands: []
+                commands: [],
+                fileOperations: []
               }
             })
           ],

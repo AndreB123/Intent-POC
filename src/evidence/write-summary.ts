@@ -51,21 +51,29 @@ function buildStageExecutionMarkdown(
 
   if (stage.commands.length === 0) {
     lines.push(`  - Commands: none`);
+  } else {
+    for (const command of stage.commands) {
+      const details = [command.label, `[${command.status}]`];
+
+      if (command.logPath) {
+        details.push(toRelativePath(controllerRoot, command.logPath) ?? command.logPath);
+      }
+
+      if (command.error) {
+        details.push(command.error);
+      }
+
+      lines.push(`  - ${details.join(" - ")}`);
+    }
+  }
+
+  if (stage.fileOperations.length === 0) {
+    lines.push(`  - File operations: none`);
     return lines;
   }
 
-  for (const command of stage.commands) {
-    const details = [command.label, `[${command.status}]`];
-
-    if (command.logPath) {
-      details.push(toRelativePath(controllerRoot, command.logPath) ?? command.logPath);
-    }
-
-    if (command.error) {
-      details.push(command.error);
-    }
-
-    lines.push(`  - ${details.join(" - ")}`);
+  for (const fileOperation of stage.fileOperations) {
+    lines.push(`  - File: ${fileOperation.operation} ${fileOperation.filePath} - ${fileOperation.rationale}`);
   }
 
   return lines;

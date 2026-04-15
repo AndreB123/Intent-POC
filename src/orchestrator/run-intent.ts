@@ -18,9 +18,11 @@ import {
   writeSourceEvidenceFiles
 } from "../evidence/write-manifest";
 import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evidence/write-summary";
+import { resolveGeminiApiKey } from "../intent/gemini-client";
 import { NormalizedIntent, TDDWorkItem } from "../intent/intent-types";
-import { RunAgentConfigOverride, applyAgentOverrides, resolveAgentStageConfig } from "../intent/agent-stage-config";
+import { ResolvedAgentStageConfig, RunAgentConfigOverride, applyAgentOverrides, resolveAgentStageConfig } from "../intent/agent-stage-config";
 import { normalizeIntentWithAgent } from "../intent/normalize-intent";
+import { executeImplementationStage as executeGeminiImplementationStage } from "../implementation/execute-implementation";
 import { LinearClient, LinearIssueRef } from "../linear/linear-client";
 import {
   BUSINESS_PLAN_SECTION_ID,
@@ -125,6 +127,7 @@ export interface ExecuteSourceRunInput {
 
 export interface ExecuteImplementationStageInput {
   config: AppConfig;
+  stage: ResolvedAgentStageConfig;
   normalizedIntent: NormalizedIntent;
   sourcePlan: ExecutionSourcePlan;
   sourcePaths: SourceRunPaths;
@@ -274,8 +277,25 @@ function buildSkippedStageExecutionRecord(summary: string): SourceStageExecution
   return {
     status: "skipped",
     summary,
-    commands: []
+    commands: [],
+    fileOperations: []
   };
+}
+
+function assertImplementationStageReady(stage: ResolvedAgentStageConfig): void {
+  if (!stage.enabled) {
+    return;
+  }
+
+  if (!stage.provider) {
+    throw new Error("Implementation stage requires an explicit provider when the stage is enabled.");
+  }
+
+  if (stage.provider !== "gemini") {
+    throw new Error(`Implementation stage provider '${stage.provider}' is not supported. Supported providers: gemini.`);
+  }
+
+  resolveGeminiApiKey({ apiKeyEnv: stage.apiKeyEnv });
 }
 
 function buildAttemptFailureMessage(sourceId: string, attempt: SourceRunAttemptRecord): string {
@@ -356,12 +376,6 @@ async function runLoggedStageCommand(input: {
   return commandRecord;
 }
 
-async function executeDefaultImplementationStage(): Promise<SourceStageExecutionRecord> {
-  return buildSkippedStageExecutionRecord(
-    "No implementation executor is wired yet, so the current workspace state is verified as-is."
-  );
-}
-
 async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationStageInput): Promise<SourceStageExecutionRecord> {
   const env = {
     ...input.workspace.source.workspace.env,
@@ -415,7 +429,8 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
         status: "failed",
         summary: `QA verification failed while running '${command.label}'.`,
         error: commandRecord.error,
-        commands: commandRecords
+        commands: commandRecords,
+        fileOperations: []
       };
     }
   }
@@ -423,7 +438,8 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
   return {
     status: "completed",
     summary: `QA verification passed ${commandRecords.length} command${commandRecords.length === 1 ? "" : "s"}.`,
-    commands: commandRecords
+    commands: commandRecords,
+    fileOperations: []
   };
 }
 
@@ -1182,6 +1198,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
     const implementationStage = resolveAgentStageConfig(input.agentConfig, "implementation");
     const qaVerificationStage = resolveAgentStageConfig(input.agentConfig, "qaVerification");
 
+    assertImplementationStageReady(implementationStage);
+
     if (implementationStage.enabled || qaVerificationStage.enabled) {
       const attemptLoop = await runSourceAttemptLoop<RunningAppHandle>({
         sourceId: input.sourcePlan.sourceId,
@@ -1205,6 +1223,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
             try {
               implementationResult = await input.executeImplementationStage({
                 config: input.config,
+                stage: implementationStage,
                 normalizedIntent: input.normalizedIntent,
                 sourcePlan: input.sourcePlan,
                 sourcePaths: input.sourcePaths,
@@ -1218,7 +1237,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 status: "failed",
                 summary: "Implementation executor threw before the source lane could continue.",
                 error: captureErrorMessage(error),
-                commands: []
+                commands: [],
+                fileOperations: []
               };
             }
 
@@ -1235,7 +1255,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 attemptNumber,
                 status: implementationResult.status,
                 summary: implementationResult.summary,
-                error: implementationResult.error
+                error: implementationResult.error,
+                fileOperations: implementationResult.fileOperations
               },
               implementationResult.status === "failed"
                 ? "error"
@@ -1301,7 +1322,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 status: "failed",
                 summary: "QA verification threw before the source lane could continue.",
                 error: captureErrorMessage(error),
-                commands: []
+                commands: [],
+                fileOperations: []
               };
             }
 
@@ -1357,7 +1379,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 status: "failed",
                 summary: "QA verification could not start because the source app never became ready.",
                 error: captureErrorMessage(error),
-                commands: []
+                commands: [],
+                fileOperations: []
               }
             };
           }
@@ -1837,7 +1860,7 @@ function createDefaultRunIntentDependencies(): RunIntentDependencies {
     createRunPaths,
     createLinearClient: (config) => new LinearClient(config),
     executeSourceRun,
-    executeImplementationStage: executeDefaultImplementationStage,
+    executeImplementationStage: executeGeminiImplementationStage,
     executeQAVerificationStage: executeDefaultQAVerificationStage,
     writeJsonFile,
     writePlanLifecycleFile,
