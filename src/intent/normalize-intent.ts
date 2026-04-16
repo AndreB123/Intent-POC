@@ -389,12 +389,14 @@ function buildPlaywrightCheckpoints(input: {
   captureItems: CaptureItemConfig[];
   workItemTitle: string;
   desiredOutcome: string;
+  acceptanceCriteria: string[];
 }): PlaywrightCheckpoint[] {
   if (input.codeSurface.id === "intent-studio") {
     return buildIntentStudioPlaywrightCheckpoints({
       scenario: input.scenario,
       workItemTitle: input.workItemTitle,
-      desiredOutcome: input.desiredOutcome
+      desiredOutcome: input.desiredOutcome,
+      acceptanceCriteria: input.acceptanceCriteria
     });
   }
 
@@ -433,9 +435,12 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
   scenario?: BDDScenario;
   workItemTitle: string;
   desiredOutcome: string;
+  acceptanceCriteria: string[];
 }): PlaywrightCheckpoint[] {
   const scenarioText = [
     input.workItemTitle,
+    ...input.acceptanceCriteria,
+    ...(input.scenario?.given ?? []),
     ...(input.scenario?.when ?? []),
     ...(input.scenario?.then ?? [])
   ]
@@ -443,6 +448,15 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
     .toLowerCase();
   const isCollapseFlow = /\bcollapse|collapsed|collapsable|collapsible|hide\b/i.test(scenarioText);
   const isExpandFlow = /\bexpand|expanded|show|restore\b/i.test(scenarioText);
+  const mentionsPromptInput = /\b(prompt|input|textarea|text area|input box|prompt box)\b/i.test(scenarioText);
+  const mentionsRunButton = /\b(run intent|submit|button)\b/i.test(scenarioText);
+  const mentionsBelowRelationship = /\b(under|below|beneath)\b/i.test(scenarioText);
+  const isLayoutFlow = /\blayout|placement|position\b/i.test(scenarioText) || (mentionsPromptInput && mentionsRunButton);
+  const shouldAssertPromptButtonPlacement = isLayoutFlow && mentionsPromptInput && mentionsRunButton && mentionsBelowRelationship;
+  const includesWorkScopeSection = /\b(work scope|source scope)\b/i.test(scenarioText);
+  const includesStepsSection = /\b(steps|stages|optional config|optional configuration|configuration section|orchestration stages)\b/i.test(
+    scenarioText
+  );
   const checkpoints: PlaywrightCheckpoint[] = [
     {
       id: createPlanId("checkpoint", `${input.workItemTitle}-open-intent-studio`, 0),
@@ -453,59 +467,133 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       path: "/",
       waitForSelector: "#prompt-input",
       waitUntil: "domcontentloaded"
-    },
-    {
-      id: createPlanId("checkpoint", `${input.workItemTitle}-stage-grid-visible`, 1),
-      label: "Configuration Section Visible",
-      action: "assert-visible",
-      assertion: "The optional configuration section is visible before interaction.",
-      screenshotId: createPlanId("shot", `${input.workItemTitle}-configuration-visible`, 1),
-      target: "#agent-stages-grid",
-      waitForSelector: "#agent-stages-grid"
     }
   ];
 
-  if (isCollapseFlow || isExpandFlow) {
+  if (shouldAssertPromptButtonPlacement) {
     checkpoints.push({
-      id: createPlanId("checkpoint", `${input.workItemTitle}-collapse-toggle`, checkpoints.length),
-      label: "Collapse Optional Configuration",
-      action: "click",
-      assertion: "The collapse toggle is available for the optional configuration section.",
-      screenshotId: createPlanId("shot", `${input.workItemTitle}-collapse-toggle`, checkpoints.length),
-      target: "#toggle-stages-visibility",
-      waitForSelector: "#toggle-stages-visibility"
+      id: createPlanId("checkpoint", `${input.workItemTitle}-submit-button-visible`, checkpoints.length),
+      label: "Run Intent Button Visible",
+      action: "assert-visible",
+      assertion: "The run intent button is visible on the prompt run form.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-submit-button-visible`, checkpoints.length),
+      target: "#submit-button",
+      waitForSelector: "#submit-button"
     });
     checkpoints.push({
-      id: createPlanId("checkpoint", `${input.workItemTitle}-collapsed-state`, checkpoints.length),
-      label: "Configuration Section Collapsed",
-      action: "assert-hidden",
-      assertion: isCollapseFlow
-        ? input.desiredOutcome
-        : "The optional configuration section can be hidden before it is expanded again.",
-      screenshotId: createPlanId("shot", `${input.workItemTitle}-collapsed-state`, checkpoints.length),
-      target: "#agent-stages-grid",
-      waitForSelector: "#agent-stages-grid"
+      id: createPlanId("checkpoint", `${input.workItemTitle}-submit-button-below-input`, checkpoints.length),
+      label: "Run Intent Button Below Prompt Input",
+      action: "assert-below",
+      assertion: input.desiredOutcome,
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-submit-button-below-input`, checkpoints.length),
+      target: "#submit-button",
+      referenceTarget: "#prompt-input",
+      waitForSelector: "#submit-button"
     });
   }
 
-  if (isExpandFlow) {
+  const addSectionCollapseFlow = (section: {
+    key: string;
+    label: string;
+    toggleTarget: string;
+    collapsedTarget: string;
+    expandedTarget: string;
+    visibleAssertion: string;
+    collapsedAssertion: string;
+    expandedAssertion: string;
+  }): void => {
     checkpoints.push({
-      id: createPlanId("checkpoint", `${input.workItemTitle}-expand-toggle`, checkpoints.length),
-      label: "Expand Optional Configuration",
-      action: "click",
-      assertion: "The expand toggle is available when the configuration section is collapsed.",
-      screenshotId: createPlanId("shot", `${input.workItemTitle}-expand-toggle`, checkpoints.length),
-      target: "#toggle-stages-visibility",
-      waitForSelector: "#toggle-stages-visibility"
-    });
-    checkpoints.push({
-      id: createPlanId("checkpoint", `${input.workItemTitle}-expanded-state`, checkpoints.length),
-      label: "Configuration Section Expanded",
+      id: createPlanId("checkpoint", `${input.workItemTitle}-${section.key}-visible`, checkpoints.length),
+      label: `${section.label} Visible`,
       action: "assert-visible",
-      assertion: input.desiredOutcome,
-      screenshotId: createPlanId("shot", `${input.workItemTitle}-expanded-state`, checkpoints.length),
-      target: "#promptNormalization-enabled",
-      waitForSelector: "#promptNormalization-enabled"
+      assertion: section.visibleAssertion,
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-visible`, checkpoints.length),
+      target: section.collapsedTarget,
+      waitForSelector: section.collapsedTarget
+    });
+
+    if (isCollapseFlow || isExpandFlow) {
+      checkpoints.push({
+        id: createPlanId("checkpoint", `${input.workItemTitle}-${section.key}-collapse-toggle`, checkpoints.length),
+        label: `Collapse ${section.label}`,
+        action: "click",
+        assertion: `The collapse toggle is available for the ${section.label.toLowerCase()}.`,
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-collapse-toggle`, checkpoints.length),
+        target: section.toggleTarget,
+        waitForSelector: section.toggleTarget
+      });
+      checkpoints.push({
+        id: createPlanId("checkpoint", `${input.workItemTitle}-${section.key}-collapsed`, checkpoints.length),
+        label: `${section.label} Collapsed`,
+        action: "assert-hidden",
+        assertion: section.collapsedAssertion,
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-collapsed`, checkpoints.length),
+        target: section.collapsedTarget,
+        waitForSelector: section.collapsedTarget
+      });
+    }
+
+    if (isExpandFlow) {
+      checkpoints.push({
+        id: createPlanId("checkpoint", `${input.workItemTitle}-${section.key}-expand-toggle`, checkpoints.length),
+        label: `Expand ${section.label}`,
+        action: "click",
+        assertion: `The expand toggle is available when the ${section.label.toLowerCase()} is collapsed.`,
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-expand-toggle`, checkpoints.length),
+        target: section.toggleTarget,
+        waitForSelector: section.toggleTarget
+      });
+      checkpoints.push({
+        id: createPlanId("checkpoint", `${input.workItemTitle}-${section.key}-expanded`, checkpoints.length),
+        label: `${section.label} Expanded`,
+        action: "assert-visible",
+        assertion: section.expandedAssertion,
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-expanded`, checkpoints.length),
+        target: section.expandedTarget,
+        waitForSelector: section.expandedTarget
+      });
+    }
+  };
+
+  if (includesWorkScopeSection) {
+    addSectionCollapseFlow({
+      key: "work-scope",
+      label: "Work Scope Section",
+      toggleTarget: "#toggle-work-scope-visibility",
+      collapsedTarget: "#work-scope-panel",
+      expandedTarget: "#source-scope",
+      visibleAssertion: "The work scope section is visible before interaction.",
+      collapsedAssertion: "The work scope section can be collapsed without affecting the prompt input.",
+      expandedAssertion: "The work scope section can be expanded again and the configured source cards are visible."
+    });
+  }
+
+  if (includesStepsSection) {
+    addSectionCollapseFlow({
+      key: "steps",
+      label: "Steps Section",
+      toggleTarget: "#toggle-stages-visibility",
+      collapsedTarget: "#steps-panel",
+      expandedTarget: "#agent-stages-grid",
+      visibleAssertion: "The steps section is visible before interaction.",
+      collapsedAssertion: isCollapseFlow
+        ? input.desiredOutcome
+        : "The steps section can be collapsed before it is expanded again.",
+      expandedAssertion: isExpandFlow
+        ? input.desiredOutcome
+        : "The steps section can be expanded again and remains interactable."
+    });
+  }
+
+  if (!shouldAssertPromptButtonPlacement && !includesWorkScopeSection && !includesStepsSection) {
+    checkpoints.push({
+      id: createPlanId("checkpoint", `${input.workItemTitle}-stage-grid-visible`, checkpoints.length),
+      label: "Configuration Section Visible",
+      action: "assert-visible",
+      assertion: "The optional configuration section is visible before interaction.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-configuration-visible`, checkpoints.length),
+      target: "#agent-stages-grid",
+      waitForSelector: "#agent-stages-grid"
     });
   }
 
@@ -520,6 +608,7 @@ function buildPlaywrightSpecs(input: {
   scenarioIds: string[];
   sourceIds: string[];
   desiredOutcome: string;
+  acceptanceCriteria: string[];
   availableSources: Record<string, AvailableSourceDescriptor>;
 }): PlaywrightSpecArtifact[] {
   return input.sourceIds.map((sourceId) => {
@@ -538,7 +627,8 @@ function buildPlaywrightSpecs(input: {
         scenario: input.scenario,
         captureItems,
         workItemTitle: input.title,
-        desiredOutcome: input.desiredOutcome
+        desiredOutcome: input.desiredOutcome,
+        acceptanceCriteria: input.acceptanceCriteria
       })
     };
   });
@@ -548,12 +638,49 @@ function buildScenarioNarrativeText(scenario: BDDScenario): string {
   return [scenario.title, scenario.goal, ...scenario.when, ...scenario.then].join(" ").toLowerCase();
 }
 
+function tokenizeScenarioText(text: string): string[] {
+  const stopWords = new Set([
+    "again",
+    "below",
+    "each",
+    "input",
+    "intent",
+    "prompt",
+    "remains",
+    "section",
+    "sections",
+    "stays",
+    "that",
+    "the",
+    "then",
+    "user",
+    "verify",
+    "when"
+  ]);
+
+  return (text.match(/[a-z0-9]+/g) ?? []).filter((token) => token.length > 2 && !stopWords.has(token));
+}
+
+function selectRelevantAcceptanceCriteria(
+  scenario: BDDScenario,
+  acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"]
+): string[] {
+  const scenarioTokens = new Set(
+    tokenizeScenarioText([scenario.title, scenario.goal, ...scenario.when, ...scenario.then].join(" ").toLowerCase())
+  );
+  const matchingCriteria = acceptanceCriteria.filter((criterion) =>
+    tokenizeScenarioText(criterion.description.toLowerCase()).filter((token) => scenarioTokens.has(token)).length >= 2
+  );
+
+  return (matchingCriteria.length > 0 ? matchingCriteria : acceptanceCriteria).map((criterion) => criterion.description);
+}
+
 function isExecutableVisualScenario(scenario: BDDScenario): boolean {
   const text = buildScenarioNarrativeText(scenario);
   const visualSignalPattern =
-    /\b(playwright|screenshot|screen ?shot|visual|capture|visible|page|screen|component|view|click|toggle|button|modal|dialog|header|form|theme|ui)\b/i;
+    /\b(playwright|screenshot|screen ?shot|visual|capture|visible|page|screen|component|view|click|toggle|toggles|collapse|collapsed|expand|expanded|collapsible|button|buttons|modal|dialog|header|form|forms|theme|ui)\b/i;
   const strongExecutionSignalPattern =
-    /\b(playwright|screenshot|screen ?shot|click|toggle|button|page|screen|component|view|modal|dialog|header|form|theme|ui)\b/i;
+    /\b(playwright|screenshot|screen ?shot|click|toggle|toggles|collapse|collapsed|expand|expanded|collapsible|button|buttons|page|screen|component|view|modal|dialog|header|form|forms|theme|ui)\b/i;
   const processOnlyPattern =
     /\b(planner|planning|acceptance criteria|acceptance-ready|decompose|distribution|distribute|publishing|publish|destination|stakeholder|summary|manifest|package|issue|linear|business process|workflow gate)\b/i;
 
@@ -580,6 +707,7 @@ function buildWorkItemVerification(scenario: BDDScenario): string {
 function buildWorkItems(input: {
   codeSurface: CodeSurfaceSelection;
   scenarios: NormalizedIntent["businessIntent"]["scenarios"];
+  acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
   sourceIds: string[];
   desiredOutcome: string;
   availableSources: Record<string, AvailableSourceDescriptor>;
@@ -593,6 +721,7 @@ function buildWorkItems(input: {
       const id = createPlanId("work", `${scenario.title}-${sourceId}`, scenarioItems.length);
       const userVisibleOutcome = scenario.then[0] ?? input.desiredOutcome;
       const verification = buildWorkItemVerification(scenario);
+      const relevantAcceptanceCriteria = selectRelevantAcceptanceCriteria(scenario, input.acceptanceCriteria);
 
       scenarioItems.push({
         id,
@@ -616,7 +745,8 @@ function buildWorkItems(input: {
             title: scenario.title,
             scenarioIds: [scenario.id],
             sourceIds: [sourceId],
-            desiredOutcome: verification,
+            desiredOutcome: userVisibleOutcome,
+            acceptanceCriteria: relevantAcceptanceCriteria,
             availableSources: input.availableSources
           })
         }
@@ -658,6 +788,7 @@ function buildWorkItems(input: {
             scenarioIds,
             sourceIds: [sourceId],
             desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
+            acceptanceCriteria: [],
             availableSources: input.availableSources
           })
         }
@@ -1428,6 +1559,7 @@ function buildIntentDraft(
       : buildWorkItems({
           codeSurface,
           scenarios,
+          acceptanceCriteria,
           sourceIds: resolution.sourceIds,
           desiredOutcome,
           availableSources: options.availableSources

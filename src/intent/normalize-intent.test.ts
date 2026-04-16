@@ -336,11 +336,11 @@ test("normalizeIntent keeps ambiguous source-local UI requests broad when the co
   );
 });
 
-test("normalizeIntentWithAgent targets Intent Studio checkpoints for collapsible prompt-run configuration intents", async () => {
+test("normalizeIntentWithAgent preserves Intent Studio layout and collapsible section semantics in Playwright checkpoints", async () => {
   const normalized = await normalizeIntentWithAgent(
     {
       rawPrompt:
-        "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+        "Move the run intent button directly below the prompt input box and make the work scope and steps sections collapsable and expandable.",
       defaultSourceId: "demo-catalog",
       continueOnCaptureError: false,
       availableSources: demoCatalogSources,
@@ -355,27 +355,28 @@ test("normalizeIntentWithAgent targets Intent Studio checkpoints for collapsible
         codeSurfaceId: "intent-studio"
       }),
       refineIntentPlanWithGemini: async () => ({
-        statement: "The configuration and setup section beneath the prompt run input can be collapsed or expanded.",
-        desiredOutcome: "Users can collapse and expand the optional Studio configuration section.",
+        statement: "The run intent button stays directly below the prompt input, and the work scope and steps sections can be collapsed or expanded.",
+        desiredOutcome: "The prompt run layout keeps the run intent button below the prompt input while both sections remain collapsible.",
         acceptanceCriteria: [
-          { description: "The optional configuration section can be collapsed." },
-          { description: "The optional configuration section can be expanded again." }
+          { description: "The run intent button remains directly below the prompt input." },
+          { description: "The work scope section can be collapsed and expanded again." },
+          { description: "The steps section can be collapsed and expanded again." }
         ],
         scenarios: [
           {
-            title: "Collapse configuration section",
-            goal: "Verify that the user can hide optional configuration settings.",
-            given: ["The user is viewing the prompt run interface", "The configuration section is currently expanded"],
-            when: ["The user clicks the collapse toggle"],
-            then: ["The configuration section is no longer visible", "The prompt run input box remains accessible"],
+            title: "Verify prompt run component layout",
+            goal: "Verify that the run intent button stays directly below the prompt input.",
+            given: ["The user is viewing the prompt run interface"],
+            when: ["The prompt run form loads"],
+            then: ["The run intent button remains directly below the prompt input"],
             applicableSourceIds: ["demo-catalog"]
           },
           {
-            title: "Expand configuration section",
-            goal: "Verify that the user can reveal optional configuration settings.",
-            given: ["The user is viewing the prompt run interface", "The configuration section is currently collapsed"],
-            when: ["The user clicks the expand toggle"],
-            then: ["The configuration section becomes visible", "The configuration settings are interactable"],
+            title: "Verify collapsible sections",
+            goal: "Verify that the work scope and steps sections can be collapsed and expanded.",
+            given: ["The user is viewing the prompt run interface", "The work scope and steps sections are currently expanded"],
+            when: ["The user clicks the collapse and expand toggles for each section"],
+            then: ["Both sections can be collapsed and expanded again", "The prompt run input remains accessible"],
             applicableSourceIds: ["demo-catalog"]
           }
         ]
@@ -386,25 +387,40 @@ test("normalizeIntentWithAgent targets Intent Studio checkpoints for collapsible
   assert.equal(normalized.codeSurface?.id, "intent-studio");
   assert.equal(normalized.businessIntent.workItems.length, 2);
 
-  const collapseWorkItem = normalized.businessIntent.workItems.find((workItem) =>
-    workItem.title.toLowerCase().includes("collapse configuration section")
+  const layoutWorkItem = normalized.businessIntent.workItems.find((workItem) =>
+    workItem.title.toLowerCase().includes("prompt run component layout")
   );
-  const expandWorkItem = normalized.businessIntent.workItems.find((workItem) =>
-    workItem.title.toLowerCase().includes("expand configuration section")
+  const collapsibleWorkItem = normalized.businessIntent.workItems.find((workItem) =>
+    workItem.title.toLowerCase().includes("collapsible sections")
   );
 
-  assert.ok(collapseWorkItem);
-  assert.ok(expandWorkItem);
+  assert.ok(layoutWorkItem);
+  assert.ok(collapsibleWorkItem);
   assert.deepEqual(
-    collapseWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.target ?? checkpoint.path),
-    ["/", "#agent-stages-grid", "#toggle-stages-visibility", "#agent-stages-grid"]
+    layoutWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.target ?? checkpoint.path),
+    ["/", "#submit-button", "#submit-button"]
   );
-  assert.equal(collapseWorkItem?.playwright.specs[0]?.checkpoints[0]?.waitUntil, "domcontentloaded");
-  assert.equal(collapseWorkItem?.playwright.specs[0]?.checkpoints[3]?.action, "assert-hidden");
+  assert.equal(layoutWorkItem?.playwright.specs[0]?.checkpoints[0]?.waitUntil, "domcontentloaded");
+  assert.equal(layoutWorkItem?.playwright.specs[0]?.checkpoints[2]?.action, "assert-below");
+  assert.equal(layoutWorkItem?.playwright.specs[0]?.checkpoints[2]?.referenceTarget, "#prompt-input");
   assert.deepEqual(
-    expandWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.target ?? checkpoint.path),
-    ["/", "#agent-stages-grid", "#toggle-stages-visibility", "#agent-stages-grid", "#toggle-stages-visibility", "#promptNormalization-enabled"]
+    collapsibleWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.target ?? checkpoint.path),
+    [
+      "/",
+      "#work-scope-panel",
+      "#toggle-work-scope-visibility",
+      "#work-scope-panel",
+      "#toggle-work-scope-visibility",
+      "#source-scope",
+      "#steps-panel",
+      "#toggle-stages-visibility",
+      "#steps-panel",
+      "#toggle-stages-visibility",
+      "#agent-stages-grid"
+    ]
   );
+  assert.equal(collapsibleWorkItem?.playwright.specs[0]?.checkpoints[3]?.action, "assert-hidden");
+  assert.equal(collapsibleWorkItem?.playwright.specs[0]?.checkpoints[8]?.action, "assert-hidden");
 });
 
 test("normalizeIntent honors the requested source scope across multiple sources", () => {

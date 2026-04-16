@@ -25,7 +25,13 @@ export type ExecutionToolType =
   | "reporting"
   | "linear-publishing";
 
-export type PlaywrightCheckpointAction = "goto" | "click" | "fill" | "assert-visible" | "assert-hidden";
+export type PlaywrightCheckpointAction =
+  | "goto"
+  | "click"
+  | "fill"
+  | "assert-visible"
+  | "assert-hidden"
+  | "assert-below";
 
 export interface PlaywrightCheckpoint {
   id: string;
@@ -38,6 +44,7 @@ export interface PlaywrightCheckpoint {
   value?: string;
   captureId?: string;
   locator?: string;
+  referenceTarget?: string;
   waitForSelector?: string;
   waitUntil?: "load" | "domcontentloaded" | "networkidle";
 }

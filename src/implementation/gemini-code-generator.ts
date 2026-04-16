@@ -652,6 +652,17 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
       )
     )
   );
+  const requiredRelationships = Array.from(
+    new Set(
+      input.generatedSpecs.flatMap((spec) =>
+        Array.from(
+          spec.content.matchAll(
+            /assertLocatorBelow\(page,\s*(["'`])(#[A-Za-z][A-Za-z0-9_-]*)\1,\s*(["'`])(#[A-Za-z][A-Za-z0-9_-]*)\3,\s*(["'`])([^"'`]+)\5\)/g
+          )
+        ).map((match) => `${match[2]} below ${match[4]}: ${match[6]}`)
+      )
+    )
+  );
 
   return [
     "You are selecting the minimal bounded file operations needed to implement one source lane for an intent-driven development runner.",
@@ -705,6 +716,12 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
           JSON.stringify(requiredSelectors, null, 2)
         ]
       : []),
+    ...(requiredRelationships.length > 0
+      ? [
+          "Required UI relationships referenced by the tracked Playwright specs. Preserve these behaviors in the final source when editing the owning UI:",
+          JSON.stringify(requiredRelationships, null, 2)
+        ]
+      : []),
     "Relevant existing source files:",
     JSON.stringify(input.relevantFiles, null, 2),
     "Workspace file manifest:",
@@ -723,6 +740,17 @@ function buildMaterializationPrompt(input: {
     new Set(
       input.context.generatedSpecs.flatMap((spec) =>
         Array.from(spec.content.matchAll(/(["'`])(#[A-Za-z][A-Za-z0-9_-]*)\1/g)).map((match) => match[2])
+      )
+    )
+  );
+  const requiredRelationships = Array.from(
+    new Set(
+      input.context.generatedSpecs.flatMap((spec) =>
+        Array.from(
+          spec.content.matchAll(
+            /assertLocatorBelow\(page,\s*(["'`])(#[A-Za-z][A-Za-z0-9_-]*)\1,\s*(["'`])(#[A-Za-z][A-Za-z0-9_-]*)\3,\s*(["'`])([^"'`]+)\5\)/g
+          )
+        ).map((match) => `${match[2]} below ${match[4]}: ${match[6]}`)
       )
     )
   );
@@ -747,6 +775,12 @@ function buildMaterializationPrompt(input: {
       ? [
           "Required selectors referenced by the tracked Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
           JSON.stringify(requiredSelectors, null, 2)
+        ]
+      : []),
+    ...(requiredRelationships.length > 0
+      ? [
+          "Required UI relationships referenced by the tracked Playwright specs. Preserve these behaviors in the final source when editing the owning UI:",
+          JSON.stringify(requiredRelationships, null, 2)
         ]
       : []),
     "Active work items for this pass:",

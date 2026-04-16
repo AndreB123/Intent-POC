@@ -371,8 +371,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
       .form-actions {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        flex-direction: column;
         gap: 16px;
         margin-top: 18px;
       }
@@ -390,8 +389,9 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
       }
 
       .submit-row {
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 14px;
       }
 
@@ -1147,42 +1147,44 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                     <label for="prompt-input">Intent prompt</label>
                     <textarea id="prompt-input" placeholder="Describe the business intent, what sources or tools it should touch, and what outcome should be verified."></textarea>
                     <div class="field-note">Work scope is config-backed. Leave every checkbox clear when the planner should infer sources from your prompt, or keep the default scope checked when the run should stay inside the current app. Run behavior is inferred from prompt phrases such as &quot;create baseline&quot; or &quot;approve baseline&quot;, then falls back to <code>run.mode</code>.</div>
+                    <div class="form-actions prompt-actions">
+                      <label class="toggle">
+                        <input id="dry-run-input" type="checkbox" />
+                        Dry run only
+                      </label>
+                      <div class="submit-row">
+                        <span class="notice" id="form-note">No run in progress.</span>
+                        <button class="primary-button" id="submit-button" type="submit">Run intent</button>
+                      </div>
+                    </div>
                   </div>
                   <div class="field">
                     <div class="field-head">
                       <label>Work scope</label>
                       <div class="field-actions">
+                        <button type="button" class="ghost-link" id="toggle-work-scope-visibility">Collapse</button>
                         <button type="button" class="ghost-link" id="toggle-source-editor">Edit Source Metadata</button>
                         <a class="ghost-link" id="config-editor-link" href="#">Open config in editor</a>
                         <a class="ghost-link" id="config-file-link" href="#">View YAML</a>
                       </div>
                     </div>
-                    <div class="field-note">These cards come from the <code>sources</code> block in the active YAML config. Every configured source stays visible here. Use the Source Metadata editor for labels and context, and use YAML for structural source changes.</div>
-                    <div class="scope-list" id="source-scope"></div>
-                    <div class="field-note" id="source-visibility-note">All configured sources are visible in work scope.</div>
+                    <div id="work-scope-panel">
+                      <div class="field-note">These cards come from the <code>sources</code> block in the active YAML config. Every configured source stays visible here. Use the Source Metadata editor for labels and context, and use YAML for structural source changes.</div>
+                      <div class="scope-list" id="source-scope"></div>
+                      <div class="field-note" id="source-visibility-note">All configured sources are visible in work scope.</div>
+                    </div>
                   </div>
                 </div>
 
                 <div class="agent-stages-section">
                   <div class="field-head">
-                    <label>
-                      AI Orchestration Stages
-                      <button type="button" class="ghost-link" id="toggle-stages-visibility" style="margin-left: 10px; padding: 4px 8px; font-size: 10px;">Collapse</button>
-                    </label>
+                    <label>AI Orchestration Stages</label>
+                    <button type="button" class="ghost-link" id="toggle-stages-visibility">Collapse</button>
                   </div>
-                  <div class="agent-stages-grid" id="agent-stages-grid">
-                    ${agentStageFields}
-                  </div>
-                </div>
-
-                <div class="form-actions">
-                  <label class="toggle">
-                    <input id="dry-run-input" type="checkbox" />
-                    Dry run only
-                  </label>
-                  <div class="submit-row">
-                    <span class="notice" id="form-note">No run in progress.</span>
-                    <button class="primary-button" id="submit-button" type="submit">Run intent</button>
+                  <div id="steps-panel">
+                    <div class="agent-stages-grid" id="agent-stages-grid">
+                      ${agentStageFields}
+                    </div>
                   </div>
                 </div>
               </form>
@@ -1363,13 +1365,22 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           document.body.classList.toggle("dark-mode");
         });
 
-        const toggleStagesVisibility = document.getElementById("toggle-stages-visibility");
-        const agentStagesGrid = document.getElementById("agent-stages-grid");
-        toggleStagesVisibility.addEventListener("click", function() {
-          const isHidden = agentStagesGrid.style.display === "none";
-          agentStagesGrid.style.display = isHidden ? "grid" : "none";
-          toggleStagesVisibility.textContent = isHidden ? "Collapse" : "Expand";
-        });
+        function wireCollapseToggle(toggleId, panelId, expandedDisplay) {
+          const toggle = document.getElementById(toggleId);
+          const panel = document.getElementById(panelId);
+          if (!toggle || !panel) {
+            return;
+          }
+
+          toggle.addEventListener("click", function() {
+            const isHidden = panel.style.display === "none";
+            panel.style.display = isHidden ? expandedDisplay : "none";
+            toggle.textContent = isHidden ? "Collapse" : "Expand";
+          });
+        }
+
+        wireCollapseToggle("toggle-work-scope-visibility", "work-scope-panel", "block");
+        wireCollapseToggle("toggle-stages-visibility", "steps-panel", "block");
 
         const promptInput = document.getElementById("prompt-input");
         const sourceScope = document.getElementById("source-scope");

@@ -240,3 +240,148 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
     await fs.rm(rootDir, { recursive: true, force: true });
   }
 });
+
+test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs are generated Then the spec emits the layout helper and assertion", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-layout-"));
+
+  try {
+    const source = {
+      ...buildDemoCatalogBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent: NormalizedIntent = {
+      intentId: "intent-layout-checkpoint",
+      receivedAt: new Date().toISOString(),
+      rawPrompt: "Keep the run intent button directly below the prompt input.",
+      summary: "capture evidence for demo-catalog",
+      intentType: "capture-evidence",
+      businessIntent: {
+        statement: "Keep the run intent button directly below the prompt input.",
+        desiredOutcome: "The run intent button remains directly below the prompt input.",
+        acceptanceCriteria: [],
+        scenarios: [],
+        workItems: [
+          {
+            id: "work-1-verify-prompt-layout-demo-catalog",
+            type: "playwright-spec",
+            title: "Verify prompt layout",
+            description: "Verify the prompt layout relationship.",
+            scenarioIds: [],
+            sourceIds: ["demo-catalog"],
+            userVisibleOutcome: "The run intent button remains directly below the prompt input.",
+            verification: "The run intent button remains directly below the prompt input.",
+            execution: {
+              order: 1,
+              dependsOnWorkItemIds: []
+            },
+            playwright: {
+              generatedBy: "rules",
+              specs: [
+                {
+                  framework: "playwright",
+                  sourceId: "demo-catalog",
+                  relativeSpecPath: "demo-catalog/work-1-verify-prompt-layout-demo-catalog.spec.ts",
+                  suiteName: "Intent-driven flow for demo-catalog",
+                  testName: "Verify prompt layout",
+                  scenarioIds: [],
+                  checkpoints: [
+                    {
+                      id: "checkpoint-layout",
+                      label: "Run Intent Button Below Prompt Input",
+                      action: "assert-below",
+                      assertion: "The run intent button remains directly below the prompt input.",
+                      screenshotId: "layout-state",
+                      target: "#submit-button",
+                      referenceTarget: "#prompt-input",
+                      waitForSelector: "#submit-button"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      planning: {
+        repoCandidates: [],
+        plannerSections: [],
+        reviewNotes: [],
+        linearPlan: {
+          mode: "new"
+        }
+      },
+      executionPlan: {
+        primarySourceId: "demo-catalog",
+        sources: [
+          {
+            sourceId: "demo-catalog",
+            selectionReason: "Requested source.",
+            captureScope: {
+              mode: "all",
+              captureIds: []
+            },
+            warnings: []
+          }
+        ],
+        destinations: [],
+        tools: [],
+        orchestrationStrategy: "single-source",
+        reviewNotes: []
+      },
+      sourceId: "demo-catalog",
+      captureScope: {
+        mode: "all",
+        captureIds: []
+      },
+      artifacts: {
+        requireScreenshots: true,
+        requireManifest: true,
+        requireHashes: true
+      },
+      linear: {
+        createIssue: false,
+        issueTitle: ""
+      },
+      execution: {
+        continueOnCaptureError: false
+      },
+      normalizationMeta: {
+        source: "rules",
+        warnings: [],
+        stages: []
+      }
+    };
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "demo-catalog",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "demo-catalog"
+    });
+
+    const layoutSpecPath = result?.files.find((filePath) => filePath.includes("prompt-layout"));
+    assert.ok(layoutSpecPath);
+
+    const generatedContent = await fs.readFile(layoutSpecPath!, "utf8");
+    assert.equal(generatedContent.includes('import { expect, test, type Page } from "playwright/test";'), true);
+    assert.equal(generatedContent.includes("async function assertLocatorBelow(page: Page, targetSelector: string, referenceSelector: string, message: string): Promise<void> {"), true);
+    assert.equal(
+      generatedContent.includes('await assertLocatorBelow(page, "#submit-button", "#prompt-input", "The run intent button remains directly below the prompt input.");'),
+      true
+    );
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
