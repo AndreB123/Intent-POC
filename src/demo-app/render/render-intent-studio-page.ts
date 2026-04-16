@@ -885,6 +885,43 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         gap: 8px;
       }
 
+      .lifecycle-step-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 76px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+      }
+
+      .lifecycle-step-status[data-state="pending"] {
+        color: var(--muted);
+      }
+
+      .lifecycle-step-status[data-state="preview"] {
+        color: var(--warning);
+        border-color: rgba(185, 106, 19, 0.24);
+        background: rgba(185, 106, 19, 0.08);
+      }
+
+      .lifecycle-step-status[data-state="running"] {
+        color: var(--accent-strong);
+        border-color: rgba(15, 118, 110, 0.28);
+        background: rgba(15, 118, 110, 0.1);
+      }
+
+      .lifecycle-step-status[data-state="completed"] {
+        color: var(--success);
+        border-color: rgba(31, 122, 70, 0.24);
+        background: rgba(31, 122, 70, 0.08);
+      }
+
       .lifecycle-step.active .lifecycle-step-title {
         color: var(--accent-strong);
       }
@@ -1229,7 +1266,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             </div>
             <div class="lifecycle-stack">
               <div class="lifecycle-step" id="step-normalization">
-                <div class="lifecycle-step-title">1. Prompt Interpretation</div>
+                <div class="lifecycle-step-title">1. Prompt Interpretation <span class="lifecycle-step-status" id="step-normalization-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content">
                   <div class="plan-intent-text" id="plan-intent-text"></div>
                   <div class="plan-intent-outcome" id="plan-intent-outcome"></div>
@@ -1237,22 +1274,22 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 </div>
               </div>
               <div class="lifecycle-step" id="step-linear">
-                <div class="lifecycle-step-title">2. Linear Scoping</div>
+                <div class="lifecycle-step-title">2. Linear Scoping <span class="lifecycle-step-status" id="step-linear-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content" id="plan-linear"></div>
               </div>
               <div class="lifecycle-step" id="step-bdd">
-                <div class="lifecycle-step-title">3. BDD Planning</div>
+                <div class="lifecycle-step-title">3. BDD Planning <span class="lifecycle-step-status" id="step-bdd-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content">
                   <div id="plan-criteria"></div>
                   <div id="plan-scenarios"></div>
                 </div>
               </div>
               <div class="lifecycle-step" id="step-tdd">
-                <div class="lifecycle-step-title">4. TDD Planning</div>
+                <div class="lifecycle-step-title">4. TDD Planning <span class="lifecycle-step-status" id="step-tdd-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content" id="plan-work-items"></div>
               </div>
               <div class="lifecycle-step" id="step-plan">
-                <div class="lifecycle-step-title">5. Planned Execution</div>
+                <div class="lifecycle-step-title">5. Planned Execution <span class="lifecycle-step-status" id="step-plan-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content">
                   <div class="plan-note" id="plan-execution-note"></div>
                   <div id="plan-sources"></div>
@@ -1261,11 +1298,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 </div>
               </div>
               <div class="lifecycle-step" id="step-implementation">
-                <div class="lifecycle-step-title">6. Implementation</div>
+                <div class="lifecycle-step-title">6. Implementation <span class="lifecycle-step-status" id="step-implementation-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content" id="plan-implementation"></div>
               </div>
               <div class="lifecycle-step" id="step-qa">
-                <div class="lifecycle-step-title">7. QA Verification</div>
+                <div class="lifecycle-step-title">7. QA Verification <span class="lifecycle-step-status" id="step-qa-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content" id="plan-qa"></div>
               </div>
             </div>
@@ -1938,7 +1975,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           const implItems = [];
           if (run && run.sourceRuns) {
             run.sourceRuns.forEach(function(sr) {
-              const meta = [sr.status, sr.latestImplementationSummary || "Waiting…"];
+              const meta = [sr.implementationStageStatus || sr.status, sr.latestImplementationSummary || (sr.implementationStageStatus === "running" ? "Implementation in progress…" : "Waiting…")];
               if (sr.captureScopeSummary) {
                 meta.push(sr.captureScopeSummary);
               }
@@ -1955,7 +1992,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           if (run) {
             if (run.sourceRuns) {
               run.sourceRuns.forEach(function(sr) {
-                const meta = [sr.status];
+                const meta = [sr.qaVerificationStageStatus || sr.status];
                 if (typeof sr.executedCaptureCount === "number") {
                   meta.push(sr.executedCaptureCount + " captures executed");
                 }
@@ -1983,9 +2020,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           }
 
           return run.sourceRuns.some(function (sourceRun) {
-            return Boolean(sourceRun.latestImplementationSummary)
-              || Boolean(sourceRun.latestImplementationFileOperations && sourceRun.latestImplementationFileOperations.length > 0)
-              || sourceRun.latestFailureStage === "implementation";
+            return sourceRun.implementationStageStatus === "running"
+              || sourceRun.implementationStageStatus === "completed"
+              || sourceRun.implementationStageStatus === "failed"
+              || Boolean(sourceRun.latestImplementationSummary)
+              || Boolean(sourceRun.latestImplementationFileOperations && sourceRun.latestImplementationFileOperations.length > 0);
           });
         }
 
@@ -2003,8 +2042,22 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           }
 
           return run.sourceRuns.some(function (sourceRun) {
-            return sourceRun.latestFailureStage === "qa-verification" || Boolean(sourceRun.comparisonIssueSummary);
+            return sourceRun.qaVerificationStageStatus === "running"
+              || sourceRun.qaVerificationStageStatus === "completed"
+              || sourceRun.qaVerificationStageStatus === "failed"
+              || sourceRun.latestFailureStage === "qaVerification"
+              || Boolean(sourceRun.comparisonIssueSummary);
           });
+        }
+
+        function setLifecycleStepBadge(stepId, state, label) {
+          const badge = document.getElementById(stepId + "-status");
+          if (!badge) {
+            return;
+          }
+
+          badge.setAttribute("data-state", state);
+          badge.textContent = label;
         }
 
         function updateLifecycleProgress(activePlan, run) {
@@ -2037,6 +2090,13 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             }
 
             node.classList.toggle("active", isActive);
+            if (isCompleted) {
+              setLifecycleStepBadge(step.id, "completed", "Completed");
+            } else if (isActive) {
+              setLifecycleStepBadge(step.id, step.id === "step-plan" && previewPlanReady ? "preview" : "running", step.id === "step-plan" && previewPlanReady ? "Preview" : "Running");
+            } else {
+              setLifecycleStepBadge(step.id, "pending", "Pending");
+            }
             if (isActive) foundActive = true;
           });
         }

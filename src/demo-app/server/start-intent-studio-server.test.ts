@@ -2,7 +2,34 @@ import { strict as assert } from "node:assert";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { loadConfig } from "../../config/load-config";
+import { normalizeIntent } from "../../intent/normalize-intent";
+import { RunIntentOptions, RunIntentResult } from "../../orchestrator/run-intent";
 import { startIntentStudioServer } from "./start-intent-studio-server";
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForState<T>(
+  serverBaseUrl: string,
+  predicate: (state: T) => boolean,
+  timeoutMs = 2000
+): Promise<T> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const response = await fetch(`${serverBaseUrl}/api/state`);
+    assert.equal(response.status, 200);
+    const state = (await response.json()) as T;
+    if (predicate(state)) {
+      return state;
+    }
+    await delay(20);
+  }
+
+  throw new Error(`Timed out waiting for studio state after ${timeoutMs}ms.`);
+}
 
 async function writeStudioConfig(configPath: string, tmpDir: string): Promise<void> {
   await fs.writeFile(
@@ -163,6 +190,7 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   assert.match(pageHtml, /Open config in editor/);
   assert.match(pageHtml, /5\. Planned Execution/);
   assert.match(pageHtml, /id="plan-execution-note"/);
+  assert.match(pageHtml, /class="lifecycle-step-status" id="step-plan-status" data-state="pending">Pending/);
   assert.doesNotMatch(pageHtml, /5\. Execution Plan/);
 });
 
@@ -220,4 +248,250 @@ test("startIntentStudioServer rejects Studio requests that enable implementation
   assert.equal(stateResponse.status, 200);
   const state = (await stateResponse.json()) as { currentRun: unknown };
   assert.equal(state.currentRun, null);
+});
+
+test("startIntentStudioServer exposes live implementation and QA lifecycle state during a mocked run", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-lifecycle-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+  const loaded = await loadConfig(configPath);
+  const normalizedIntent = normalizeIntent({
+    rawPrompt: "Add a dark mode button to the app header.",
+    defaultSourceId: loaded.config.run.sourceId,
+    continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    availableSources: loaded.config.sources,
+    linearEnabled: loaded.config.linear.enabled
+  });
+
+  const mockedRunIntent = async (options: RunIntentOptions): Promise<RunIntentResult> => {
+    options.onEvent?.({
+      timestamp: new Date().toISOString(),
+      level: "info",
+      phase: "intent",
+      message: "Intent normalized.",
+      details: {
+        summary: normalizedIntent.summary,
+        sourceId: normalizedIntent.sourceId,
+        normalizedIntent
+      }
+    });
+
+    await delay(30);
+
+    options.onEvent?.({
+      timestamp: new Date().toISOString(),
+      level: "info",
+      phase: "implementation",
+      message: "Implementation attempt started.",
+      details: {
+        sourceId: "app"
+      }
+    });
+
+    await delay(30);
+
+    options.onEvent?.({
+      timestamp: new Date().toISOString(),
+      level: "info",
+      phase: "implementation",
+      message: "Implementation attempt completed.",
+      details: {
+        sourceId: "app",
+        status: "completed",
+        summary: "Added dark mode toggle in the app header.",
+        fileOperations: [
+          {
+            operation: "replace",
+            filePath: "src/demo-app/render/render-intent-studio-page.ts"
+          }
+        ]
+      }
+    });
+
+    await delay(30);
+
+    options.onEvent?.({
+      timestamp: new Date().toISOString(),
+      level: "info",
+      phase: "qa-verification",
+      message: "QA verification started.",
+      details: {
+        sourceId: "app"
+      }
+    });
+
+    await delay(30);
+
+    options.onEvent?.({
+      timestamp: new Date().toISOString(),
+      level: "info",
+      phase: "qa-verification",
+      message: "QA verification passed.",
+      details: {
+        sourceId: "app",
+        status: "completed",
+        summary: "Typecheck and focused verification passed."
+      }
+    });
+
+    await delay(30);
+
+    return {
+      status: "completed",
+      sourceId: "app",
+      dryRun: false,
+      normalizedIntent,
+      paths: {
+        runId: "run-1",
+        controllerRoot: tmpDir,
+        runDir: path.join(tmpDir, "artifacts", "runs", "run-1"),
+        sourcesDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources"),
+        logsDir: path.join(tmpDir, "artifacts", "runs", "run-1", "logs"),
+        normalizedIntentPath: path.join(tmpDir, "artifacts", "runs", "run-1", "normalized-intent.json"),
+        linearPath: path.join(tmpDir, "artifacts", "runs", "run-1", "linear.json"),
+        planLifecyclePath: path.join(tmpDir, "artifacts", "runs", "run-1", "plan-lifecycle.json"),
+        summaryPath: path.join(tmpDir, "artifacts", "runs", "run-1", "summary.md"),
+        manifestPath: path.join(tmpDir, "artifacts", "runs", "run-1", "manifest.json"),
+        hashesPath: path.join(tmpDir, "artifacts", "runs", "run-1", "hashes.json"),
+        comparisonPath: path.join(tmpDir, "artifacts", "runs", "run-1", "comparison.json"),
+        sourceRuns: {
+          app: {
+            runId: "run-1",
+            sourceId: "app",
+            controllerRoot: tmpDir,
+            sourceDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app"),
+            attemptsDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "attempts"),
+            capturesDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "captures"),
+            diffsDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "diffs"),
+            logsDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "logs"),
+            baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
+            appLogPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "logs", "app.log"),
+            manifestPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "manifest.json"),
+            hashesPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "hashes.json"),
+            comparisonPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "comparison.json"),
+            summaryPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "summary.md")
+          }
+        }
+      },
+      linearIssue: null,
+      linearPublication: null,
+      sourceRuns: [
+        {
+          sourceId: "app",
+          status: "completed",
+          paths: {
+            runId: "run-1",
+            sourceId: "app",
+            controllerRoot: tmpDir,
+            sourceDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app"),
+            attemptsDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "attempts"),
+            capturesDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "captures"),
+            diffsDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "diffs"),
+            logsDir: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "logs"),
+            baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
+            appLogPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "logs", "app.log"),
+            manifestPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "manifest.json"),
+            hashesPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "hashes.json"),
+            comparisonPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "comparison.json"),
+            summaryPath: path.join(tmpDir, "artifacts", "runs", "run-1", "sources", "app", "summary.md")
+          },
+          captures: [],
+          error: undefined,
+          linearIssue: null,
+          generatedPlaywrightTests: [],
+          attempts: [
+            {
+              attemptNumber: 1,
+              startedAt: "2026-04-15T00:00:00.000Z",
+              finishedAt: "2026-04-15T00:00:01.000Z",
+              status: "completed",
+              implementation: {
+                status: "completed",
+                summary: "Added dark mode toggle in the app header.",
+                commands: [],
+                fileOperations: [
+                  {
+                    operation: "replace",
+                    filePath: "src/demo-app/render/render-intent-studio-page.ts",
+                    rationale: "Mocked implementation result",
+                    status: "applied"
+                  }
+                ]
+              },
+              qaVerification: {
+                status: "completed",
+                summary: "Typecheck and focused verification passed.",
+                commands: [],
+                fileOperations: []
+              }
+            }
+          ],
+          summaryMarkdown: "# app"
+        }
+      ],
+      captures: [],
+      hasDrift: false,
+      counts: {
+        "baseline-written": 0,
+        unchanged: 0,
+        changed: 0,
+        "missing-baseline": 0,
+        "capture-failed": 0,
+        "diff-error": 0
+      },
+      summaryMarkdown: "# run summary",
+      errors: []
+    };
+  };
+
+  const server = await startIntentStudioServer({ configPath, port: 0, runIntentFn: mockedRunIntent });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const runResponse = await fetch(`${server.baseUrl}/api/runs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Add a dark mode button to the app header."
+    })
+  });
+  assert.equal(runResponse.status, 202);
+
+  const runningState = await waitForState<{
+    currentRun: {
+      status: string;
+      sourceRuns: Array<{
+        sourceId: string;
+        status: string;
+        implementationStageStatus?: string;
+        qaVerificationStageStatus?: string;
+      }>;
+    } | null;
+  }>(server.baseUrl, (state) => state.currentRun?.sourceRuns?.[0]?.implementationStageStatus === "running");
+
+  assert.equal(runningState.currentRun?.status, "running");
+  assert.equal(runningState.currentRun?.sourceRuns[0]?.sourceId, "app");
+  assert.equal(runningState.currentRun?.sourceRuns[0]?.status, "running");
+  assert.equal(runningState.currentRun?.sourceRuns[0]?.implementationStageStatus, "running");
+
+  const completedState = await waitForState<{
+    currentRun: {
+      status: string;
+      sourceRuns: Array<{
+        implementationStageStatus?: string;
+        qaVerificationStageStatus?: string;
+        latestImplementationSummary?: string;
+      }>;
+    } | null;
+  }>(server.baseUrl, (state) => state.currentRun?.status === "completed");
+
+  assert.equal(completedState.currentRun?.sourceRuns[0]?.implementationStageStatus, "completed");
+  assert.equal(completedState.currentRun?.sourceRuns[0]?.qaVerificationStageStatus, "completed");
+  assert.match(completedState.currentRun?.sourceRuns[0]?.latestImplementationSummary ?? "", /dark mode toggle/);
 });

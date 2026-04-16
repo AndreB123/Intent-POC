@@ -32,6 +32,7 @@ export interface StartIntentStudioServerOptions {
   port?: number;
   initialVariant?: LibraryVariant;
   configPath?: string;
+  runIntentFn?: typeof runIntent;
 }
 
 interface StudioSourceSummary {
@@ -66,7 +67,7 @@ interface StudioCaptureSummary {
 
 interface StudioSourceRunSummary {
   sourceId: string;
-  status: "planned" | "completed" | "failed";
+  status: "planned" | "running" | "completed" | "failed";
   error?: string;
   counts?: Record<string, number>;
   executedCaptureCount?: number;
@@ -76,6 +77,8 @@ interface StudioSourceRunSummary {
   attemptCount?: number;
   latestAttemptStatus?: "completed" | "failed";
   latestFailureStage?: "implementation" | "qaVerification";
+  implementationStageStatus?: "pending" | "running" | "completed" | "failed" | "skipped";
+  qaVerificationStageStatus?: "pending" | "running" | "completed" | "failed" | "skipped";
   latestImplementationSummary?: string;
   latestImplementationFileOperations?: Array<{
     operation: "create" | "replace" | "delete";
@@ -635,6 +638,34 @@ function summarizeComparisonIssue(sourceRun: RunIntentResult["sourceRuns"][numbe
   return undefined;
 }
 
+function ensureStudioSourceRunSummary(run: StudioRunRecord, sourceId: string): StudioSourceRunSummary {
+  let sourceRun = run.sourceRuns.find((entry) => entry.sourceId === sourceId);
+
+  if (!sourceRun) {
+    sourceRun = {
+      sourceId,
+      status: "planned",
+      implementationStageStatus: "pending",
+      qaVerificationStageStatus: "pending"
+    };
+    run.sourceRuns.push(sourceRun);
+  }
+
+  return sourceRun;
+}
+
+function syncSourceRunsFromIntentPlan(run: StudioRunRecord): void {
+  if (!run.intentPlan) {
+    return;
+  }
+
+  run.intentPlan.executionPlan.sources.forEach((sourcePlan) => {
+    const sourceRun = ensureStudioSourceRunSummary(run, sourcePlan.sourceId);
+    sourceRun.captureScopeSummary = summarizeCaptureScope(sourcePlan, sourceRun.executedCaptureCount ?? 0);
+    sourceRun.sourceWarnings = sourcePlan.warnings ?? [];
+  });
+}
+
 function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
   run.sourceId = result.sourceId;
   run.runId = result.paths.runId;
@@ -661,6 +692,8 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
       attemptCount: sourceRun.attempts.length,
       latestAttemptStatus: latestAttempt?.status,
       latestFailureStage: latestAttempt?.failureStage,
+      implementationStageStatus: latestAttempt?.implementation.status ?? "pending",
+      qaVerificationStageStatus: latestAttempt?.qaVerification.status ?? "pending",
       latestImplementationSummary: latestAttempt?.implementation.summary,
       latestImplementationFileOperations: latestAttempt?.implementation.fileOperations.map((fileOperation) => ({
         operation: fileOperation.operation,
@@ -697,6 +730,7 @@ export async function startIntentStudioServer(
   const host = options.host ?? "127.0.0.1";
   const configPath = options.configPath ?? "./intent-poc.yaml";
   const workspaceRoot = process.cwd();
+  const runIntentFn = options.runIntentFn ?? runIntent;
   let variant: LibraryVariant = options.initialVariant ?? "v1";
   const byRoute = new Map(SURFACE_CATALOG.map((surface) => [`/library/${surface.id}`, surface]));
   const clients = new Set<ServerResponse>();
@@ -778,6 +812,7 @@ export async function startIntentStudioServer(
       run.normalizedSummary = details.summary ?? run.normalizedSummary;
       run.sourceId = details.sourceId ?? run.sourceId;
       run.intentPlan = details.normalizedIntent ?? run.intentPlan;
+      syncSourceRunsFromIntentPlan(run);
     }
 
     if (event.phase === "linear" && event.details && typeof event.details === "object") {
@@ -803,6 +838,109 @@ export async function startIntentStudioServer(
         };
       }
     }
+
+    if ((event.phase === "implementation" || event.phase === "qa-verification") && event.details && typeof event.details === "object") {
+      const details = event.details as {
+        sourceId?: string;
+        status?: "skipped" | "completed" | "failed";
+        summary?: string;
+        error?: string;
+        fileOperations?: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
+      };
+
+      if (details.sourceId) {
+        const sourceRun = ensureStudioSourceRunSummary(run, details.sourceId);
+        sourceRun.status = "running";
+
+        if (event.phase === "implementation") {
+          sourceRun.implementationStageStatus = details.status ?? "running";
+          sourceRun.latestImplementationSummary = details.summary ?? sourceRun.latestImplementationSummary;
+          sourceRun.latestImplementationFileOperations = details.fileOperations ?? sourceRun.latestImplementationFileOperations;
+        } else {
+          sourceRun.qaVerificationStageStatus = details.status ?? "running";
+        }
+
+        if (details.error) {
+          sourceRun.error = details.error;
+        }
+      }
+    }
+
+    if (event.phase === "capture" && event.details && typeof event.details === "object") {
+      const details = event.details as { sourceId?: string };
+      if (details.sourceId) {
+        const sourceRun = ensureStudioSourceRunSummary(run, details.sourceId);
+        sourceRun.status = "running";
+        if (event.message.startsWith("Captured '") || event.message.startsWith("Capture failed for '") ) {
+          sourceRun.executedCaptureCount = (sourceRun.executedCaptureCount ?? 0) + 1;
+        }
+      }
+    }
+
+    if (event.phase === "run" && event.details && typeof event.details === "object") {
+      const details = event.details as {
+        sourceId?: string;
+        status?: StudioSourceRunSummary["status"];
+        attemptCount?: number;
+        latestFailureStage?: StudioSourceRunSummary["latestFailureStage"];
+        sourceWarnings?: string[];
+        error?: string;
+      };
+
+      if (details.sourceId) {
+        const sourceRun = ensureStudioSourceRunSummary(run, details.sourceId);
+        sourceRun.status = details.status ?? sourceRun.status;
+        sourceRun.attemptCount = details.attemptCount ?? sourceRun.attemptCount;
+        sourceRun.latestFailureStage = details.latestFailureStage ?? sourceRun.latestFailureStage;
+        sourceRun.sourceWarnings = details.sourceWarnings ?? sourceRun.sourceWarnings;
+        sourceRun.error = details.error ?? sourceRun.error;
+      }
+    }
+  }
+
+  async function executeRun(input: {
+    prompt: string;
+    sourceIds?: string[];
+    agentOverrides?: RunAgentConfigOverride;
+    resumeIssue?: string;
+    dryRun: boolean;
+    run: StudioRunRecord;
+  }): Promise<void> {
+    const { run } = input;
+
+    try {
+      const result = await runIntentFn({
+          configPath,
+          intent: input.prompt,
+          sourceIds: input.sourceIds,
+          agentOverrides: input.agentOverrides,
+          resumeIssue: input.resumeIssue,
+          dryRun: input.dryRun,
+          onEvent: (event) => {
+            appendEvent(run, event);
+            void broadcastState();
+          }
+        });
+
+        applyRunResult(run, result);
+  run.status = result.status;
+        run.finishedAt = new Date().toISOString();
+        void broadcastState();
+      } catch (error) {
+        run.status = "failed";
+        run.finishedAt = new Date().toISOString();
+        run.error = error instanceof Error ? error.message : String(error);
+        appendEvent(run, {
+          timestamp: new Date().toISOString(),
+          level: "error",
+          phase: "run",
+          message: "Studio run failed.",
+          details: {
+            error: run.error
+          }
+        });
+        void broadcastState();
+      }
   }
 
   function startRun(input: {
@@ -844,41 +982,7 @@ export async function startIntentStudioServer(
     });
     void broadcastState();
 
-    void (async () => {
-      try {
-        const result = await runIntent({
-          configPath,
-          intent: input.prompt,
-          sourceIds: input.sourceIds,
-          agentOverrides: input.agentOverrides,
-          resumeIssue: input.resumeIssue,
-          dryRun: input.dryRun,
-          onEvent: (event) => {
-            appendEvent(run, event);
-            void broadcastState();
-          }
-        });
-
-        applyRunResult(run, result);
-  run.status = result.status;
-        run.finishedAt = new Date().toISOString();
-        void broadcastState();
-      } catch (error) {
-        run.status = "failed";
-        run.finishedAt = new Date().toISOString();
-        run.error = error instanceof Error ? error.message : String(error);
-        appendEvent(run, {
-          timestamp: new Date().toISOString(),
-          level: "error",
-          phase: "run",
-          message: "Studio run failed.",
-          details: {
-            error: run.error
-          }
-        });
-        void broadcastState();
-      }
-    })();
+    void executeRun({ ...input, run });
   }
 
   async function serveFile(requestedPath: string, res: ServerResponse): Promise<void> {
