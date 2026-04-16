@@ -14,7 +14,7 @@ export function renderSurfaceFrame(input: {
   isDark?: boolean;
 }): string {
   const theme = getThemeTokens(input.variant);
-  const toggle = getThemeToggleState(!!input.isDark);
+  const toggleState = getThemeToggleState(!!input.isDark);
 
   return `
     <section data-testid="${input.testId}" class="surface-frame ${input.isDark ? "dark-mode" : ""}">
@@ -23,11 +23,13 @@ export function renderSurfaceFrame(input: {
           <h1>${input.title}</h1>
         </div>
         <div class="header-right">
-          <button id="theme-toggle" aria-label="${toggle.label}" onclick="document.querySelector('.surface-frame').classList.toggle('dark-mode'); const btn = document.getElementById('theme-toggle'); btn.innerText = btn.innerText === '☀️' ? '🌙' : '☀️';">${toggle.icon}</button>
+          <button data-testid="theme-toggle" aria-label="${toggleState.label}" onclick="window.location.search = '?dark=' + ${!input.isDark}">${toggleState.icon}</button>
           <span class="chip chip-${input.layer}">${layerLabel(input.layer)}</span>
         </div>
       </header>
-      ${input.body}
+      <div class="surface-content">
+        ${input.body}
+      </div>
     </section>
     <style>
       :root {
@@ -154,14 +156,9 @@ export function renderSurfaceFrame(input: {
         border-radius: var(--radius-md);
         padding: 10px 14px;
         font-weight: 700;
-        cursor: default;
+        cursor: pointer;
         background: #e7edf6;
         color: var(--text);
-      }
-      #theme-toggle {
-        cursor: pointer;
-        font-size: 18px;
-        padding: 6px 10px;
       }
       .layout-stack {
         display: grid;
@@ -240,6 +237,14 @@ export function renderSurfaceFrame(input: {
         background: rgba(45, 103, 176, 0.08);
         border-radius: var(--radius-md);
         padding: 10px 12px;
+      }
+      details summary {
+        cursor: pointer;
+        font-weight: 600;
+        padding: 8px 0;
+      }
+      details[open] .details-content {
+        padding-top: 8px;
       }
     </style>
   `;

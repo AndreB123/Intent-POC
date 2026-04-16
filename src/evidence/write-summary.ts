@@ -58,6 +58,18 @@ function buildStageExecutionMarkdown(
 ): string[] {
   const lines = [`- ${label}: ${stage.status} - ${stage.summary}`];
 
+  if (stage.targetedWorkItemIds.length > 0) {
+    lines.push(`  - Targeted work items: ${stage.targetedWorkItemIds.join(", ")}`);
+  }
+
+  if (stage.completedWorkItemIds.length > 0) {
+    lines.push(`  - Completed work items: ${stage.completedWorkItemIds.join(", ")}`);
+  }
+
+  if (stage.remainingWorkItemIds.length > 0) {
+    lines.push(`  - Remaining work items: ${stage.remainingWorkItemIds.join(", ")}`);
+  }
+
   if (stage.error) {
     lines.push(`  - Error: ${stage.error}`);
   }
@@ -103,6 +115,9 @@ function buildRuntimeAttemptsMarkdown(controllerRoot: string, attempts: SourceRu
         `### Attempt ${attempt.attemptNumber}`,
         `- Status: ${attempt.status}`,
         `- Failure stage: ${attempt.failureStage ?? "none"}`,
+        `- Targeted work items: ${attempt.targetedWorkItemIds.length > 0 ? attempt.targetedWorkItemIds.join(", ") : "none"}`,
+        `- Completed work items: ${attempt.completedWorkItemIds.length > 0 ? attempt.completedWorkItemIds.join(", ") : "none"}`,
+        `- Remaining work items: ${attempt.remainingWorkItemIds.length > 0 ? attempt.remainingWorkItemIds.join(", ") : "none"}`,
         ...buildStageExecutionMarkdown("Implementation", attempt.implementation, controllerRoot),
         ...buildStageExecutionMarkdown("QA verification", attempt.qaVerification, controllerRoot)
       ];
@@ -193,8 +208,11 @@ export function buildSourceSummaryMarkdown(input: {
         (workItem) =>
           [
             `- ${workItem.title}`,
+            `  - Type: QA-runnable Playwright screenshot spec`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
             `  - Verification: ${workItem.verification}`,
+            `  - Order: ${workItem.execution.order}`,
+            `  - Depends on: ${workItem.execution.dependsOnWorkItemIds.length > 0 ? workItem.execution.dependsOnWorkItemIds.join(", ") : "none"}`,
             `  - Playwright specs: ${workItem.playwright.specs.length}`,
             `  - Checkpoints: ${workItem.playwright.specs.reduce((count, spec) => count + spec.checkpoints.length, 0)}`
           ].join("\n")
@@ -333,6 +351,7 @@ export function buildBusinessSummaryMarkdown(input: {
           [
             `- ${workItem.title}`,
             `  - Sources: ${workItem.sourceIds.join(", ")}`,
+            `  - Type: QA-runnable Playwright screenshot spec`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
             `  - Verification: ${workItem.verification}`,
             `  - Playwright specs: ${workItem.playwright.specs.length}`,

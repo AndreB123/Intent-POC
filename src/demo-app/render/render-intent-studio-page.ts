@@ -74,6 +74,16 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         --font-heading: "Azeret Mono", "IBM Plex Sans", sans-serif;
       }
 
+      .dark-mode {
+        --bg: #16212b;
+        --bg-accent: #1e293b;
+        --panel: rgba(30, 41, 59, 0.92);
+        --panel-strong: #2d3748;
+        --line: rgba(255, 255, 255, 0.1);
+        --text: #f8fafc;
+        --muted: #94a3b8;
+      }
+
       * { box-sizing: border-box; }
 
       body {
@@ -120,6 +130,20 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
       .hero {
         padding: 28px;
+        position: relative;
+      }
+
+      .dark-mode-toggle {
+        position: absolute;
+        top: 28px;
+        right: 28px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
       }
 
       .hero h1,
@@ -1062,6 +1086,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
     <div class="shell">
       <header class="masthead">
         <section class="hero">
+          <button class="dark-mode-toggle" id="dark-mode-toggle">Toggle Dark Mode</button>
           <div class="workspace">Config: <span id="config-path">${configPath}</span></div>
           <h1>Intent Studio</h1>
           <p>Prompt-driven control surface for the intent runner. Start a run, watch the orchestration timeline, and inspect captures, diffs, summaries, and Linear activity as the workflow progresses. Work scope cards come from the active YAML config so the Studio stays aligned with the repos you actually want to work on.</p>
@@ -1330,6 +1355,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
     <script>
       (function () {
+        const darkModeToggle = document.getElementById("dark-mode-toggle");
+        darkModeToggle.addEventListener("click", function() {
+          document.body.classList.toggle("dark-mode");
+        });
+
         const promptInput = document.getElementById("prompt-input");
         const sourceScope = document.getElementById("source-scope");
         const sourceVisibilityNote = document.getElementById("source-visibility-note");
@@ -1936,7 +1966,12 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             planWorkItems,
             activePlan.businessIntent.workItems,
             function (workItem) {
-              return renderPlanItem(workItem.title, ["Verification: " + workItem.verification], [], []);
+              const meta = [
+                "Verification: " + workItem.verification,
+                "Order: " + workItem.execution.order,
+                "Depends on: " + (workItem.execution.dependsOnWorkItemIds.length > 0 ? workItem.execution.dependsOnWorkItemIds.join(", ") : "none")
+              ];
+              return renderPlanItem(workItem.title, meta, [], []);
             },
             "No work items defined."
           );
@@ -1983,6 +2018,12 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           if (run && run.sourceRuns) {
             run.sourceRuns.forEach(function(sr) {
               const meta = [sr.implementationStageStatus || sr.status, sr.latestImplementationSummary || (sr.implementationStageStatus === "running" ? "Implementation in progress…" : "Waiting…")];
+              if (typeof sr.completedWorkItemCount === "number" || typeof sr.remainingWorkItemCount === "number") {
+                meta.push((sr.completedWorkItemCount || 0) + " completed / " + (sr.remainingWorkItemCount || 0) + " remaining");
+              }
+              if (sr.targetedWorkItemIds && sr.targetedWorkItemIds.length > 0) {
+                meta.push("Active batch: " + sr.targetedWorkItemIds.join(", "));
+              }
               if (sr.captureScopeSummary) {
                 meta.push(sr.captureScopeSummary);
               }
@@ -2000,6 +2041,9 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             if (run.sourceRuns) {
               run.sourceRuns.forEach(function(sr) {
                 const meta = [sr.qaVerificationStageStatus || sr.status];
+                if (typeof sr.completedWorkItemCount === "number" || typeof sr.remainingWorkItemCount === "number") {
+                  meta.push((sr.completedWorkItemCount || 0) + " completed / " + (sr.remainingWorkItemCount || 0) + " remaining");
+                }
                 if (typeof sr.executedCaptureCount === "number") {
                   meta.push(sr.executedCaptureCount + " captures executed");
                 }
@@ -2052,8 +2096,31 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             return sourceRun.qaVerificationStageStatus === "running"
               || sourceRun.qaVerificationStageStatus === "completed"
               || sourceRun.qaVerificationStageStatus === "failed"
-              || sourceRun.latestFailureStage === "qaVerification"
+              || Boolean(sourceRun.latestFailureStage === "qaVerification")
+              || Boolean(typeof sourceRun.remainingWorkItemCount === "number")
               || Boolean(sourceRun.comparisonIssueSummary);
+          });
+        }
+
+        function isRunFullyImplemented(run) {
+          if (!run || !run.sourceRuns || run.sourceRuns.length === 0) {
+            return false;
+          }
+
+          return run.sourceRuns.every(function (sourceRun) {
+            return sourceRun.implementationStageStatus === "completed"
+              && (sourceRun.remainingWorkItemCount || 0) === 0;
+          });
+        }
+
+        function isRunFullyVerified(run) {
+          if (!run || !run.sourceRuns || run.sourceRuns.length === 0) {
+            return false;
+          }
+
+          return run.sourceRuns.every(function (sourceRun) {
+            return sourceRun.qaVerificationStageStatus === "completed"
+              && (sourceRun.remainingWorkItemCount || 0) === 0;
           });
         }
 
@@ -2075,8 +2142,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             { id: "step-bdd", data: activePlan && (activePlan.businessIntent.acceptanceCriteria.length > 0 || activePlan.businessIntent.scenarios.length > 0) },
             { id: "step-tdd", data: activePlan && activePlan.businessIntent.workItems.length > 0 },
             { id: "step-plan", data: run && activePlan && activePlan.executionPlan.sources.length > 0 },
-            { id: "step-implementation", data: hasImplementationActivity(run) },
-            { id: "step-qa", data: hasQaActivity(run) }
+            { id: "step-implementation", data: run ? isRunFullyImplemented(run) : hasImplementationActivity(run) },
+            { id: "step-qa", data: run ? isRunFullyVerified(run) : hasQaActivity(run) }
           ];
 
           let foundActive = false;

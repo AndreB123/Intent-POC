@@ -33,6 +33,9 @@ export interface SourceStageExecutionRecord {
   status: "skipped" | "completed" | "failed";
   summary: string;
   error?: string;
+  targetedWorkItemIds: string[];
+  completedWorkItemIds: string[];
+  remainingWorkItemIds: string[];
   commands: SourceStageCommandRecord[];
   fileOperations: SourceStageFileOperationRecord[];
 }
@@ -43,6 +46,9 @@ export interface SourceRunAttemptRecord {
   finishedAt: string;
   status: "completed" | "failed";
   failureStage?: "implementation" | "qaVerification";
+  targetedWorkItemIds: string[];
+  completedWorkItemIds: string[];
+  remainingWorkItemIds: string[];
   implementation: SourceStageExecutionRecord;
   qaVerification: SourceStageExecutionRecord;
 }
@@ -86,6 +92,9 @@ export interface PlanLifecycleRecord {
       attemptNumber: number;
       status: SourceRunAttemptRecord["status"];
       failureStage?: SourceRunAttemptRecord["failureStage"];
+      targetedWorkItemIds: string[];
+      completedWorkItemIds: string[];
+      remainingWorkItemIds: string[];
       implementation: SourceStageExecutionRecord["status"];
       qaVerification: SourceStageExecutionRecord["status"];
     }>;
@@ -116,6 +125,9 @@ function serializeSourceRunAttempts(controllerRoot: string, attempts: SourceRunA
     finishedAt: attempt.finishedAt,
     status: attempt.status,
     failureStage: attempt.failureStage,
+    targetedWorkItemIds: attempt.targetedWorkItemIds,
+    completedWorkItemIds: attempt.completedWorkItemIds,
+    remainingWorkItemIds: attempt.remainingWorkItemIds,
     implementation: serializeSourceStageExecution(controllerRoot, attempt.implementation),
     qaVerification: serializeSourceStageExecution(controllerRoot, attempt.qaVerification)
   }));
@@ -390,6 +402,9 @@ export async function writePlanLifecycleFile(input: {
           attemptNumber: attempt.attemptNumber,
           status: attempt.status,
           failureStage: attempt.failureStage,
+          targetedWorkItemIds: attempt.targetedWorkItemIds,
+          completedWorkItemIds: attempt.completedWorkItemIds,
+          remainingWorkItemIds: attempt.remainingWorkItemIds,
           implementation: attempt.implementation.status,
           qaVerification: attempt.qaVerification.status
         }))

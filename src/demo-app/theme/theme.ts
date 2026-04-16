@@ -54,3 +54,7 @@ export function getThemeToggleState(isDark: boolean) {
     transitionClass: isDark ? "dark-mode-transition" : ""
   };
 }
+
+export function toggleTheme(isDark: boolean): boolean {
+  return !isDark;
+}

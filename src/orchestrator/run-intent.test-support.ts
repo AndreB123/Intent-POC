@@ -303,6 +303,9 @@ export function buildSourceStageExecutionRecord(
   return {
     status: "skipped",
     summary: "Stage skipped.",
+    targetedWorkItemIds: [],
+    completedWorkItemIds: [],
+    remainingWorkItemIds: [],
     commands: [],
     fileOperations: [],
     ...overrides
@@ -310,17 +313,25 @@ export function buildSourceStageExecutionRecord(
 }
 
 export function buildSourceRunAttemptRecord(
-  overrides: Partial<SourceRunAttemptRecord> = {}
+  overrides: Omit<Partial<SourceRunAttemptRecord>, "implementation" | "qaVerification"> & {
+    implementation?: Partial<SourceStageExecutionRecord>;
+    qaVerification?: Partial<SourceStageExecutionRecord>;
+  } = {}
 ): SourceRunAttemptRecord {
+  const { implementation, qaVerification, ...attemptOverrides } = overrides;
+
   return {
-    attemptNumber: overrides.attemptNumber ?? 1,
-    startedAt: overrides.startedAt ?? "2026-01-01T00:00:00.000Z",
-    finishedAt: overrides.finishedAt ?? "2026-01-01T00:00:01.000Z",
-    status: overrides.status ?? "completed",
-    failureStage: overrides.failureStage,
-    implementation: buildSourceStageExecutionRecord(overrides.implementation),
-    qaVerification: buildSourceStageExecutionRecord(overrides.qaVerification),
-    ...overrides
+    attemptNumber: attemptOverrides.attemptNumber ?? 1,
+    startedAt: attemptOverrides.startedAt ?? "2026-01-01T00:00:00.000Z",
+    finishedAt: attemptOverrides.finishedAt ?? "2026-01-01T00:00:01.000Z",
+    status: attemptOverrides.status ?? "completed",
+    failureStage: attemptOverrides.failureStage,
+    targetedWorkItemIds: attemptOverrides.targetedWorkItemIds ?? [],
+    completedWorkItemIds: attemptOverrides.completedWorkItemIds ?? [],
+    remainingWorkItemIds: attemptOverrides.remainingWorkItemIds ?? [],
+    implementation: buildSourceStageExecutionRecord(implementation),
+    qaVerification: buildSourceStageExecutionRecord(qaVerification),
+    ...attemptOverrides
   };
 }
 

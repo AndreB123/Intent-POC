@@ -134,6 +134,9 @@ export interface ExecuteImplementationStageInput {
   workspace: ResolvedSourceWorkspace;
   generatedPlaywrightTests: string[];
   attemptNumber: number;
+  activeWorkItemIds: string[];
+  completedWorkItemIds: string[];
+  remainingWorkItemIds: string[];
   options: RunIntentOptions;
 }
 
@@ -145,20 +148,32 @@ export interface ExecuteQAVerificationStageInput {
   workspace: ResolvedSourceWorkspace;
   generatedPlaywrightTests: string[];
   attemptNumber: number;
+  activeWorkItemIds: string[];
+  completedWorkItemIds: string[];
+  remainingWorkItemIds: string[];
   options: RunIntentOptions;
 }
 
 export interface SourceAttemptExecutionResult<Resource = void> {
   implementation: SourceStageExecutionRecord;
   qaVerification: SourceStageExecutionRecord;
+  targetedWorkItemIds: string[];
+  completedWorkItemIds: string[];
+  remainingWorkItemIds: string[];
   resource?: Resource;
 }
 
 export interface RunSourceAttemptLoopInput<Resource = void> {
   sourceId: string;
+  workItems: TDDWorkItem[];
   maxAttempts: number;
   retryEnabled: boolean;
-  executeAttempt: (attemptNumber: number) => Promise<SourceAttemptExecutionResult<Resource>>;
+  executeAttempt: (input: {
+    attemptNumber: number;
+    activeWorkItemIds: string[];
+    completedWorkItemIds: string[];
+    remainingWorkItemIds: string[];
+  }) => Promise<SourceAttemptExecutionResult<Resource>>;
   releaseResource?: (resource: Resource) => Promise<void>;
   onRetry?: (input: { attempt: SourceRunAttemptRecord; nextAttemptNumber: number }) => void;
 }
@@ -244,8 +259,58 @@ function buildSkippedStageExecutionRecord(summary: string): SourceStageExecution
   return {
     status: "skipped",
     summary,
+    targetedWorkItemIds: [],
+    completedWorkItemIds: [],
+    remainingWorkItemIds: [],
     commands: [],
     fileOperations: []
+  };
+}
+
+function sortWorkItemsForExecution(workItems: TDDWorkItem[]): TDDWorkItem[] {
+  return [...workItems].sort((left, right) => {
+    const orderDelta = left.execution.order - right.execution.order;
+    if (orderDelta !== 0) {
+      return orderDelta;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+}
+
+function resolveNextExecutableWorkItem(
+  workItems: TDDWorkItem[],
+  completedWorkItemIds: Set<string>,
+  pendingWorkItemIds: Set<string>
+): TDDWorkItem | undefined {
+  return sortWorkItemsForExecution(workItems).find((workItem) => {
+    if (!pendingWorkItemIds.has(workItem.id)) {
+      return false;
+    }
+
+    return workItem.execution.dependsOnWorkItemIds.every((dependencyId) => completedWorkItemIds.has(dependencyId));
+  });
+}
+
+function buildRemainingWorkItemIds(workItems: TDDWorkItem[], completedWorkItemIds: Set<string>): string[] {
+  return sortWorkItemsForExecution(workItems)
+    .map((workItem) => workItem.id)
+    .filter((workItemId) => !completedWorkItemIds.has(workItemId));
+}
+
+function buildProgressAwareStageRecord(
+  stage: SourceStageExecutionRecord,
+  input: {
+    targetedWorkItemIds: string[];
+    completedWorkItemIds: string[];
+    remainingWorkItemIds: string[];
+  }
+): SourceStageExecutionRecord {
+  return {
+    ...stage,
+    targetedWorkItemIds: input.targetedWorkItemIds,
+    completedWorkItemIds: input.completedWorkItemIds,
+    remainingWorkItemIds: input.remainingWorkItemIds
   };
 }
 
@@ -380,6 +445,9 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
         status: "failed",
         summary: `QA verification failed while running '${command.label}'.`,
         error: commandRecord.error,
+        targetedWorkItemIds: input.activeWorkItemIds,
+        completedWorkItemIds: input.completedWorkItemIds,
+        remainingWorkItemIds: input.remainingWorkItemIds,
         commands: commandRecords,
         fileOperations: []
       };
@@ -389,6 +457,9 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
   return {
     status: "completed",
     summary: `QA verification passed ${commandRecords.length} command${commandRecords.length === 1 ? "" : "s"}.`,
+    targetedWorkItemIds: input.activeWorkItemIds,
+    completedWorkItemIds: [...input.completedWorkItemIds, ...input.activeWorkItemIds],
+    remainingWorkItemIds: input.remainingWorkItemIds.filter((workItemId) => !input.activeWorkItemIds.includes(workItemId)),
     commands: commandRecords,
     fileOperations: []
   };
@@ -459,59 +530,87 @@ export async function runSourceAttemptLoop<Resource>(
 ): Promise<RunSourceAttemptLoopResult<Resource>> {
   const attempts: SourceRunAttemptRecord[] = [];
 
-  for (let attemptNumber = 1; attemptNumber <= input.maxAttempts; attemptNumber += 1) {
-    const startedAt = new Date().toISOString();
-    const result = await input.executeAttempt(attemptNumber);
-    const finishedAt = new Date().toISOString();
-    const failureStage =
-      result.implementation.status === "failed"
-        ? "implementation"
-        : result.qaVerification.status === "failed"
-          ? "qaVerification"
-          : undefined;
-    const attempt: SourceRunAttemptRecord = {
-      attemptNumber,
-      startedAt,
-      finishedAt,
-      status: failureStage ? "failed" : "completed",
-      failureStage,
-      implementation: result.implementation,
-      qaVerification: result.qaVerification
-    };
+  const completedWorkItemIds = new Set<string>();
+  let remainingWorkItemIds = buildRemainingWorkItemIds(input.workItems, completedWorkItemIds);
+  let attemptNumber = 1;
+  let latestResource: Resource | undefined;
 
-    attempts.push(attempt);
+  while (remainingWorkItemIds.length > 0) {
+    const nextWorkItem = resolveNextExecutableWorkItem(input.workItems, completedWorkItemIds, new Set(remainingWorkItemIds));
 
-    if (!failureStage) {
-      return {
-        attempts,
-        status: "completed",
-        resource: result.resource
-      };
-    }
-
-    if (result.resource && input.releaseResource) {
-      await input.releaseResource(result.resource);
-    }
-
-    const canRetry = input.retryEnabled && attemptNumber < input.maxAttempts && result.implementation.status !== "skipped";
-    if (!canRetry) {
+    if (!nextWorkItem) {
       return {
         attempts,
         status: "failed",
-        error: buildAttemptFailureMessage(input.sourceId, attempt)
+        error: `No dependency-ready work item remained for source '${input.sourceId}'. Check work item execution ordering.`
       };
     }
 
-    input.onRetry?.({
-      attempt,
-      nextAttemptNumber: attemptNumber + 1
-    });
+    const activeWorkItemIds = [nextWorkItem.id];
+
+    for (let retryNumber = 1; retryNumber <= input.maxAttempts; retryNumber += 1) {
+      const startedAt = new Date().toISOString();
+      const result = await input.executeAttempt({
+        attemptNumber,
+        activeWorkItemIds,
+        completedWorkItemIds: Array.from(completedWorkItemIds),
+        remainingWorkItemIds
+      });
+      const finishedAt = new Date().toISOString();
+      const failureStage =
+        result.implementation.status === "failed"
+          ? "implementation"
+          : result.qaVerification.status === "failed"
+            ? "qaVerification"
+            : undefined;
+      const attempt: SourceRunAttemptRecord = {
+        attemptNumber,
+        startedAt,
+        finishedAt,
+        status: failureStage ? "failed" : "completed",
+        failureStage,
+        targetedWorkItemIds: result.targetedWorkItemIds,
+        completedWorkItemIds: result.completedWorkItemIds,
+        remainingWorkItemIds: result.remainingWorkItemIds,
+        implementation: result.implementation,
+        qaVerification: result.qaVerification
+      };
+
+      attempts.push(attempt);
+
+      if (!failureStage) {
+        activeWorkItemIds.forEach((workItemId) => completedWorkItemIds.add(workItemId));
+        remainingWorkItemIds = buildRemainingWorkItemIds(input.workItems, completedWorkItemIds);
+        latestResource = result.resource;
+        attemptNumber += 1;
+        break;
+      }
+
+      if (result.resource && input.releaseResource) {
+        await input.releaseResource(result.resource);
+      }
+
+      const canRetry = input.retryEnabled && retryNumber < input.maxAttempts && result.implementation.status !== "skipped";
+      if (!canRetry) {
+        return {
+          attempts,
+          status: "failed",
+          error: buildAttemptFailureMessage(input.sourceId, attempt)
+        };
+      }
+
+      input.onRetry?.({
+        attempt,
+        nextAttemptNumber: attemptNumber + 1
+      });
+      attemptNumber += 1;
+    }
   }
 
   return {
     attempts,
-    status: "failed",
-    error: `Implementation and QA attempts for source '${input.sourceId}' did not complete successfully.`
+    status: "completed",
+    resource: latestResource
   };
 }
 
@@ -522,6 +621,8 @@ function formatWorkItemDescription(workItem: TDDWorkItem, includeSources: boolea
     ...(includeSources ? [`  - Sources: ${workItem.sourceIds.join(", ")}`] : []),
     `  - Outcome: ${workItem.userVisibleOutcome}`,
     `  - Verification: ${workItem.verification}`,
+    `  - Order: ${workItem.execution.order}`,
+    `  - Depends on: ${workItem.execution.dependsOnWorkItemIds.length > 0 ? workItem.execution.dependsOnWorkItemIds.join(", ") : "none"}`,
     `  - Playwright specs: ${workItem.playwright.specs.length}`,
     `  - Checkpoints: ${checkpointCount}`
   ];
@@ -1147,15 +1248,19 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
     const implementationStage = resolveAgentStageConfig(input.agentConfig, "implementation");
     const qaVerificationStage = resolveAgentStageConfig(input.agentConfig, "qaVerification");
+    const sourceWorkItems = sortWorkItemsForExecution(
+      input.normalizedIntent.businessIntent.workItems.filter((workItem) => workItem.sourceIds.includes(input.sourcePlan.sourceId))
+    );
 
     assertImplementationStageReady(implementationStage);
 
     if (implementationStage.enabled || qaVerificationStage.enabled) {
       const attemptLoop = await runSourceAttemptLoop<RunningAppHandle>({
         sourceId: input.sourcePlan.sourceId,
+        workItems: sourceWorkItems,
         maxAttempts: implementationStage.enabled ? MAX_SOURCE_ATTEMPTS : 1,
         retryEnabled: implementationStage.enabled,
-        executeAttempt: async (attemptNumber) => {
+        executeAttempt: async ({ attemptNumber, activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds }) => {
           let implementationResult = buildSkippedStageExecutionRecord(
             implementationStage.enabled
               ? "Implementation did not run."
@@ -1180,6 +1285,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 workspace: workspace!,
                 generatedPlaywrightTests,
                 attemptNumber,
+                activeWorkItemIds,
+                completedWorkItemIds,
+                remainingWorkItemIds,
                 options: input.options
               });
             } catch (error) {
@@ -1187,6 +1295,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 status: "failed",
                 summary: "Implementation executor threw before the source lane could continue.",
                 error: captureErrorMessage(error),
+                targetedWorkItemIds: activeWorkItemIds,
+                completedWorkItemIds,
+                remainingWorkItemIds,
                 commands: [],
                 fileOperations: []
               };
@@ -1206,6 +1317,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 status: implementationResult.status,
                 summary: implementationResult.summary,
                 error: implementationResult.error,
+                targetedWorkItemIds: implementationResult.targetedWorkItemIds,
+                completedWorkItemIds: implementationResult.completedWorkItemIds,
+                remainingWorkItemIds: implementationResult.remainingWorkItemIds,
                 fileOperations: implementationResult.fileOperations
               },
               implementationResult.status === "failed"
@@ -1218,9 +1332,17 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
           if (implementationResult.status === "failed") {
             return {
+              targetedWorkItemIds: activeWorkItemIds,
+              completedWorkItemIds,
+              remainingWorkItemIds,
               implementation: implementationResult,
-              qaVerification: buildSkippedStageExecutionRecord(
-                "QA verification was skipped because implementation did not complete successfully."
+              qaVerification: buildProgressAwareStageRecord(
+                buildSkippedStageExecutionRecord("QA verification was skipped because implementation did not complete successfully."),
+                {
+                  targetedWorkItemIds: activeWorkItemIds,
+                  completedWorkItemIds,
+                  remainingWorkItemIds
+                }
               )
             };
           }
@@ -1240,8 +1362,18 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
             if (!qaVerificationStage.enabled) {
               return {
+                targetedWorkItemIds: activeWorkItemIds,
+                completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+                remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
                 implementation: implementationResult,
-                qaVerification: buildSkippedStageExecutionRecord("QA verification stage is disabled for this run."),
+                qaVerification: buildProgressAwareStageRecord(
+                  buildSkippedStageExecutionRecord("QA verification stage is disabled for this run."),
+                  {
+                    targetedWorkItemIds: activeWorkItemIds,
+                    completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+                    remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId))
+                  }
+                ),
                 resource: attemptAppHandle
               };
             }
@@ -1265,6 +1397,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 workspace: workspace!,
                 generatedPlaywrightTests,
                 attemptNumber,
+                activeWorkItemIds,
+                completedWorkItemIds,
+                remainingWorkItemIds,
                 options: input.options
               });
             } catch (error) {
@@ -1272,6 +1407,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 status: "failed",
                 summary: "QA verification threw before the source lane could continue.",
                 error: captureErrorMessage(error),
+                targetedWorkItemIds: activeWorkItemIds,
+                completedWorkItemIds,
+                remainingWorkItemIds,
                 commands: [],
                 fileOperations: []
               };
@@ -1291,6 +1429,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 status: qaVerificationResult.status,
                 summary: qaVerificationResult.summary,
                 error: qaVerificationResult.error,
+                targetedWorkItemIds: qaVerificationResult.targetedWorkItemIds,
+                completedWorkItemIds: qaVerificationResult.completedWorkItemIds,
+                remainingWorkItemIds: qaVerificationResult.remainingWorkItemIds,
                 commands: qaVerificationResult.commands.map((command) => ({
                   label: command.label,
                   status: command.status,
@@ -1306,6 +1447,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
             if (qaVerificationResult.status === "completed") {
               return {
+                targetedWorkItemIds: activeWorkItemIds,
+                completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+                remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
                 implementation: implementationResult,
                 qaVerification: qaVerificationResult,
                 resource: attemptAppHandle
@@ -1315,6 +1459,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
             await attemptAppHandle.stop();
 
             return {
+              targetedWorkItemIds: activeWorkItemIds,
+              completedWorkItemIds,
+              remainingWorkItemIds,
               implementation: implementationResult,
               qaVerification: qaVerificationResult
             };
@@ -1324,14 +1471,24 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
             }
 
             return {
+              targetedWorkItemIds: activeWorkItemIds,
+              completedWorkItemIds,
+              remainingWorkItemIds,
               implementation: implementationResult,
-              qaVerification: {
+              qaVerification: buildProgressAwareStageRecord({
                 status: "failed",
                 summary: "QA verification could not start because the source app never became ready.",
                 error: captureErrorMessage(error),
+                targetedWorkItemIds: [],
+                completedWorkItemIds: [],
+                remainingWorkItemIds: [],
                 commands: [],
                 fileOperations: []
-              }
+              }, {
+                targetedWorkItemIds: activeWorkItemIds,
+                completedWorkItemIds,
+                remainingWorkItemIds
+              })
             };
           }
         },

@@ -277,7 +277,7 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
       }
     });
 
-    await delay(30);
+    await delay(100);
 
     options.onEvent?.({
       timestamp: new Date().toISOString(),
@@ -289,7 +289,7 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
       }
     });
 
-    await delay(30);
+    await delay(100);
 
     options.onEvent?.({
       timestamp: new Date().toISOString(),
@@ -300,6 +300,9 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
         sourceId: "app",
         status: "completed",
         summary: "Added dark mode toggle in the app header.",
+        targetedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+        completedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+        remainingWorkItemIds: ["work-2-wire-dark-mode-state"],
         fileOperations: [
           {
             operation: "replace",
@@ -309,7 +312,7 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
       }
     });
 
-    await delay(30);
+    await delay(100);
 
     options.onEvent?.({
       timestamp: new Date().toISOString(),
@@ -321,7 +324,7 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
       }
     });
 
-    await delay(30);
+    await delay(100);
 
     options.onEvent?.({
       timestamp: new Date().toISOString(),
@@ -331,11 +334,14 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
       details: {
         sourceId: "app",
         status: "completed",
-        summary: "Typecheck and focused verification passed."
+        summary: "Typecheck and focused verification passed.",
+        targetedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+        completedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+        remainingWorkItemIds: ["work-2-wire-dark-mode-state"]
       }
     });
 
-    await delay(30);
+    await delay(100);
 
     return {
       status: "completed",
@@ -406,9 +412,15 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
               startedAt: "2026-04-15T00:00:00.000Z",
               finishedAt: "2026-04-15T00:00:01.000Z",
               status: "completed",
+              targetedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+              completedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+              remainingWorkItemIds: ["work-2-wire-dark-mode-state"],
               implementation: {
                 status: "completed",
                 summary: "Added dark mode toggle in the app header.",
+                targetedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+                completedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+                remainingWorkItemIds: ["work-2-wire-dark-mode-state"],
                 commands: [],
                 fileOperations: [
                   {
@@ -422,6 +434,9 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
               qaVerification: {
                 status: "completed",
                 summary: "Typecheck and focused verification passed.",
+                targetedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+                completedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+                remainingWorkItemIds: ["work-2-wire-dark-mode-state"],
                 commands: [],
                 fileOperations: []
               }

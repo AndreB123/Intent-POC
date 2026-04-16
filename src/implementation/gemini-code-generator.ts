@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { ResolvedAgentStageConfig } from "../intent/agent-stage-config";
+import { CodeSurfaceSelection, getCodeSurfaceImplementationHints } from "../intent/code-surface";
 import { BDDScenario, TDDWorkItem } from "../intent/intent-types";
 import { createGeminiClient } from "../intent/gemini-client";
 
@@ -39,10 +40,13 @@ export interface ImplementationScenarioContext {
 }
 
 export interface ImplementationWorkItemContext {
+  id: string;
   title: string;
   description: string;
   verification: string;
   userVisibleOutcome: string;
+  order: number;
+  dependsOnWorkItemIds: string[];
   scenarioIds: string[];
   verificationNotes: string[];
 }
@@ -51,10 +55,20 @@ export interface ImplementationPromptContext {
   rawPrompt: string;
   summary: string;
   sourceId: string;
+  codeSurface?: {
+    id: string;
+    label: string;
+    confidence: string;
+    rationale: string;
+    primaryPathPrefixes: string[];
+    adjacentPathPrefixes: string[];
+    avoidPathPrefixes: string[];
+  };
   desiredOutcome: string;
   acceptanceCriteria: string[];
   scenarios: ImplementationScenarioContext[];
-  workItems: ImplementationWorkItemContext[];
+  activeWorkItems: ImplementationWorkItemContext[];
+  backlogWorkItems: ImplementationWorkItemContext[];
   workspaceFiles: ImplementationWorkspaceFileDescriptor[];
   generatedSpecs: ImplementationGeneratedSpecContext[];
   relevantFiles: ImplementationRelevantFileContext[];
@@ -338,10 +352,13 @@ function buildVerificationNotes(workItem: TDDWorkItem): string[] {
 
 function buildWorkItemContext(workItems: TDDWorkItem[]): ImplementationWorkItemContext[] {
   return workItems.map((workItem) => ({
+    id: workItem.id,
     title: workItem.title,
     description: workItem.description,
     verification: workItem.verification,
     userVisibleOutcome: workItem.userVisibleOutcome,
+    order: workItem.execution.order,
+    dependsOnWorkItemIds: workItem.execution.dependsOnWorkItemIds,
     scenarioIds: workItem.scenarioIds,
     verificationNotes: buildVerificationNotes(workItem)
   }));
@@ -485,16 +502,22 @@ function isPreferredImplementationSourcePath(filePath: string): boolean {
   return normalizedPath.startsWith("src/") && !getTestFileKind(normalizedPath);
 }
 
+function matchesAnyPathPrefix(relativePath: string, prefixes: string[]): boolean {
+  return prefixes.some((prefix) => relativePath.startsWith(prefix.toLowerCase()));
+}
+
 function scoreRelevantFile(input: {
   relativePath: string;
   content: string;
   keywords: string[];
+  codeSurface?: CodeSurfaceSelection;
 }): { score: number; matchedKeywords: string[] } {
   const relativePath = input.relativePath.toLowerCase();
   const content = input.content.toLowerCase();
   const testFileKind = getTestFileKind(relativePath);
   const matchedKeywords: string[] = [];
   let score = 0;
+  const surfaceHints = input.codeSurface ? getCodeSurfaceImplementationHints(input.codeSurface.id) : undefined;
 
   if (relativePath.startsWith("src/demo-app/") && !testFileKind) {
     score += 8;
@@ -506,6 +529,23 @@ function scoreRelevantFile(input: {
 
   if (/(render|page|view|component|route|screen|layout|app)/.test(relativePath)) {
     score += 3;
+  }
+
+  if (surfaceHints) {
+    if (matchesAnyPathPrefix(relativePath, surfaceHints.primaryPathPrefixes)) {
+      score += 24;
+      matchedKeywords.push(`surface:${input.codeSurface?.id}:primary`);
+    }
+
+    if (matchesAnyPathPrefix(relativePath, surfaceHints.adjacentPathPrefixes)) {
+      score += 10;
+      matchedKeywords.push(`surface:${input.codeSurface?.id}:adjacent`);
+    }
+
+    if (matchesAnyPathPrefix(relativePath, surfaceHints.avoidPathPrefixes)) {
+      score -= 12;
+      matchedKeywords.push(`surface:${input.codeSurface?.id}:avoid`);
+    }
   }
 
   for (const keyword of input.keywords) {
@@ -537,6 +577,7 @@ export async function collectRelevantImplementationFiles(input: {
   rawPrompt: string;
   summary: string;
   sourceId: string;
+  codeSurface?: CodeSurfaceSelection;
   desiredOutcome: string;
   acceptanceCriteria: string[];
   scenarios: BDDScenario[];
@@ -547,11 +588,12 @@ export async function collectRelevantImplementationFiles(input: {
 }): Promise<ImplementationRelevantFileContext[]> {
   const readFile = input.readFile ?? fs.readFile;
   const generatedSpecPaths = new Set(input.generatedSpecs.map((spec) => spec.relativePath));
+  const surfaceHints = input.codeSurface ? getCodeSurfaceImplementationHints(input.codeSurface.id) : undefined;
   const keywords = tokenizeRelevantFileTerms([
     input.rawPrompt,
     input.summary,
-    input.sourceId,
     input.desiredOutcome,
+    ...(surfaceHints?.keywords ?? []),
     ...input.acceptanceCriteria,
     ...input.scenarios.flatMap((scenario) => [scenario.title, scenario.goal, ...scenario.given, ...scenario.when, ...scenario.then]),
     ...input.workItems.flatMap((workItem) => [
@@ -571,7 +613,8 @@ export async function collectRelevantImplementationFiles(input: {
         const score = scoreRelevantFile({
           relativePath: descriptor.relativePath,
           content,
-          keywords
+          keywords,
+          codeSurface: input.codeSurface
         });
 
         return {
@@ -596,7 +639,7 @@ export async function collectRelevantImplementationFiles(input: {
       content: truncateRelevantFileContent(file.content),
       reason:
         file.matchedKeywords.length > 0
-          ? `Matched prompt and plan terms: ${file.matchedKeywords.join(", ")}`
+          ? `Matched prompt, plan, and surface terms: ${file.matchedKeywords.join(", ")}`
           : "Likely source entrypoint for the requested behavior."
     }));
 }
@@ -615,14 +658,28 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
     "Prefer the smallest change set that should satisfy the planned work and QA bundle.",
     "If no source changes are needed, return an empty operations array.",
     `Source id: ${input.sourceId}`,
+    ...(input.codeSurface
+      ? [
+          `Code surface: ${input.codeSurface.label} (${input.codeSurface.id}, confidence: ${input.codeSurface.confidence})`,
+          `Code surface rationale: ${input.codeSurface.rationale}`,
+          "Primary surface paths:",
+          JSON.stringify(input.codeSurface.primaryPathPrefixes, null, 2),
+          "Adjacent surface paths:",
+          JSON.stringify(input.codeSurface.adjacentPathPrefixes, null, 2),
+          "Avoid unrelated surface paths unless the change clearly requires them:",
+          JSON.stringify(input.codeSurface.avoidPathPrefixes, null, 2)
+        ]
+      : []),
     `Intent summary: ${input.summary}`,
     `Desired outcome: ${input.desiredOutcome}`,
     "Acceptance criteria:",
     JSON.stringify(input.acceptanceCriteria, null, 2),
     "Relevant scenarios:",
     JSON.stringify(input.scenarios, null, 2),
-    "Relevant work items:",
-    JSON.stringify(input.workItems, null, 2),
+    "Active work items to implement in this pass:",
+    JSON.stringify(input.activeWorkItems, null, 2),
+    "Remaining backlog work items for context only. Do not claim the source is complete based on backlog items unless they are in the active set:",
+    JSON.stringify(input.backlogWorkItems, null, 2),
     "Package scripts:",
     JSON.stringify(input.packageContext, null, 2),
     "Generated Playwright specs (read-only verification inputs):",
@@ -664,8 +721,10 @@ function buildMaterializationPrompt(input: {
     JSON.stringify(input.context.relevantFiles, null, 2),
     "Generated Playwright specs:",
     JSON.stringify(input.context.generatedSpecs, null, 2),
-    "Relevant work items:",
-    JSON.stringify(input.context.workItems, null, 2)
+    "Active work items for this pass:",
+    JSON.stringify(input.context.activeWorkItems, null, 2),
+    "Remaining backlog work items:",
+    JSON.stringify(input.context.backlogWorkItems, null, 2)
   ].join("\n\n");
 }
 
@@ -710,23 +769,39 @@ export function buildImplementationPromptContext(input: {
   rawPrompt: string;
   summary: string;
   sourceId: string;
+  codeSurface?: CodeSurfaceSelection;
   desiredOutcome: string;
   acceptanceCriteria: string[];
   scenarios: BDDScenario[];
-  workItems: TDDWorkItem[];
+  activeWorkItems: TDDWorkItem[];
+  backlogWorkItems: TDDWorkItem[];
   workspaceFiles: ImplementationWorkspaceFileDescriptor[];
   generatedSpecs: ImplementationGeneratedSpecContext[];
   relevantFiles: ImplementationRelevantFileContext[];
   packageContext: ImplementationPackageContext;
 }): ImplementationPromptContext {
+  const surfaceHints = input.codeSurface ? getCodeSurfaceImplementationHints(input.codeSurface.id) : undefined;
+
   return {
     rawPrompt: input.rawPrompt,
     summary: input.summary,
     sourceId: input.sourceId,
+    codeSurface: input.codeSurface
+      ? {
+          id: input.codeSurface.id,
+          label: input.codeSurface.label,
+          confidence: input.codeSurface.confidence,
+          rationale: input.codeSurface.rationale,
+          primaryPathPrefixes: surfaceHints?.primaryPathPrefixes ?? [],
+          adjacentPathPrefixes: surfaceHints?.adjacentPathPrefixes ?? [],
+          avoidPathPrefixes: surfaceHints?.avoidPathPrefixes ?? []
+        }
+      : undefined,
     desiredOutcome: input.desiredOutcome,
     acceptanceCriteria: input.acceptanceCriteria,
     scenarios: buildScenarioContext(input.scenarios),
-    workItems: buildWorkItemContext(input.workItems),
+    activeWorkItems: buildWorkItemContext(input.activeWorkItems),
+    backlogWorkItems: buildWorkItemContext(input.backlogWorkItems),
     workspaceFiles: input.workspaceFiles,
     generatedSpecs: input.generatedSpecs,
     relevantFiles: input.relevantFiles,

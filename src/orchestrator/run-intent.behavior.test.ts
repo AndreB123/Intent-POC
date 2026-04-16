@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { ComparisonSummary } from "../compare/run-comparison";
 import { normalizeIntent } from "../intent/normalize-intent";
+import { TDDWorkItem } from "../intent/intent-types";
 import { readJsonFile } from "../shared/fs";
 import {
   buildBehaviorTestLoadedConfig,
@@ -19,19 +20,47 @@ import {
   runSourceAttemptLoop
 } from "./run-intent";
 
+function buildLoopWorkItem(id: string, order: number, dependsOnWorkItemIds: string[] = []): TDDWorkItem {
+  return {
+    id,
+    type: "playwright-spec",
+    title: id,
+    description: `${id} description`,
+    scenarioIds: [],
+    sourceIds: ["demo-catalog"],
+    userVisibleOutcome: `${id} outcome`,
+    verification: `${id} verification`,
+    execution: {
+      order,
+      dependsOnWorkItemIds
+    },
+    playwright: {
+      generatedBy: "rules",
+      specs: []
+    }
+  };
+}
+
 test("runSourceAttemptLoop Given a retryable QA failure When a later attempt passes Then it records both attempts and returns the successful resource", async () => {
   const retries: number[] = [];
 
   const result = await runSourceAttemptLoop<string>({
     sourceId: "demo-catalog",
+    workItems: [buildLoopWorkItem("work-1", 1)],
     maxAttempts: 3,
     retryEnabled: true,
-    executeAttempt: async (attemptNumber) => {
+    executeAttempt: async ({ attemptNumber, activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds }) => {
       if (attemptNumber === 1) {
         return {
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds,
+          remainingWorkItemIds,
           implementation: {
             status: "completed",
             summary: "Implementation pass completed.",
+            targetedWorkItemIds: activeWorkItemIds,
+            completedWorkItemIds,
+            remainingWorkItemIds,
             commands: [],
             fileOperations: []
           },
@@ -39,6 +68,9 @@ test("runSourceAttemptLoop Given a retryable QA failure When a later attempt pas
             status: "failed",
             summary: "QA verification failed while running 'test-code'.",
             error: "Command failed (1).",
+            targetedWorkItemIds: activeWorkItemIds,
+            completedWorkItemIds,
+            remainingWorkItemIds,
             commands: [],
             fileOperations: []
           }
@@ -46,15 +78,24 @@ test("runSourceAttemptLoop Given a retryable QA failure When a later attempt pas
       }
 
       return {
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+        remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
         implementation: {
           status: "completed",
           summary: "Retry implementation pass completed.",
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+          remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
           commands: [],
           fileOperations: []
         },
         qaVerification: {
           status: "completed",
           summary: "QA verification passed 2 commands.",
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+          remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
           commands: [],
           fileOperations: []
         },
@@ -79,12 +120,19 @@ test("runSourceAttemptLoop Given repeated QA failures When retries are exhausted
 
   const result = await runSourceAttemptLoop({
     sourceId: "demo-catalog",
+    workItems: [buildLoopWorkItem("work-1", 1)],
     maxAttempts: 3,
     retryEnabled: true,
-    executeAttempt: async () => ({
+    executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds }) => ({
+      targetedWorkItemIds: activeWorkItemIds,
+      completedWorkItemIds,
+      remainingWorkItemIds,
       implementation: {
         status: "completed",
         summary: "Implementation pass completed.",
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds,
+        remainingWorkItemIds,
         commands: [],
         fileOperations: []
       },
@@ -92,6 +140,9 @@ test("runSourceAttemptLoop Given repeated QA failures When retries are exhausted
         status: "failed",
         summary: "QA verification failed while running 'generated-playwright'.",
         error: "Command failed (1).",
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds,
+        remainingWorkItemIds,
         commands: [],
         fileOperations: []
       }
@@ -106,6 +157,52 @@ test("runSourceAttemptLoop Given repeated QA failures When retries are exhausted
   assert.deepEqual(retries, [2, 3]);
   assert.equal(result.attempts.at(-1)?.failureStage, "qaVerification");
   assert.match(result.error ?? "", /QA verification failed for source 'demo-catalog' on attempt 3/);
+});
+
+test("runSourceAttemptLoop Given ordered work items When one batch passes QA Then it continues to the next batch before completing", async () => {
+  const executedBatches: string[][] = [];
+
+  const result = await runSourceAttemptLoop<string>({
+    sourceId: "demo-catalog",
+    workItems: [buildLoopWorkItem("work-1", 1), buildLoopWorkItem("work-2", 2, ["work-1"])],
+    maxAttempts: 3,
+    retryEnabled: true,
+    executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds, attemptNumber }) => {
+      executedBatches.push(activeWorkItemIds);
+
+      return {
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+        remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
+        implementation: {
+          status: "completed",
+          summary: `Implementation pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+          remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
+          commands: [],
+          fileOperations: []
+        },
+        qaVerification: {
+          status: "completed",
+          summary: `QA verification pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
+          remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
+          commands: [],
+          fileOperations: []
+        },
+        resource: `ready-app-${attemptNumber}`
+      };
+    }
+  });
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(executedBatches, [["work-1"], ["work-2"]]);
+  assert.equal(result.attempts.length, 2);
+  assert.deepEqual(result.attempts[0]?.remainingWorkItemIds, ["work-2"]);
+  assert.deepEqual(result.attempts[1]?.completedWorkItemIds, ["work-1", "work-2"]);
+  assert.equal(result.resource, "ready-app-2");
 });
 
 test("runIntent Given a dry run When the plan is valid Then it writes plan lifecycle metadata and skips source execution", async () => {

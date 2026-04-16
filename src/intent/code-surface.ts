@@ -25,6 +25,13 @@ export interface CodeSurfaceSelection {
   alternatives: CodeSurfaceAlternative[];
 }
 
+export interface CodeSurfaceImplementationHints {
+  primaryPathPrefixes: string[];
+  adjacentPathPrefixes: string[];
+  avoidPathPrefixes: string[];
+  keywords: string[];
+}
+
 const CODE_SURFACE_LABELS: Record<CodeSurfaceId, string> = {
   "intent-studio": "Intent Studio",
   "surface-catalog": "Surface Catalog",
@@ -103,6 +110,73 @@ export function getCodeSurfaceLabel(id: CodeSurfaceId): string {
 
 export function isCodeSurfaceId(value: string | undefined): value is CodeSurfaceId {
   return value !== undefined && CODE_SURFACE_IDS.includes(value as CodeSurfaceId);
+}
+
+export function getCodeSurfaceImplementationHints(codeSurfaceId: CodeSurfaceId): CodeSurfaceImplementationHints {
+  switch (codeSurfaceId) {
+    case "intent-studio":
+      return {
+        primaryPathPrefixes: ["src/demo-app/render/render-intent-studio-page.ts"],
+        adjacentPathPrefixes: [
+          "src/demo-app/server/start-intent-studio-server.ts",
+          "src/demo-app/serve-demo-app.ts"
+        ],
+        avoidPathPrefixes: [
+          "src/demo-app/render/render-surface-frame.ts",
+          "src/demo-app/render/render-surface-page.ts",
+          "src/demo-app/components/",
+          "src/demo-app/pages/",
+          "src/demo-app/views/",
+          "src/demo-app/primitives/"
+        ],
+        keywords: ["intent", "studio", "runner", "header", "toggle", "theme"]
+      };
+    case "surface-catalog":
+      return {
+        primaryPathPrefixes: [
+          "src/demo-app/render/render-surface-frame.ts",
+          "src/demo-app/render/render-surface-page.ts",
+          "src/demo-app/components/",
+          "src/demo-app/pages/",
+          "src/demo-app/views/",
+          "src/demo-app/primitives/"
+        ],
+        adjacentPathPrefixes: ["src/demo-app/model/catalog.ts", "src/demo-app/model/types.ts"],
+        avoidPathPrefixes: [
+          "src/demo-app/render/render-intent-studio-page.ts",
+          "src/demo-app/server/start-intent-studio-server.ts"
+        ],
+        keywords: ["catalog", "surface", "library", "component", "view", "page"]
+      };
+    case "capture-and-evidence":
+      return {
+        primaryPathPrefixes: ["src/capture/", "src/evidence/", "src/compare/", "src/demo-app/capture/"],
+        adjacentPathPrefixes: ["src/demo-app/generate-demo-library.ts"],
+        avoidPathPrefixes: ["src/demo-app/render/render-intent-studio-page.ts"],
+        keywords: ["capture", "screenshot", "baseline", "diff", "evidence", "comparison"]
+      };
+    case "orchestrator-and-planning":
+      return {
+        primaryPathPrefixes: ["src/orchestrator/", "src/intent/", "src/implementation/", "src/linear/"],
+        adjacentPathPrefixes: ["src/demo-app/server/start-intent-studio-server.ts"],
+        avoidPathPrefixes: ["src/demo-app/render/render-surface-frame.ts"],
+        keywords: ["orchestrator", "intent", "planning", "runner", "verification", "implementation"]
+      };
+    case "config-and-settings":
+      return {
+        primaryPathPrefixes: ["src/config/", "intent-poc.yaml", "intent-poc.local-no-linear.yaml"],
+        adjacentPathPrefixes: ["src/demo-app/server/start-intent-studio-server.ts"],
+        avoidPathPrefixes: ["src/demo-app/render/render-surface-frame.ts"],
+        keywords: ["config", "schema", "yaml", "settings", "environment"]
+      };
+    case "shared-source":
+      return {
+        primaryPathPrefixes: [],
+        adjacentPathPrefixes: [],
+        avoidPathPrefixes: [],
+        keywords: []
+      };
+  }
 }
 
 export function inferCodeSurface(input: {

@@ -58,11 +58,11 @@ const acceptanceCriteria = [
 
 const scenarioTitles = [
   "Intent is translated into acceptance-ready work",
-  "Executable evidence is prepared for applicable sources",
+  "QA-runnable visual evidence is defined for applicable sources",
   "Results are distributed consistently"
 ];
 
-const workItemTitles = [...scenarioTitles, "Produce visible evidence for demo-catalog"];
+const workItemTitles = ["QA-runnable visual evidence is defined for applicable sources"];
 
 const destinationStatuses: IntentPocBddSampleExpectation["destinationStatuses"] = [
   { label: "Controller artifacts", status: "active" },
@@ -120,7 +120,8 @@ export const INTENT_POC_BDD_SAMPLE = {
       "- Sources: demo-catalog",
       `- Given A business intent has been captured: ${prompt}`,
       "## TDD Work Items",
-      "- Produce visible evidence for demo-catalog",
+      "- QA-runnable visual evidence is defined for applicable sources",
+      "  - Type: QA-runnable Playwright screenshot spec",
       "  - Playwright specs: 1",
       "  - Checkpoints: 3",
       "- Destinations: Controller artifacts [active], Linear parent issue [planned], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]",

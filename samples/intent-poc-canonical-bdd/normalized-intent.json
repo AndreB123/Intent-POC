@@ -4,6 +4,20 @@
   "rawPrompt": "Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.",
   "summary": "capture evidence for demo-catalog",
   "intentType": "capture-evidence",
+  "codeSurface": {
+    "sourceId": "demo-catalog",
+    "id": "surface-catalog",
+    "label": "Surface Catalog",
+    "confidence": "high",
+    "rationale": "The prompt points to library or catalog behavior inside demo-catalog.",
+    "alternatives": [
+      {
+        "id": "intent-studio",
+        "label": "Intent Studio",
+        "reason": "The catalog request may also touch the Studio shell if the prompt is using Studio language loosely."
+      }
+    ]
+  },
   "businessIntent": {
     "statement": "Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.",
     "desiredOutcome": "product and engineering leads can inspect the baseline without reading implementation details",
@@ -66,19 +80,19 @@
         ]
       },
       {
-        "id": "scenario-2-executable-evidence-is-prepared-for-applicable-sources",
-        "title": "Executable evidence is prepared for applicable sources",
-        "goal": "Define what visible verification should happen for each source involved in the intent.",
+        "id": "scenario-2-qa-runnable-visual-evidence-is-defined-for-applicable-sources",
+        "title": "QA-runnable visual evidence is defined for applicable sources",
+        "goal": "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
         "given": [
           "Source demo-catalog is available for execution."
         ],
         "when": [
-          "Execution is prepared for capture-based evidence collection.",
-          "Visible evidence tooling is assigned to each applicable source."
+          "TDD planning prepares Playwright screenshot verification for the applicable sources.",
+          "The runner maps the configured capture surfaces into QA-runnable checkpoints."
         ],
         "then": [
-          "Evidence is ready to be gathered from demo-catalog.",
-          "The resulting work remains understandable without a specific agent implementation."
+          "QA can run a Playwright screenshot flow for demo-catalog.",
+          "Each applicable source has executable visual evidence coverage that captures reviewable screenshots."
         ],
         "applicableSourceIds": [
           "demo-catalog"
@@ -107,216 +121,33 @@
     ],
     "workItems": [
       {
-        "id": "work-1-intent-is-translated-into-acceptance-ready-work",
+        "id": "work-1-qa-runnable-visual-evidence-is-defined-for-applicable-sources-demo-catalog",
         "type": "playwright-spec",
-        "title": "Intent is translated into acceptance-ready work",
-        "description": "Turn the raw business statement into reviewable BDD structure.",
+        "title": "QA-runnable visual evidence is defined for applicable sources",
+        "description": "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
         "scenarioIds": [
-          "scenario-1-intent-is-translated-into-acceptance-ready-work"
+          "scenario-2-qa-runnable-visual-evidence-is-defined-for-applicable-sources"
         ],
         "sourceIds": [
           "demo-catalog"
         ],
-        "userVisibleOutcome": "turn the request into acceptance-ready work for the built-in catalog experience",
-        "verification": "publish a reviewable evidence package for GitHub and documentation stakeholders",
+        "userVisibleOutcome": "QA can run a Playwright screenshot flow for demo-catalog.",
+        "verification": "QA can run a Playwright screenshot flow for demo-catalog.",
+        "execution": {
+          "order": 1,
+          "dependsOnWorkItemIds": []
+        },
         "playwright": {
           "generatedBy": "rules",
           "specs": [
             {
               "framework": "playwright",
               "sourceId": "demo-catalog",
-              "relativeSpecPath": "demo-catalog/work-1-intent-is-translated-into-acceptance-ready-work.spec.ts",
+              "relativeSpecPath": "demo-catalog/work-1-qa-runnable-visual-evidence-is-defined-for-applicable-sources-demo-catalo.spec.ts",
               "suiteName": "Intent-driven flow for demo-catalog",
-              "testName": "Intent is translated into acceptance-ready work",
+              "testName": "QA-runnable visual evidence is defined for applicable sources",
               "scenarioIds": [
-                "scenario-1-intent-is-translated-into-acceptance-ready-work"
-              ],
-              "checkpoints": [
-                {
-                  "id": "checkpoint-1-library-index",
-                  "label": "Demo Catalog Index",
-                  "action": "goto",
-                  "assertion": "The page '/library' is ready for evidence review.",
-                  "screenshotId": "shot-1-library-index",
-                  "path": "/library",
-                  "captureId": "library-index"
-                },
-                {
-                  "id": "checkpoint-2-component-button-primary",
-                  "label": "Demo Primary Button",
-                  "action": "goto",
-                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.",
-                  "screenshotId": "shot-2-component-button-primary",
-                  "path": "/library/component-button-primary",
-                  "captureId": "component-button-primary",
-                  "locator": "[data-testid='component-button-primary']",
-                  "waitForSelector": "[data-testid='component-button-primary']",
-                  "target": "[data-testid='component-button-primary']"
-                },
-                {
-                  "id": "checkpoint-3-page-analytics-overview",
-                  "label": "Demo Analytics Overview",
-                  "action": "goto",
-                  "assertion": "The page '/library/page-analytics-overview' is ready for evidence review.",
-                  "screenshotId": "shot-3-page-analytics-overview",
-                  "path": "/library/page-analytics-overview",
-                  "captureId": "page-analytics-overview"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "id": "work-2-executable-evidence-is-prepared-for-applicable-sources",
-        "type": "playwright-spec",
-        "title": "Executable evidence is prepared for applicable sources",
-        "description": "Define what visible verification should happen for each source involved in the intent.",
-        "scenarioIds": [
-          "scenario-2-executable-evidence-is-prepared-for-applicable-sources"
-        ],
-        "sourceIds": [
-          "demo-catalog"
-        ],
-        "userVisibleOutcome": "Evidence is ready to be gathered from demo-catalog.",
-        "verification": "The resulting work remains understandable without a specific agent implementation.",
-        "playwright": {
-          "generatedBy": "rules",
-          "specs": [
-            {
-              "framework": "playwright",
-              "sourceId": "demo-catalog",
-              "relativeSpecPath": "demo-catalog/work-2-executable-evidence-is-prepared-for-applicable-sources.spec.ts",
-              "suiteName": "Intent-driven flow for demo-catalog",
-              "testName": "Executable evidence is prepared for applicable sources",
-              "scenarioIds": [
-                "scenario-2-executable-evidence-is-prepared-for-applicable-sources"
-              ],
-              "checkpoints": [
-                {
-                  "id": "checkpoint-1-library-index",
-                  "label": "Demo Catalog Index",
-                  "action": "goto",
-                  "assertion": "The page '/library' is ready for evidence review.",
-                  "screenshotId": "shot-1-library-index",
-                  "path": "/library",
-                  "captureId": "library-index"
-                },
-                {
-                  "id": "checkpoint-2-component-button-primary",
-                  "label": "Demo Primary Button",
-                  "action": "goto",
-                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.",
-                  "screenshotId": "shot-2-component-button-primary",
-                  "path": "/library/component-button-primary",
-                  "captureId": "component-button-primary",
-                  "locator": "[data-testid='component-button-primary']",
-                  "waitForSelector": "[data-testid='component-button-primary']",
-                  "target": "[data-testid='component-button-primary']"
-                },
-                {
-                  "id": "checkpoint-3-page-analytics-overview",
-                  "label": "Demo Analytics Overview",
-                  "action": "goto",
-                  "assertion": "The page '/library/page-analytics-overview' is ready for evidence review.",
-                  "screenshotId": "shot-3-page-analytics-overview",
-                  "path": "/library/page-analytics-overview",
-                  "captureId": "page-analytics-overview"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "id": "work-3-results-are-distributed-consistently",
-        "type": "playwright-spec",
-        "title": "Results are distributed consistently",
-        "description": "Make the outputs visible in the places that matter to stakeholders.",
-        "scenarioIds": [
-          "scenario-3-results-are-distributed-consistently"
-        ],
-        "sourceIds": [
-          "demo-catalog"
-        ],
-        "userVisibleOutcome": "Stakeholders can inspect the outcome through a consistent package tied to the intent.",
-        "verification": "Distribution remains decoupled from any single source-specific workflow.",
-        "playwright": {
-          "generatedBy": "rules",
-          "specs": [
-            {
-              "framework": "playwright",
-              "sourceId": "demo-catalog",
-              "relativeSpecPath": "demo-catalog/work-3-results-are-distributed-consistently.spec.ts",
-              "suiteName": "Intent-driven flow for demo-catalog",
-              "testName": "Results are distributed consistently",
-              "scenarioIds": [
-                "scenario-3-results-are-distributed-consistently"
-              ],
-              "checkpoints": [
-                {
-                  "id": "checkpoint-1-library-index",
-                  "label": "Demo Catalog Index",
-                  "action": "goto",
-                  "assertion": "The page '/library' is ready for evidence review.",
-                  "screenshotId": "shot-1-library-index",
-                  "path": "/library",
-                  "captureId": "library-index"
-                },
-                {
-                  "id": "checkpoint-2-component-button-primary",
-                  "label": "Demo Primary Button",
-                  "action": "goto",
-                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.",
-                  "screenshotId": "shot-2-component-button-primary",
-                  "path": "/library/component-button-primary",
-                  "captureId": "component-button-primary",
-                  "locator": "[data-testid='component-button-primary']",
-                  "waitForSelector": "[data-testid='component-button-primary']",
-                  "target": "[data-testid='component-button-primary']"
-                },
-                {
-                  "id": "checkpoint-3-page-analytics-overview",
-                  "label": "Demo Analytics Overview",
-                  "action": "goto",
-                  "assertion": "The page '/library/page-analytics-overview' is ready for evidence review.",
-                  "screenshotId": "shot-3-page-analytics-overview",
-                  "path": "/library/page-analytics-overview",
-                  "captureId": "page-analytics-overview"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "id": "work-4-visible-evidence-demo-catalog",
-        "type": "playwright-spec",
-        "title": "Produce visible evidence for demo-catalog",
-        "description": "Make the outcome of the intent inspectable through the evidence tools configured for demo-catalog.",
-        "scenarioIds": [
-          "scenario-1-intent-is-translated-into-acceptance-ready-work",
-          "scenario-2-executable-evidence-is-prepared-for-applicable-sources",
-          "scenario-3-results-are-distributed-consistently"
-        ],
-        "sourceIds": [
-          "demo-catalog"
-        ],
-        "userVisibleOutcome": "Users can verify the outcome for demo-catalog without reading implementation details.",
-        "verification": "Evidence for demo-catalog is linked back to the intent and its scenarios.",
-        "playwright": {
-          "generatedBy": "rules",
-          "specs": [
-            {
-              "framework": "playwright",
-              "sourceId": "demo-catalog",
-              "relativeSpecPath": "demo-catalog/work-4-visible-evidence-demo-catalog.spec.ts",
-              "suiteName": "Intent-driven flow for demo-catalog",
-              "testName": "Produce visible evidence for demo-catalog",
-              "scenarioIds": [
-                "scenario-1-intent-is-translated-into-acceptance-ready-work",
-                "scenario-2-executable-evidence-is-prepared-for-applicable-sources",
-                "scenario-3-results-are-distributed-consistently"
+                "scenario-2-qa-runnable-visual-evidence-is-defined-for-applicable-sources"
               ],
               "checkpoints": [
                 {

@@ -41,6 +41,11 @@ export interface PlaywrightCheckpoint {
   waitForSelector?: string;
 }
 
+export interface WorkItemExecutionPlan {
+  order: number;
+  dependsOnWorkItemIds: string[];
+}
+
 export interface PlaywrightSpecArtifact {
   framework: "playwright";
   sourceId: string;
@@ -76,6 +81,7 @@ export interface TDDWorkItem {
   sourceIds: string[];
   userVisibleOutcome: string;
   verification: string;
+  execution: WorkItemExecutionPlan;
   playwright: {
     generatedBy: "rules" | "llm";
     specs: PlaywrightSpecArtifact[];

@@ -6,6 +6,7 @@ import test from "node:test";
 import { AppConfig } from "../config/schema";
 import { SourceRunPaths } from "../evidence/paths";
 import { ResolvedAgentStageConfig } from "../intent/agent-stage-config";
+import { CodeSurfaceSelection } from "../intent/code-surface";
 import { NormalizedIntent } from "../intent/intent-types";
 import { buildBehaviorTestConfig } from "../orchestrator/run-intent.test-support";
 import { ExecuteImplementationStageInput } from "../orchestrator/run-intent";
@@ -20,13 +21,14 @@ import {
 } from "./gemini-code-generator";
 import { executeImplementationStage } from "./execute-implementation";
 
-function buildNormalizedIntent(sourceId: string): NormalizedIntent {
+function buildNormalizedIntent(sourceId: string, codeSurface?: CodeSurfaceSelection): NormalizedIntent {
   return {
     intentId: "intent-1",
     receivedAt: "2026-01-01T00:00:00.000Z",
     rawPrompt: "Add the requested dashboard affordance.",
     summary: "Add the requested dashboard affordance.",
     intentType: "capture-evidence",
+    codeSurface,
     businessIntent: {
       statement: "Add the requested dashboard affordance.",
       desiredOutcome: "Users can see the new dashboard affordance.",
@@ -58,6 +60,10 @@ function buildNormalizedIntent(sourceId: string): NormalizedIntent {
           sourceIds: [sourceId],
           userVisibleOutcome: "The affordance is visible on the dashboard.",
           verification: "Generated Playwright spec passes.",
+          execution: {
+            order: 1,
+            dependsOnWorkItemIds: []
+          },
           playwright: {
             generatedBy: "rules",
             specs: [
@@ -232,6 +238,9 @@ async function createImplementationInput(): Promise<{
         path.join(rootDir, "tests", "intent", "generated", "dashboard-affordance.spec.ts")
       ],
       attemptNumber: 1,
+      activeWorkItemIds: ["work-item-1"],
+      completedWorkItemIds: [],
+      remainingWorkItemIds: ["work-item-1"],
       options: {
         configPath: path.join(rootDir, "intent-poc.yaml")
       }
@@ -249,18 +258,23 @@ async function buildPlanningContext(rootDir: string, input: ExecuteImplementatio
   const scenarios = input.normalizedIntent.businessIntent.scenarios.filter((scenario) =>
     scenario.applicableSourceIds.includes(input.sourcePlan.sourceId)
   );
-  const workItems = input.normalizedIntent.businessIntent.workItems.filter((workItem) =>
+  const sourceWorkItems = input.normalizedIntent.businessIntent.workItems.filter((workItem) =>
     workItem.sourceIds.includes(input.sourcePlan.sourceId)
+  );
+  const activeWorkItems = sourceWorkItems.filter((workItem) => input.activeWorkItemIds.includes(workItem.id));
+  const backlogWorkItems = sourceWorkItems.filter(
+    (workItem) => input.remainingWorkItemIds.includes(workItem.id) && !input.activeWorkItemIds.includes(workItem.id)
   );
   const relevantFiles = await collectRelevantImplementationFiles({
     rootDir,
     rawPrompt: input.normalizedIntent.rawPrompt,
     summary: input.normalizedIntent.summary,
     sourceId: input.sourcePlan.sourceId,
+    codeSurface: input.normalizedIntent.codeSurface,
     desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
     acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
     scenarios,
-    workItems,
+    workItems: activeWorkItems,
     workspaceFiles,
     generatedSpecs
   });
@@ -269,10 +283,12 @@ async function buildPlanningContext(rootDir: string, input: ExecuteImplementatio
     rawPrompt: input.normalizedIntent.rawPrompt,
     summary: input.normalizedIntent.summary,
     sourceId: input.sourcePlan.sourceId,
+    codeSurface: input.normalizedIntent.codeSurface,
     desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
     acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
     scenarios,
-    workItems,
+    activeWorkItems,
+    backlogWorkItems,
     workspaceFiles,
     generatedSpecs,
     relevantFiles,
@@ -329,11 +345,42 @@ test("planImplementationChanges Given generated specs When planning is requested
     );
 
     assert.match(capturedPrompt, /Generated Playwright specs \(read-only verification inputs\):/);
+    assert.match(capturedPrompt, /Active work items to implement in this pass:/);
     assert.match(capturedPrompt, /dashboard-affordance\.spec\.ts/);
     assert.match(capturedPrompt, /Prefer existing source files under src\/ and src\/demo-app\//);
     assert.equal(capturedPrompt.includes('"specPaths"'), false);
     assert.equal(capturedPrompt.includes("test('dashboard affordance'"), false);
   } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given active work items and zero planned operations When execution runs Then it fails instead of completing early", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+
+  try {
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [],
+        warnings: []
+      })
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.summary, /planned no source file changes/);
+    assert.match(result.error ?? "", /zero operations/);
+    assert.deepEqual(result.targetedWorkItemIds, ["work-item-1"]);
+    assert.deepEqual(result.completedWorkItemIds, []);
+    assert.deepEqual(result.remainingWorkItemIds, ["work-item-1"]);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
     await fs.rm(rootDir, { recursive: true, force: true });
   }
 });
@@ -359,6 +406,54 @@ test("collectRelevantImplementationFiles Given matching source and test files Wh
     assert.equal(relevantFiles.at(0)?.relativePath, "src/demo-app/theme/theme.ts");
     assert.equal(relevantFiles.some((file) => file.relativePath === "src/demo-app/theme/theme.ts"), true);
     assert.equal(relevantFiles.some((file) => file.relativePath === "src/demo-app/theme/theme.test.ts"), false);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("collectRelevantImplementationFiles Given an intent studio surface When library and studio files compete Then it prefers the studio render surface", async () => {
+  const { rootDir } = await createImplementationInput();
+
+  try {
+    await fs.mkdir(path.join(rootDir, "src", "demo-app", "render"), { recursive: true });
+    await fs.mkdir(path.join(rootDir, "src", "demo-app", "server"), { recursive: true });
+    await fs.writeFile(
+      path.join(rootDir, "src", "demo-app", "render", "render-intent-studio-page.ts"),
+      "export function renderIntentStudioPage() { return '<section>studio</section>'; }\n"
+    );
+    await fs.writeFile(
+      path.join(rootDir, "src", "demo-app", "render", "render-surface-frame.ts"),
+      "export function renderSurfaceFrame() { return '<section>library</section>'; }\n"
+    );
+    await fs.writeFile(
+      path.join(rootDir, "src", "demo-app", "server", "start-intent-studio-server.ts"),
+      "export async function startIntentStudioServer() { return { close: async () => {} }; }\n"
+    );
+
+    const workspaceFiles = await collectImplementationWorkspaceFiles(rootDir);
+    const relevantFiles = await collectRelevantImplementationFiles({
+      rootDir,
+      rawPrompt: "Add a dark mode button to the intent studio screen, not the library.",
+      summary: "Add the dark mode button to Intent Studio.",
+      sourceId: "demo-catalog",
+      codeSurface: {
+        sourceId: "demo-catalog",
+        id: "intent-studio",
+        label: "Intent Studio",
+        confidence: "high",
+        rationale: "The prompt explicitly names Intent Studio.",
+        alternatives: []
+      },
+      desiredOutcome: "Users can use a dark mode button in Intent Studio.",
+      acceptanceCriteria: ["The button is visible in the Intent Studio header."],
+      scenarios: [],
+      workItems: [],
+      workspaceFiles,
+      generatedSpecs: []
+    });
+
+    assert.equal(relevantFiles.at(0)?.relativePath, "src/demo-app/render/render-intent-studio-page.ts");
+    assert.equal(relevantFiles.some((file) => file.relativePath === "src/demo-app/server/start-intent-studio-server.ts"), true);
   } finally {
     await fs.rm(rootDir, { recursive: true, force: true });
   }
@@ -426,6 +521,72 @@ test("executeImplementationStage Given a planned bounded change set When generat
       process.env.TEST_GEMINI_API_KEY = previousApiKey;
     }
 
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given a real source file omitted from sampled workspace files When planning replaces it Then validation uses filesystem existence", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+
+  try {
+    await fs.mkdir(path.join(rootDir, "src", "demo-app", "render"), { recursive: true });
+    await fs.writeFile(
+      path.join(rootDir, "src", "demo-app", "render", "render-intent-studio-page.ts"),
+      "export function renderIntentStudioPage() { return '<div>before</div>'; }\n"
+    );
+
+    const result = await executeImplementationStage(input, {
+      collectWorkspaceFiles: async () => [
+        {
+          relativePath: "src/existing.ts",
+          bytes: 29,
+          lineCount: 1
+        }
+      ],
+      readGeneratedSpecs: async () => [],
+      readPackageContext: async () => ({ scripts: {} }),
+      collectRelevantFiles: async () => [
+        {
+          relativePath: "src/demo-app/render/render-intent-studio-page.ts",
+          content: "export function renderIntentStudioPage() { return '<div>before</div>'; }\n",
+          reason: "The intended Studio surface implementation lives here."
+        }
+      ],
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "replace",
+            filePath: "src/demo-app/render/render-intent-studio-page.ts",
+            rationale: "Update the Intent Studio surface."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => ({
+        files: [
+          {
+            filePath: "src/demo-app/render/render-intent-studio-page.ts",
+            content: "export function renderIntentStudioPage() { return '<div>after</div>'; }\n"
+          }
+        ],
+        warnings: []
+      })
+    });
+
+    assert.equal(result.status, "completed");
+    const updatedContent = await fs.readFile(
+      path.join(rootDir, "src", "demo-app", "render", "render-intent-studio-page.ts"),
+      "utf8"
+    );
+    assert.equal(updatedContent, "export function renderIntentStudioPage() { return '<div>after</div>'; }\n");
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
     await fs.rm(rootDir, { recursive: true, force: true });
   }
 });

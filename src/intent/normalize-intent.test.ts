@@ -263,7 +263,11 @@ test("normalizeIntent can plan across multiple sources for business-wide intent"
       (destination) => destination.type === "linear" && destination.status === "planned"
     )
   );
-  assert.ok(normalized.businessIntent.workItems.length >= 3);
+  assert.equal(normalized.businessIntent.workItems.length, 2);
+  assert.deepEqual(
+    normalized.businessIntent.workItems.map((workItem) => workItem.sourceIds[0]),
+    ["client-systems-roach-admin", "docs-portal"]
+  );
   assert.ok(
     normalized.planning.reviewNotes.some((note) => note.includes("capture workflow"))
   );

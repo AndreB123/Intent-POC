@@ -2,7 +2,7 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import type { ExecuteImplementationStageInput } from "../orchestrator/run-intent";
 import { resolveGeminiApiKey } from "../intent/gemini-client";
-import { writeTextFile } from "../shared/fs";
+import { pathExists, writeTextFile } from "../shared/fs";
 import {
   SourceStageCommandRecord,
   SourceStageExecutionRecord,
@@ -187,12 +187,13 @@ function describeTestOperation(operation: "create" | "replace" | "delete"): stri
   return "modify";
 }
 
-function validatePlannedOperations(input: {
+async function validatePlannedOperations(input: {
   operations: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
+  workspaceRoot: string;
   workspaceFiles: Array<{ relativePath: string }>;
   generatedSpecs: Array<{ relativePath: string }>;
   generatedSpecOutputRoot?: string;
-}): void {
+}): Promise<void> {
   const existingPaths = new Set(input.workspaceFiles.map((file) => file.relativePath));
   const generatedSpecPaths = new Set(input.generatedSpecs.map((file) => file.relativePath));
   const generatedSpecOutputRoot = normalizeRelativeRoot(input.generatedSpecOutputRoot);
@@ -215,11 +216,15 @@ function validatePlannedOperations(input: {
       );
     }
 
-    if (operation.operation === "create" && existingPaths.has(operation.filePath)) {
+    const fileExists = existingPaths.has(operation.filePath)
+      ? true
+      : await pathExists(path.join(input.workspaceRoot, operation.filePath));
+
+    if (operation.operation === "create" && fileExists) {
       throw new Error(`Implementation planned to create an existing file: ${operation.filePath}`);
     }
 
-    if (operation.operation !== "create" && !existingPaths.has(operation.filePath)) {
+    if (operation.operation !== "create" && !fileExists) {
       throw new Error(`Implementation planned to ${operation.operation} a file that does not exist: ${operation.filePath}`);
     }
   }
@@ -263,18 +268,23 @@ export async function executeImplementationStage(
     const scenarios = input.normalizedIntent.businessIntent.scenarios.filter((scenario) =>
       scenario.applicableSourceIds.includes(input.sourcePlan.sourceId)
     );
-    const workItems = input.normalizedIntent.businessIntent.workItems.filter((workItem) =>
+    const sourceWorkItems = input.normalizedIntent.businessIntent.workItems.filter((workItem) =>
       workItem.sourceIds.includes(input.sourcePlan.sourceId)
+    );
+    const activeWorkItems = sourceWorkItems.filter((workItem) => input.activeWorkItemIds.includes(workItem.id));
+    const backlogWorkItems = sourceWorkItems.filter(
+      (workItem) => input.remainingWorkItemIds.includes(workItem.id) && !input.activeWorkItemIds.includes(workItem.id)
     );
     const relevantFiles = await activeDependencies.collectRelevantFiles({
       rootDir: input.workspace.rootDir,
       rawPrompt: input.normalizedIntent.rawPrompt,
       summary: input.normalizedIntent.summary,
       sourceId: input.sourcePlan.sourceId,
+      codeSurface: input.normalizedIntent.codeSurface,
       desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
       acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
       scenarios,
-      workItems,
+      workItems: activeWorkItems,
       workspaceFiles,
       generatedSpecs
     });
@@ -282,10 +292,12 @@ export async function executeImplementationStage(
       rawPrompt: input.normalizedIntent.rawPrompt,
       summary: input.normalizedIntent.summary,
       sourceId: input.sourcePlan.sourceId,
+      codeSurface: input.normalizedIntent.codeSurface,
       desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
       acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
       scenarios,
-      workItems,
+      activeWorkItems,
+      backlogWorkItems,
       workspaceFiles,
       generatedSpecs,
       relevantFiles,
@@ -324,8 +336,9 @@ export async function executeImplementationStage(
       warnings: plannedChangeSet.warnings
     });
 
-    validatePlannedOperations({
+    await validatePlannedOperations({
       operations: plannedChangeSet.operations,
+      workspaceRoot: input.workspace.rootDir,
       workspaceFiles,
       generatedSpecs,
       generatedSpecOutputRoot: input.workspace.source.testing.playwright.outputDir
@@ -333,8 +346,18 @@ export async function executeImplementationStage(
 
     if (plannedChangeSet.operations.length === 0) {
       return {
-        status: "completed",
-        summary: "No source file changes were required for this attempt.",
+        status: activeWorkItems.length === 0 ? "completed" : "failed",
+        summary:
+          activeWorkItems.length === 0
+            ? "No source file changes were required for this attempt."
+            : "Implementation planned no source file changes even though active work items remain.",
+        error:
+          activeWorkItems.length === 0
+            ? undefined
+            : `Implementation planned zero operations for active work items: ${activeWorkItems.map((workItem) => workItem.id).join(", ")}`,
+        targetedWorkItemIds: input.activeWorkItemIds,
+        completedWorkItemIds: input.completedWorkItemIds,
+        remainingWorkItemIds: input.remainingWorkItemIds,
         commands,
         fileOperations: []
       };
@@ -408,6 +431,9 @@ export async function executeImplementationStage(
     return {
       status: "completed",
       summary: buildImplementationSummary(fileOperations),
+      targetedWorkItemIds: input.activeWorkItemIds,
+      completedWorkItemIds: [...input.completedWorkItemIds, ...input.activeWorkItemIds],
+      remainingWorkItemIds: input.remainingWorkItemIds.filter((workItemId) => !input.activeWorkItemIds.includes(workItemId)),
       commands,
       fileOperations
     };
@@ -444,6 +470,9 @@ export async function executeImplementationStage(
       status: "failed",
       summary: "Implementation could not produce a valid bounded change set.",
       error: errorMessage,
+      targetedWorkItemIds: input.activeWorkItemIds,
+      completedWorkItemIds: input.completedWorkItemIds,
+      remainingWorkItemIds: input.remainingWorkItemIds,
       commands,
       fileOperations
     };

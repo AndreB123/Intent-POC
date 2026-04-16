@@ -40,6 +40,8 @@ export function renderComponent(id: string, variant: LibraryVariant): string {
       return `<div class="tile layout-stack"><div><strong>Campaign Name</strong><div class="row"><input value="Spring-Launch" readonly /></div></div><div><strong>Budget</strong><div class="row"><input value="$8,000" readonly /></div></div><div class="row"><button class="accent">Save</button><button>Discard</button></div></div>`;
     case "component-user-list-item":
       return `<div class="list-item row"><span class="avatar">AL</span><div><strong>Avery Lane</strong><div class="muted">Role: Admin</div></div><span class="chip">Online</span></div>`;
+    case "component-activity-timeline":
+      return `<div class="tile"><details><summary><strong>Activity Timeline</strong></summary><div class="muted">No recent activity.</div></details></div>`;
     default:
       return `<div class="tile">Unknown component</div>`;
   }

@@ -79,6 +79,11 @@ interface StudioSourceRunSummary {
   latestFailureStage?: "implementation" | "qaVerification";
   implementationStageStatus?: "pending" | "running" | "completed" | "failed" | "skipped";
   qaVerificationStageStatus?: "pending" | "running" | "completed" | "failed" | "skipped";
+  targetedWorkItemIds?: string[];
+  completedWorkItemIds?: string[];
+  remainingWorkItemIds?: string[];
+  completedWorkItemCount?: number;
+  remainingWorkItemCount?: number;
   latestImplementationSummary?: string;
   latestImplementationFileOperations?: Array<{
     operation: "create" | "replace" | "delete";
@@ -694,6 +699,11 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
       latestFailureStage: latestAttempt?.failureStage,
       implementationStageStatus: latestAttempt?.implementation.status ?? "pending",
       qaVerificationStageStatus: latestAttempt?.qaVerification.status ?? "pending",
+      targetedWorkItemIds: latestAttempt?.targetedWorkItemIds,
+      completedWorkItemIds: latestAttempt?.completedWorkItemIds,
+      remainingWorkItemIds: latestAttempt?.remainingWorkItemIds,
+      completedWorkItemCount: latestAttempt?.completedWorkItemIds.length,
+      remainingWorkItemCount: latestAttempt?.remainingWorkItemIds.length,
       latestImplementationSummary: latestAttempt?.implementation.summary,
       latestImplementationFileOperations: latestAttempt?.implementation.fileOperations.map((fileOperation) => ({
         operation: fileOperation.operation,
@@ -845,6 +855,9 @@ export async function startIntentStudioServer(
         status?: "skipped" | "completed" | "failed";
         summary?: string;
         error?: string;
+        targetedWorkItemIds?: string[];
+        completedWorkItemIds?: string[];
+        remainingWorkItemIds?: string[];
         fileOperations?: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
       };
 
@@ -859,6 +872,12 @@ export async function startIntentStudioServer(
         } else {
           sourceRun.qaVerificationStageStatus = details.status ?? "running";
         }
+
+        sourceRun.targetedWorkItemIds = details.targetedWorkItemIds ?? sourceRun.targetedWorkItemIds;
+        sourceRun.completedWorkItemIds = details.completedWorkItemIds ?? sourceRun.completedWorkItemIds;
+        sourceRun.remainingWorkItemIds = details.remainingWorkItemIds ?? sourceRun.remainingWorkItemIds;
+        sourceRun.completedWorkItemCount = sourceRun.completedWorkItemIds?.length;
+        sourceRun.remainingWorkItemCount = sourceRun.remainingWorkItemIds?.length;
 
         if (details.error) {
           sourceRun.error = details.error;
@@ -883,6 +902,8 @@ export async function startIntentStudioServer(
         status?: StudioSourceRunSummary["status"];
         attemptCount?: number;
         latestFailureStage?: StudioSourceRunSummary["latestFailureStage"];
+        completedWorkItemIds?: string[];
+        remainingWorkItemIds?: string[];
         sourceWarnings?: string[];
         error?: string;
       };
@@ -892,6 +913,10 @@ export async function startIntentStudioServer(
         sourceRun.status = details.status ?? sourceRun.status;
         sourceRun.attemptCount = details.attemptCount ?? sourceRun.attemptCount;
         sourceRun.latestFailureStage = details.latestFailureStage ?? sourceRun.latestFailureStage;
+        sourceRun.completedWorkItemIds = details.completedWorkItemIds ?? sourceRun.completedWorkItemIds;
+        sourceRun.remainingWorkItemIds = details.remainingWorkItemIds ?? sourceRun.remainingWorkItemIds;
+        sourceRun.completedWorkItemCount = sourceRun.completedWorkItemIds?.length;
+        sourceRun.remainingWorkItemCount = sourceRun.remainingWorkItemIds?.length;
         sourceRun.sourceWarnings = details.sourceWarnings ?? sourceRun.sourceWarnings;
         sourceRun.error = details.error ?? sourceRun.error;
       }

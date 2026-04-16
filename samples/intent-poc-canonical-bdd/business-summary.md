@@ -44,13 +44,13 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Then turn the request into acceptance-ready work for the built-in catalog experience
 - Then publish a reviewable evidence package for GitHub and documentation stakeholders
 
-### Executable evidence is prepared for applicable sources
+### QA-runnable visual evidence is defined for applicable sources
 - Sources: demo-catalog
 - Given Source demo-catalog is available for execution.
-- When Execution is prepared for capture-based evidence collection.
-- When Visible evidence tooling is assigned to each applicable source.
-- Then Evidence is ready to be gathered from demo-catalog.
-- Then The resulting work remains understandable without a specific agent implementation.
+- When TDD planning prepares Playwright screenshot verification for the applicable sources.
+- When The runner maps the configured capture surfaces into QA-runnable checkpoints.
+- Then QA can run a Playwright screenshot flow for demo-catalog.
+- Then Each applicable source has executable visual evidence coverage that captures reviewable screenshots.
 
 ### Results are distributed consistently
 - Sources: demo-catalog
@@ -63,28 +63,11 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 
 ## TDD Work Items
 
-- Intent is translated into acceptance-ready work
+- QA-runnable visual evidence is defined for applicable sources
   - Sources: demo-catalog
-  - Outcome: turn the request into acceptance-ready work for the built-in catalog experience
-  - Verification: publish a reviewable evidence package for GitHub and documentation stakeholders
-  - Playwright specs: 1
-  - Checkpoints: 3
-- Executable evidence is prepared for applicable sources
-  - Sources: demo-catalog
-  - Outcome: Evidence is ready to be gathered from demo-catalog.
-  - Verification: The resulting work remains understandable without a specific agent implementation.
-  - Playwright specs: 1
-  - Checkpoints: 3
-- Results are distributed consistently
-  - Sources: demo-catalog
-  - Outcome: Stakeholders can inspect the outcome through a consistent package tied to the intent.
-  - Verification: Distribution remains decoupled from any single source-specific workflow.
-  - Playwright specs: 1
-  - Checkpoints: 3
-- Produce visible evidence for demo-catalog
-  - Sources: demo-catalog
-  - Outcome: Users can verify the outcome for demo-catalog without reading implementation details.
-  - Verification: Evidence for demo-catalog is linked back to the intent and its scenarios.
+  - Type: QA-runnable Playwright screenshot spec
+  - Outcome: QA can run a Playwright screenshot flow for demo-catalog.
+  - Verification: QA can run a Playwright screenshot flow for demo-catalog.
   - Playwright specs: 1
   - Checkpoints: 3
 

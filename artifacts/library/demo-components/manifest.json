@@ -1,20 +1,8 @@
 {
-  "runId": "2026-04-16T00-45-59-725Z-baseline-demo-components",
+  "runId": "2026-04-16T15-51-26-323Z-demo-components",
   "sourceId": "demo-components",
-  "generatedAt": "2026-04-16T00:46:44.058Z",
-  "mode": "baseline",
-  "intentSummary": "create baseline evidence for demo-components",
+  "generatedAt": "2026-04-16T15:52:10.570Z",
+  "intentSummary": "capture evidence for demo-components",
   "captureCount": 46,
-  "hasDrift": false,
-  "comparisonSummary": {
-    "counts": {
-      "baseline-written": 46,
-      "unchanged": 0,
-      "changed": 0,
-      "missing-baseline": 0,
-      "capture-failed": 0,
-      "diff-error": 0
-    },
-    "itemCount": 46
-  }
+  "failedCaptureCount": 0
 }

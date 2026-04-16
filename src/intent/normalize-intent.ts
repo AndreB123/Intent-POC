@@ -333,22 +333,22 @@ function buildScenarios(input: {
       applicableSourceIds: input.sourceIds
     },
     {
-      title: "Executable evidence is prepared for applicable sources",
-      goal: "Define what visible verification should happen for each source involved in the intent.",
+      title: "QA-runnable visual evidence is defined for applicable sources",
+      goal: "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
       given: [
         input.sourceIds.length === 1
           ? `Source ${input.sourceIds[0]} is available for execution.`
           : `${input.sourceIds.length} sources are applicable to the intent.`
       ],
       when: [
-        "Execution is prepared for capture-based evidence collection.",
-        "Visible evidence tooling is assigned to each applicable source."
+        "TDD planning prepares Playwright screenshot verification for the applicable sources.",
+        "The runner maps the configured capture surfaces into QA-runnable checkpoints."
       ],
       then: [
         input.sourceIds.length === 1
-          ? `Evidence is ready to be gathered from ${input.sourceIds[0]}.`
-          : `Evidence lanes are defined for ${input.sourceIds.join(", ")}.`,
-        "The resulting work remains understandable without a specific agent implementation."
+          ? `QA can run a Playwright screenshot flow for ${input.sourceIds[0]}.`
+          : `QA can run Playwright screenshot flows for ${input.sourceIds.join(", ")}.`,
+        "Each applicable source has executable visual evidence coverage that captures reviewable screenshots."
       ],
       applicableSourceIds: input.sourceIds
     },
@@ -446,71 +446,124 @@ function buildPlaywrightSpecs(input: {
   });
 }
 
+function buildScenarioNarrativeText(scenario: BDDScenario): string {
+  return [scenario.title, scenario.goal, ...scenario.when, ...scenario.then].join(" ").toLowerCase();
+}
+
+function isExecutableVisualScenario(scenario: BDDScenario): boolean {
+  const text = buildScenarioNarrativeText(scenario);
+  const visualSignalPattern =
+    /\b(playwright|screenshot|screen ?shot|visual|capture|visible|page|screen|component|view|click|toggle|button|modal|dialog|header|form|theme|ui)\b/i;
+  const strongExecutionSignalPattern =
+    /\b(playwright|screenshot|screen ?shot|click|toggle|button|page|screen|component|view|modal|dialog|header|form|theme|ui)\b/i;
+  const processOnlyPattern =
+    /\b(planner|planning|acceptance criteria|acceptance-ready|decompose|distribution|distribute|publishing|publish|destination|stakeholder|summary|manifest|package|issue|linear|business process|workflow gate)\b/i;
+
+  if (!visualSignalPattern.test(text)) {
+    return false;
+  }
+
+  if (!processOnlyPattern.test(text)) {
+    return true;
+  }
+
+  return strongExecutionSignalPattern.test(text);
+}
+
+function buildWorkItemVerification(scenario: BDDScenario): string {
+  const explicitEvidenceExpectation = scenario.then.find((entry) => /\b(screenshot|capture|evidence|image)\b/i.test(entry));
+  if (explicitEvidenceExpectation) {
+    return explicitEvidenceExpectation;
+  }
+
+  return "A generated Playwright spec captures reviewable screenshots so QA can run this verification automatically.";
+}
+
 function buildWorkItems(input: {
   scenarios: NormalizedIntent["businessIntent"]["scenarios"];
   sourceIds: string[];
   desiredOutcome: string;
   availableSources: Record<string, AvailableSourceDescriptor>;
 }): NormalizedIntent["businessIntent"]["workItems"] {
-  const scenarioItems: TDDWorkItem[] = input.scenarios.map((scenario, index) => {
-    const id = createPlanId("work", scenario.title, index);
-    const userVisibleOutcome = scenario.then[0] ?? input.desiredOutcome;
-    const verification = scenario.then[scenario.then.length - 1] ?? input.desiredOutcome;
+  const executableScenarios = input.scenarios.filter(isExecutableVisualScenario);
 
-    return {
-      id,
-      type: "playwright-spec",
-      title: scenario.title,
-      description: scenario.goal,
-      scenarioIds: [scenario.id],
-      sourceIds: scenario.applicableSourceIds,
-      userVisibleOutcome,
-      verification,
-      playwright: {
-        generatedBy: "rules",
-        specs: buildPlaywrightSpecs({
-          workItemId: id,
-          title: scenario.title,
-          scenarioIds: [scenario.id],
-          sourceIds: scenario.applicableSourceIds,
-          desiredOutcome: verification,
-          availableSources: input.availableSources
-        })
-      }
-    };
-  });
+  const scenarioItems: TDDWorkItem[] = [];
 
-  const perSourceItems: TDDWorkItem[] = input.sourceIds.map((sourceId, index) => {
-    const id = createPlanId("work", `visible-evidence-${sourceId}`, input.scenarios.length + index);
+  for (const scenario of executableScenarios) {
+    for (const sourceId of scenario.applicableSourceIds) {
+      const id = createPlanId("work", `${scenario.title}-${sourceId}`, scenarioItems.length);
+      const userVisibleOutcome = scenario.then[0] ?? input.desiredOutcome;
+      const verification = buildWorkItemVerification(scenario);
+
+      scenarioItems.push({
+        id,
+        type: "playwright-spec",
+        title: scenario.title,
+        description: scenario.goal,
+        scenarioIds: [scenario.id],
+        sourceIds: [sourceId],
+        userVisibleOutcome,
+        verification,
+        execution: {
+          order: scenarioItems.length + 1,
+          dependsOnWorkItemIds: []
+        },
+        playwright: {
+          generatedBy: "rules",
+          specs: buildPlaywrightSpecs({
+            workItemId: id,
+            title: scenario.title,
+            scenarioIds: [scenario.id],
+            sourceIds: [sourceId],
+            desiredOutcome: verification,
+            availableSources: input.availableSources
+          })
+        }
+      });
+    }
+  }
+
+  const fallbackSourceItems: TDDWorkItem[] = input.sourceIds.flatMap((sourceId, index) => {
+    const hasExecutableScenario = scenarioItems.some((workItem) => workItem.sourceIds.includes(sourceId));
+    if (hasExecutableScenario) {
+      return [];
+    }
+
+    const id = createPlanId("work", `capture-reviewable-evidence-${sourceId}`, scenarioItems.length + index);
     const scenarioIds = input.scenarios
       .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
       .map((scenario) => scenario.id);
-    const verification = `Evidence for ${sourceId} is linked back to the intent and its scenarios.`;
 
-    return {
-      id,
-      type: "playwright-spec",
-      title: `Produce visible evidence for ${sourceId}`,
-      description: `Make the outcome of the intent inspectable through the evidence tools configured for ${sourceId}.`,
-      scenarioIds,
-      sourceIds: [sourceId],
-      userVisibleOutcome: `Users can verify the outcome for ${sourceId} without reading implementation details.`,
-      verification,
-      playwright: {
-        generatedBy: "rules",
-        specs: buildPlaywrightSpecs({
-          workItemId: id,
-          title: `Produce visible evidence for ${sourceId}`,
-          scenarioIds,
-          sourceIds: [sourceId],
-          desiredOutcome: verification,
-          availableSources: input.availableSources
-        })
+    return [
+      {
+        id,
+        type: "playwright-spec",
+        title: `Capture reviewable evidence for ${sourceId}`,
+        description: `Generate a QA-runnable Playwright screenshot flow for ${sourceId}.`,
+        scenarioIds,
+        sourceIds: [sourceId],
+        userVisibleOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
+        verification: `A generated Playwright spec captures screenshots for ${sourceId} and can run in the QA stage.`,
+        execution: {
+          order: scenarioItems.length + index + 1,
+          dependsOnWorkItemIds: []
+        },
+        playwright: {
+          generatedBy: "rules",
+          specs: buildPlaywrightSpecs({
+            workItemId: id,
+            title: `Capture reviewable evidence for ${sourceId}`,
+            scenarioIds,
+            sourceIds: [sourceId],
+            desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
+            availableSources: input.availableSources
+          })
+        }
       }
-    };
+    ];
   });
 
-  return [...scenarioItems, ...perSourceItems];
+  return [...scenarioItems, ...fallbackSourceItems];
 }
 
 function assertMinimumE2ECoverage(input: {
