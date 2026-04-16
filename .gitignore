@@ -5,5 +5,7 @@ dist/
 
 *.log
 
+artifacts/runs/
+
 !artifacts/.gitkeep
 !evidence/.gitkeep

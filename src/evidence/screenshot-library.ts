@@ -1,6 +1,6 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
-import { AppConfig } from "../config/schema";
+import { AppConfig, RunMode } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
 import { ComparisonSummary } from "../compare/run-comparison";
 import { NormalizedIntent } from "../intent/intent-types";
@@ -11,15 +11,25 @@ export interface ScreenshotLibraryResult {
   sourceLibraryRoot: string;
 }
 
+export type ScreenshotLibraryUpdateMode = Exclude<RunMode, "compare">;
+
+export function isScreenshotLibraryUpdateMode(mode: RunMode): mode is ScreenshotLibraryUpdateMode {
+  return mode === "baseline" || mode === "approve-baseline";
+}
+
 export async function updateScreenshotLibrary(input: {
   config: AppConfig;
   sourceId: string;
   runId: string;
-  mode: AppConfig["run"]["mode"];
+  mode: ScreenshotLibraryUpdateMode;
   captures: CaptureOutcome[];
   comparison: ComparisonSummary;
   normalizedIntent: NormalizedIntent;
 }): Promise<ScreenshotLibraryResult> {
+  if (!isScreenshotLibraryUpdateMode(input.mode)) {
+    throw new Error(`Screenshot library updates are only supported for baseline runs, received '${input.mode}'.`);
+  }
+
   const sourceLibraryRoot = path.join(input.config.artifacts.libraryRoot, input.sourceId);
 
   await ensureDirectory(sourceLibraryRoot);

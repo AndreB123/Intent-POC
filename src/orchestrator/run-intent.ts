@@ -6,7 +6,7 @@ import { runCapture } from "../capture/run-capture";
 import { ComparisonStatus, ComparisonSummary, runComparison } from "../compare/run-comparison";
 import { RunPaths, SourceRunPaths, createRunPaths, retainRecentRuns, toRelativePath } from "../evidence/paths";
 import { publishArtifactsToSourceIfConfigured } from "../evidence/publish-artifacts";
-import { updateScreenshotLibrary } from "../evidence/screenshot-library";
+import { isScreenshotLibraryUpdateMode, updateScreenshotLibrary } from "../evidence/screenshot-library";
 import {
   BusinessLinearPublication,
   SourceRunAttemptRecord,
@@ -1464,23 +1464,25 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       sourceErrors.push("Visual drift detected and comparison.failOnChange is enabled.");
     }
 
-    try {
-      const libraryResult = await updateScreenshotLibrary({
-        config: input.config,
-        sourceId: input.sourcePlan.sourceId,
-        runId: input.runPaths.runId,
-        mode: input.sourcePlan.runMode,
-        captures,
-        comparison,
-        normalizedIntent: input.normalizedIntent
-      });
+    if (isScreenshotLibraryUpdateMode(input.sourcePlan.runMode)) {
+      try {
+        const libraryResult = await updateScreenshotLibrary({
+          config: input.config,
+          sourceId: input.sourcePlan.sourceId,
+          runId: input.runPaths.runId,
+          mode: input.sourcePlan.runMode,
+          captures,
+          comparison,
+          normalizedIntent: input.normalizedIntent
+        });
 
-      emitRunEvent(input.options, "artifacts", "Screenshot library updated.", {
-        sourceId: input.sourcePlan.sourceId,
-        screenshotLibrary: toRelativePath(input.runPaths.controllerRoot, libraryResult.sourceLibraryRoot)
-      });
-    } catch (error) {
-      sourceErrors.push(`Failed to update the screenshot library: ${captureErrorMessage(error)}`);
+        emitRunEvent(input.options, "artifacts", "Screenshot library updated.", {
+          sourceId: input.sourcePlan.sourceId,
+          screenshotLibrary: toRelativePath(input.runPaths.controllerRoot, libraryResult.sourceLibraryRoot)
+        });
+      } catch (error) {
+        sourceErrors.push(`Failed to update the screenshot library: ${captureErrorMessage(error)}`);
+      }
     }
 
     try {

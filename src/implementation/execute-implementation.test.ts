@@ -10,6 +10,14 @@ import { NormalizedIntent } from "../intent/intent-types";
 import { buildBehaviorTestConfig } from "../orchestrator/run-intent.test-support";
 import { ExecuteImplementationStageInput } from "../orchestrator/run-intent";
 import { ResolvedSourceWorkspace } from "../target/resolve-target";
+import {
+  buildImplementationPromptContext,
+  collectImplementationWorkspaceFiles,
+  collectRelevantImplementationFiles,
+  planImplementationChanges,
+  readGeneratedSpecContexts,
+  readWorkspacePackageContext
+} from "./gemini-code-generator";
 import { executeImplementationStage } from "./execute-implementation";
 
 function buildNormalizedIntent(sourceId: string): NormalizedIntent {
@@ -185,6 +193,7 @@ async function createImplementationInput(): Promise<{
 
   await fs.mkdir(sourcePaths.attemptsDir, { recursive: true });
   await fs.mkdir(path.join(rootDir, "src"), { recursive: true });
+  await fs.mkdir(path.join(rootDir, "src", "demo-app", "theme"), { recursive: true });
   await fs.mkdir(path.join(rootDir, "tests", "intent", "generated"), { recursive: true });
   await fs.writeFile(
     path.join(rootDir, "package.json"),
@@ -192,6 +201,14 @@ async function createImplementationInput(): Promise<{
   );
   await fs.writeFile(path.join(rootDir, "src", "existing.ts"), "export const value = 'before';\n");
   await fs.writeFile(path.join(rootDir, "src", "remove.ts"), "export const removed = true;\n");
+  await fs.writeFile(
+    path.join(rootDir, "src", "demo-app", "theme", "theme.ts"),
+    "export const themeToggleLabel = 'Dark mode toggle';\n"
+  );
+  await fs.writeFile(
+    path.join(rootDir, "src", "demo-app", "theme", "theme.test.ts"),
+    "test('theme toggle', () => {});\n"
+  );
   await fs.writeFile(
     path.join(rootDir, "tests", "intent", "generated", "dashboard-affordance.spec.ts"),
     "test('dashboard affordance', async () => {});\n"
@@ -226,6 +243,47 @@ async function createImplementationInput(): Promise<{
   };
 }
 
+async function buildPlanningContext(rootDir: string, input: ExecuteImplementationStageInput) {
+  const workspaceFiles = await collectImplementationWorkspaceFiles(rootDir);
+  const generatedSpecs = await readGeneratedSpecContexts({
+    rootDir,
+    generatedPlaywrightTests: input.generatedPlaywrightTests
+  });
+  const packageContext = await readWorkspacePackageContext({ rootDir });
+  const scenarios = input.normalizedIntent.businessIntent.scenarios.filter((scenario) =>
+    scenario.applicableSourceIds.includes(input.sourcePlan.sourceId)
+  );
+  const workItems = input.normalizedIntent.businessIntent.workItems.filter((workItem) =>
+    workItem.sourceIds.includes(input.sourcePlan.sourceId)
+  );
+  const relevantFiles = await collectRelevantImplementationFiles({
+    rootDir,
+    rawPrompt: input.normalizedIntent.rawPrompt,
+    summary: input.normalizedIntent.summary,
+    sourceId: input.sourcePlan.sourceId,
+    desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
+    acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
+    scenarios,
+    workItems,
+    workspaceFiles,
+    generatedSpecs
+  });
+
+  return buildImplementationPromptContext({
+    rawPrompt: input.normalizedIntent.rawPrompt,
+    summary: input.normalizedIntent.summary,
+    sourceId: input.sourcePlan.sourceId,
+    desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
+    acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
+    scenarios,
+    workItems,
+    workspaceFiles,
+    generatedSpecs,
+    relevantFiles,
+    packageContext
+  });
+}
+
 test("executeImplementationStage Given a missing provider When the stage is enabled Then it fails before planning", async () => {
   const { rootDir, input } = await createImplementationInput();
   let plannerCalls = 0;
@@ -249,6 +307,62 @@ test("executeImplementationStage Given a missing provider When the stage is enab
     assert.equal(plannerCalls, 0);
     assert.deepEqual(result.fileOperations, []);
     assert.equal(result.commands.at(-1)?.status, "failed");
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("planImplementationChanges Given generated specs When planning is requested Then the prompt keeps them read-only and path-only", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  let capturedPrompt = "";
+
+  try {
+    const context = await buildPlanningContext(rootDir, input);
+
+    await planImplementationChanges(
+      {
+        stage: input.stage,
+        context
+      },
+      {
+        generateStructuredGeminiContent: async ({ prompt }) => {
+          capturedPrompt = prompt;
+          return JSON.stringify({ operations: [], warnings: [] });
+        }
+      }
+    );
+
+    assert.match(capturedPrompt, /Generated Playwright specs \(read-only verification inputs\):/);
+    assert.match(capturedPrompt, /dashboard-affordance\.spec\.ts/);
+    assert.match(capturedPrompt, /Prefer existing source files under src\/ and src\/demo-app\//);
+    assert.equal(capturedPrompt.includes('"specPaths"'), false);
+    assert.equal(capturedPrompt.includes("test('dashboard affordance'"), false);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("collectRelevantImplementationFiles Given matching source and test files When source files exist Then it prefers source files", async () => {
+  const { rootDir } = await createImplementationInput();
+
+  try {
+    const workspaceFiles = await collectImplementationWorkspaceFiles(rootDir);
+    const relevantFiles = await collectRelevantImplementationFiles({
+      rootDir,
+      rawPrompt: "Add a dark mode toggle to the theme frame.",
+      summary: "Add a dark mode toggle to the theme frame.",
+      sourceId: "demo-catalog",
+      desiredOutcome: "Users can see a dark mode toggle in the theme frame.",
+      acceptanceCriteria: ["The dark mode toggle appears in the theme frame."],
+      scenarios: [],
+      workItems: [],
+      workspaceFiles,
+      generatedSpecs: []
+    });
+
+    assert.equal(relevantFiles.at(0)?.relativePath, "src/demo-app/theme/theme.ts");
+    assert.equal(relevantFiles.some((file) => file.relativePath === "src/demo-app/theme/theme.ts"), true);
+    assert.equal(relevantFiles.some((file) => file.relativePath === "src/demo-app/theme/theme.test.ts"), false);
   } finally {
     await fs.rm(rootDir, { recursive: true, force: true });
   }
@@ -309,6 +423,178 @@ test("executeImplementationStage Given a planned bounded change set When generat
     assert.equal(newContent, "export const created = true;\n");
     assert.equal(removedExists, false);
     assert.equal(result.commands.every((command) => command.logPath && command.status === "completed"), true);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given a planned ad hoc spec target When validation runs Then it fails before materialization", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+  let materializeCalls = 0;
+
+  try {
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "create",
+            filePath: "demo-catalog/work-1-verify-dark-mode-toggle-appearance-in-demo-catalog.spec.ts",
+            rationale: "Add a verification spec for the requested UI change."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => {
+        materializeCalls += 1;
+        return {
+          files: [],
+          warnings: []
+        };
+      }
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /outside approved checked-in test roots/);
+    assert.match(result.error ?? "", /Update application\/source files instead/);
+    assert.equal(materializeCalls, 0);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given an existing rogue spec file When validation runs Then it still rejects the replace target", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+  let materializeCalls = 0;
+
+  try {
+    await fs.mkdir(path.join(rootDir, "demo-catalog"), { recursive: true });
+    await fs.writeFile(
+      path.join(rootDir, "demo-catalog", "work-1-verify-dark-mode-toggle-appearance-in-demo-catalog.spec.ts"),
+      "test('rogue spec', () => {});\n"
+    );
+
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "replace",
+            filePath: "demo-catalog/work-1-verify-dark-mode-toggle-appearance-in-demo-catalog.spec.ts",
+            rationale: "Update the verification spec content."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => {
+        materializeCalls += 1;
+        return {
+          files: [],
+          warnings: []
+        };
+      }
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /outside approved checked-in test roots/);
+    assert.equal(materializeCalls, 0);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given a planned write to generated Playwright output When validation runs Then it fails before materialization", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+  let materializeCalls = 0;
+
+  try {
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "create",
+            filePath: "tests/intent/generated/new-dashboard-affordance.spec.ts",
+            rationale: "Add a generated Playwright verification spec."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => {
+        materializeCalls += 1;
+        return {
+          files: [],
+          warnings: []
+        };
+      }
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /controller-owned generated Playwright output root/);
+    assert.equal(materializeCalls, 0);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given a planned checked-in test target When validation runs Then it allows approved test directories", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+
+  try {
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "create",
+            filePath: "src/demo-app/theme/theme-contrast.test.ts",
+            rationale: "Add a checked-in regression test beside the existing theme tests."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => ({
+        files: [
+          {
+            filePath: "src/demo-app/theme/theme-contrast.test.ts",
+            content: "test('theme contrast', () => {});\n"
+          }
+        ],
+        warnings: []
+      })
+    });
+
+    assert.equal(result.status, "completed");
+    const createdContent = await fs.readFile(path.join(rootDir, "src", "demo-app", "theme", "theme-contrast.test.ts"), "utf8");
+    assert.equal(createdContent, "test('theme contrast', () => {});\n");
   } finally {
     if (previousApiKey === undefined) {
       delete process.env.TEST_GEMINI_API_KEY;

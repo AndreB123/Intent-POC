@@ -129,17 +129,90 @@ function buildImplementationSummary(fileOperations: SourceStageFileOperationReco
   return `Applied ${fileOperations.length} file operation${fileOperations.length === 1 ? "" : "s"} (${counts.create} create, ${counts.replace} replace, ${counts.delete} delete).`;
 }
 
+function getTestFileKind(filePath: string): "test" | "spec" | undefined {
+  const normalizedPath = filePath.toLowerCase();
+  if (/\.test\.[a-z0-9]+$/.test(normalizedPath)) {
+    return "test";
+  }
+
+  if (/\.spec\.[a-z0-9]+$/.test(normalizedPath)) {
+    return "spec";
+  }
+
+  return undefined;
+}
+
+function normalizeRelativeRoot(rootPath: string | undefined): string | undefined {
+  if (!rootPath) {
+    return undefined;
+  }
+
+  const normalized = path.normalize(rootPath).split(path.sep).join("/").replace(/\/+$/, "");
+  if (!normalized || normalized === ".") {
+    return undefined;
+  }
+
+  return normalized;
+}
+
+function isWithinRelativeRoot(filePath: string, rootPath: string): boolean {
+  return filePath === rootPath || filePath.startsWith(`${rootPath}/`);
+}
+
+function isApprovedCheckedInTestPath(filePath: string, testFileKind: "test" | "spec"): boolean {
+  const normalizedPath = filePath.toLowerCase();
+  const inNamedTestDirectory =
+    normalizedPath.startsWith("__tests__/") || normalizedPath.includes("/__tests__/");
+
+  if (inNamedTestDirectory) {
+    return true;
+  }
+
+  if (normalizedPath.startsWith("tests/") || normalizedPath.startsWith("test/")) {
+    return true;
+  }
+
+  return testFileKind === "test" && normalizedPath.startsWith("src/");
+}
+
+function describeTestOperation(operation: "create" | "replace" | "delete"): string {
+  if (operation === "create") {
+    return "create";
+  }
+
+  if (operation === "delete") {
+    return "delete";
+  }
+
+  return "modify";
+}
+
 function validatePlannedOperations(input: {
   operations: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
   workspaceFiles: Array<{ relativePath: string }>;
   generatedSpecs: Array<{ relativePath: string }>;
+  generatedSpecOutputRoot?: string;
 }): void {
   const existingPaths = new Set(input.workspaceFiles.map((file) => file.relativePath));
   const generatedSpecPaths = new Set(input.generatedSpecs.map((file) => file.relativePath));
+  const generatedSpecOutputRoot = normalizeRelativeRoot(input.generatedSpecOutputRoot);
 
   for (const operation of input.operations) {
     if (generatedSpecPaths.has(operation.filePath)) {
       throw new Error(`Implementation cannot modify generated Playwright specs: ${operation.filePath}`);
+    }
+
+    if (generatedSpecOutputRoot && isWithinRelativeRoot(operation.filePath, generatedSpecOutputRoot)) {
+      throw new Error(
+        `Implementation cannot target the controller-owned generated Playwright output root: ${operation.filePath}. Update application/source files instead.`
+      );
+    }
+
+    const testFileKind = getTestFileKind(operation.filePath);
+    if (testFileKind && !isApprovedCheckedInTestPath(operation.filePath, testFileKind)) {
+      throw new Error(
+        `Implementation cannot ${describeTestOperation(operation.operation)} ad hoc ${testFileKind} files outside approved checked-in test roots: ${operation.filePath}. Update application/source files instead.`
+      );
     }
 
     if (operation.operation === "create" && existingPaths.has(operation.filePath)) {
@@ -254,7 +327,8 @@ export async function executeImplementationStage(
     validatePlannedOperations({
       operations: plannedChangeSet.operations,
       workspaceFiles,
-      generatedSpecs
+      generatedSpecs,
+      generatedSpecOutputRoot: input.workspace.source.testing.playwright.outputDir
     });
 
     if (plannedChangeSet.operations.length === 0) {

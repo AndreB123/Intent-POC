@@ -44,7 +44,7 @@ export interface ImplementationWorkItemContext {
   verification: string;
   userVisibleOutcome: string;
   scenarioIds: string[];
-  specPaths: string[];
+  verificationNotes: string[];
 }
 
 export interface ImplementationPromptContext {
@@ -329,6 +329,13 @@ function buildScenarioContext(scenarios: BDDScenario[]): ImplementationScenarioC
   }));
 }
 
+function buildVerificationNotes(workItem: TDDWorkItem): string[] {
+  return workItem.playwright.specs.map(
+    (spec) =>
+      `${spec.framework} coverage \"${spec.suiteName}\" / \"${spec.testName}\" is controller-owned and read-only during implementation.`
+  );
+}
+
 function buildWorkItemContext(workItems: TDDWorkItem[]): ImplementationWorkItemContext[] {
   return workItems.map((workItem) => ({
     title: workItem.title,
@@ -336,7 +343,7 @@ function buildWorkItemContext(workItems: TDDWorkItem[]): ImplementationWorkItemC
     verification: workItem.verification,
     userVisibleOutcome: workItem.userVisibleOutcome,
     scenarioIds: workItem.scenarioIds,
-    specPaths: workItem.playwright.specs.map((spec) => spec.relativeSpecPath)
+    verificationNotes: buildVerificationNotes(workItem)
   }));
 }
 
@@ -460,6 +467,24 @@ function truncateRelevantFileContent(content: string): string {
   return `${content.slice(0, MAX_RELEVANT_FILE_CHARACTERS)}\n/* truncated for prompt context */`;
 }
 
+function getTestFileKind(filePath: string): "test" | "spec" | undefined {
+  const normalizedPath = filePath.toLowerCase();
+  if (/\.test\.[a-z0-9]+$/.test(normalizedPath)) {
+    return "test";
+  }
+
+  if (/\.spec\.[a-z0-9]+$/.test(normalizedPath)) {
+    return "spec";
+  }
+
+  return undefined;
+}
+
+function isPreferredImplementationSourcePath(filePath: string): boolean {
+  const normalizedPath = filePath.toLowerCase();
+  return normalizedPath.startsWith("src/") && !getTestFileKind(normalizedPath);
+}
+
 function scoreRelevantFile(input: {
   relativePath: string;
   content: string;
@@ -467,11 +492,16 @@ function scoreRelevantFile(input: {
 }): { score: number; matchedKeywords: string[] } {
   const relativePath = input.relativePath.toLowerCase();
   const content = input.content.toLowerCase();
+  const testFileKind = getTestFileKind(relativePath);
   const matchedKeywords: string[] = [];
   let score = 0;
 
-  if (relativePath.startsWith("src/")) {
-    score += 4;
+  if (relativePath.startsWith("src/demo-app/") && !testFileKind) {
+    score += 8;
+  } else if (relativePath.startsWith("src/") && !testFileKind) {
+    score += 5;
+  } else if (relativePath.startsWith("src/")) {
+    score += 2;
   }
 
   if (/(render|page|view|component|route|screen|layout|app)/.test(relativePath)) {
@@ -528,10 +558,8 @@ export async function collectRelevantImplementationFiles(input: {
       workItem.title,
       workItem.description,
       workItem.userVisibleOutcome,
-      workItem.verification,
-      ...workItem.playwright.specs.map((spec) => spec.relativeSpecPath)
-    ]),
-    ...input.generatedSpecs.map((spec) => spec.content)
+      workItem.verification
+    ])
   ]);
 
   const scoredFiles = await Promise.all(
@@ -555,9 +583,13 @@ export async function collectRelevantImplementationFiles(input: {
       })
   );
 
-  return scoredFiles
+  const relevantFiles = scoredFiles
     .filter((file) => file.score > 0)
-    .sort((left, right) => right.score - left.score || left.relativePath.localeCompare(right.relativePath))
+    .sort((left, right) => right.score - left.score || left.relativePath.localeCompare(right.relativePath));
+  const preferredSourceFiles = relevantFiles.filter((file) => isPreferredImplementationSourcePath(file.relativePath));
+  const selectedFiles = preferredSourceFiles.length > 0 ? preferredSourceFiles : relevantFiles;
+
+  return selectedFiles
     .slice(0, MAX_RELEVANT_FILE_COUNT)
     .map((file) => ({
       relativePath: file.relativePath,
@@ -575,8 +607,11 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
     "Return only JSON that matches the provided schema.",
     "Use only these operations: create, replace, delete.",
     "All file paths must be relative to the workspace root.",
+    "Modify application or source files to satisfy the requested behavior.",
+    "Prefer existing source files under src/ and src/demo-app/ when they are relevant.",
     "Do not target .git, node_modules, artifacts, evidence, or generated Playwright output files.",
-    "Do not modify the generated Playwright specs themselves; they are controller-owned inputs.",
+    "Generated Playwright specs are controller-owned read-only verification inputs. Do not modify them or use them as edit targets.",
+    "Do not create ad hoc .spec or .test files to satisfy implementation work. Source changes are the default expected outcome.",
     "Prefer the smallest change set that should satisfy the planned work and QA bundle.",
     "If no source changes are needed, return an empty operations array.",
     `Source id: ${input.sourceId}`,
@@ -590,11 +625,11 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
     JSON.stringify(input.workItems, null, 2),
     "Package scripts:",
     JSON.stringify(input.packageContext, null, 2),
-    "Generated Playwright specs:",
+    "Generated Playwright specs (read-only verification inputs):",
     JSON.stringify(
       input.generatedSpecs.map((spec) => ({
         relativePath: spec.relativePath,
-        content: spec.content
+        usage: "Controller-owned verification input. Do not modify or copy as a target file."
       })),
       null,
       2

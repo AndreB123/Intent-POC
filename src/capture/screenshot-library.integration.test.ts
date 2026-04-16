@@ -242,3 +242,61 @@ test("detects drift when a global theme update occurs", async (t) => {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }
 });
+
+test("compare mode reads an existing baseline library without rewriting tracked files", async (t) => {
+  if (!(await ensurePlaywrightAvailable(t))) {
+    return;
+  }
+
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-capture-readonly-"));
+  const baselineCapturesDir = path.join(tmpRoot, "captures-baseline");
+  const compareCapturesDir = path.join(tmpRoot, "captures-compare");
+  const libraryDir = path.join(tmpRoot, "library", "component-library");
+  const diffDir = path.join(tmpRoot, "diffs");
+
+  const server = await startSurfaceCatalogServer(SURFACE_CATALOG);
+  const config = buildConfig(server.baseUrl);
+  const workspace = buildWorkspace(config, tmpRoot);
+
+  try {
+    const baselineCapture = await runCapture(
+      config,
+      workspace,
+      workspace.source.capture.items,
+      baselineCapturesDir,
+      tmpRoot,
+      false
+    );
+    await runComparison(config, "baseline", baselineCapture.outcomes, libraryDir, diffDir);
+
+    const trackedImagePath = path.join(libraryDir, "components", "component-button-primary.png");
+    const manifestPath = path.join(libraryDir, "manifest.json");
+    const baselineImageBefore = await fs.readFile(trackedImagePath);
+    const manifestBefore = JSON.stringify({
+      runId: "seed-baseline",
+      mode: "baseline",
+      note: "sentinel"
+    }, null, 2);
+    await fs.writeFile(manifestPath, `${manifestBefore}\n`, "utf8");
+
+    server.setVariant("v2");
+
+    const compareCapture = await runCapture(
+      config,
+      workspace,
+      workspace.source.capture.items,
+      compareCapturesDir,
+      tmpRoot,
+      false
+    );
+    const comparison = await runComparison(config, "compare", compareCapture.outcomes, libraryDir, diffDir);
+
+    assert.equal(comparison.hasDrift, true);
+    assert.ok(comparison.counts.changed > 0);
+    assert.deepEqual(await fs.readFile(trackedImagePath), baselineImageBefore);
+    assert.equal(await fs.readFile(manifestPath, "utf8"), `${manifestBefore}\n`);
+  } finally {
+    await server.close();
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  }
+});

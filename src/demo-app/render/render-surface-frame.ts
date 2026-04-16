@@ -1,5 +1,5 @@
 import { LibraryVariant, SurfaceLayer } from "../model/types";
-import { getThemeTokens } from "../theme/theme";
+import { getThemeTokens, getThemeToggleState } from "../theme/theme";
 
 function layerLabel(layer: SurfaceLayer): string {
   return layer;
@@ -11,13 +11,18 @@ export function renderSurfaceFrame(input: {
   layer: SurfaceLayer;
   body: string;
   variant: LibraryVariant;
+  isDark?: boolean;
 }): string {
   const theme = getThemeTokens(input.variant);
+  const toggle = getThemeToggleState(!!input.isDark);
 
   return `
-    <section data-testid="${input.testId}" class="surface-frame">
+    <section data-testid="${input.testId}" class="surface-frame ${input.isDark ? "dark-mode" : ""}">
       <header class="surface-header">
-        <h1>${input.title}</h1>
+        <div class="header-left">
+          <button id="theme-toggle" aria-label="${toggle.label}">${toggle.icon}</button>
+          <h1>${input.title}</h1>
+        </div>
         <span class="chip chip-${input.layer}">${layerLabel(input.layer)}</span>
       </header>
       ${input.body}
@@ -50,6 +55,10 @@ export function renderSurfaceFrame(input: {
         color: var(--text);
         font-family: var(--font-body);
       }
+      .dark-mode {
+        background: #1a1a1a;
+        color: #e0e0e0;
+      }
       .page {
         padding: var(--space-lg);
       }
@@ -66,6 +75,11 @@ export function renderSurfaceFrame(input: {
         justify-content: space-between;
         align-items: center;
         margin-bottom: var(--space-md);
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
       }
       .surface-header h1,
       h2,
@@ -136,6 +150,11 @@ export function renderSurfaceFrame(input: {
         cursor: default;
         background: #e7edf6;
         color: var(--text);
+      }
+      #theme-toggle {
+        cursor: pointer;
+        font-size: 18px;
+        padding: 6px 10px;
       }
       .layout-stack {
         display: grid;

@@ -45,3 +45,12 @@ const V2_THEME: ThemeTokens = {
 export function getThemeTokens(variant: LibraryVariant): ThemeTokens {
   return variant === "v2" ? V2_THEME : V1_THEME;
 }
+
+export function getThemeToggleState(isDark: boolean) {
+  return {
+    isDark,
+    icon: isDark ? "🌙" : "☀️",
+    label: isDark ? "Switch to Light Mode" : "Switch to Dark Mode",
+    transitionClass: isDark ? "dark-mode-transition" : ""
+  };
+}
