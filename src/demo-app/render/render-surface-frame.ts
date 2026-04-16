@@ -23,7 +23,7 @@ export function renderSurfaceFrame(input: {
           <h1>${input.title}</h1>
         </div>
         <div class="header-right">
-          <button id="theme-toggle" aria-label="${toggle.label}">${toggle.icon}</button>
+          <button id="theme-toggle" aria-label="${toggle.label}" onclick="document.querySelector('.surface-frame').classList.toggle('dark-mode'); const btn = document.getElementById('theme-toggle'); btn.innerText = btn.innerText === '☀️' ? '🌙' : '☀️';">${toggle.icon}</button>
           <span class="chip chip-${input.layer}">${layerLabel(input.layer)}</span>
         </div>
       </header>

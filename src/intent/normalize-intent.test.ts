@@ -300,6 +300,38 @@ test("normalizeIntent prefers exact source tokens over overlapping aliases", () 
   assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source demo-catalog was referenced directly in the prompt.");
 });
 
+test("normalizeIntent infers the intent studio code surface while preserving source scope", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Add a dark mode button to the Intent Studio screen in demo-catalog so that the theme toggle is visible.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: demoCatalogSources
+  });
+
+  assert.equal(normalized.sourceId, "demo-catalog");
+  assert.equal(normalized.executionPlan.primarySourceId, "demo-catalog");
+  assert.equal(normalized.codeSurface?.sourceId, "demo-catalog");
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+  assert.equal(normalized.codeSurface?.confidence, "high");
+});
+
+test("normalizeIntent keeps ambiguous source-local UI requests broad when the code surface is unclear", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Add a dark mode button to my application in demo-catalog so the theme control is visible.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: demoCatalogSources
+  });
+
+  assert.equal(normalized.sourceId, "demo-catalog");
+  assert.equal(normalized.codeSurface?.id, "shared-source");
+  assert.equal(normalized.codeSurface?.confidence, "low");
+  assert.deepEqual(
+    normalized.codeSurface?.alternatives.map((alternative) => alternative.id),
+    ["intent-studio", "surface-catalog"]
+  );
+});
+
 test("normalizeIntent honors the requested source scope across multiple sources", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Prepare reviewable visual evidence for the current release.",
@@ -334,6 +366,7 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
         intentType: "capture-evidence",
         desiredOutcome: "The documentation screenshots are reviewable by stakeholders.",
         sourceIds: ["docs-portal"],
+        codeSurfaceId: "capture-and-evidence",
         captureIdsBySource: {
           "docs-portal": ["docs-home"]
         },
@@ -344,6 +377,7 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
 
   assert.equal(normalized.intentType, "capture-evidence");
   assert.equal(normalized.sourceId, "docs-portal");
+  assert.equal(normalized.codeSurface?.id, "capture-and-evidence");
   assert.deepEqual(normalized.captureScope, {
     mode: "all",
     captureIds: []

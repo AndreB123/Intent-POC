@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SourceConfig } from "../config/schema";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
+import { CODE_SURFACE_IDS, CodeSurfaceId } from "./code-surface";
 import { createGeminiClient } from "./gemini-client";
 import { IntentType } from "./intent-types";
 
@@ -18,6 +19,8 @@ export interface PromptNormalizationHints {
   intentType?: IntentType;
   desiredOutcome?: string;
   sourceIds?: string[];
+  codeSurfaceId?: CodeSurfaceId;
+  codeSurfaceAlternatives?: CodeSurfaceId[];
   captureIdsBySource?: Record<string, string[]>;
   warnings?: string[];
 }
@@ -26,6 +29,8 @@ const promptNormalizationHintsSchema: z.ZodType<PromptNormalizationHints> = z.ob
   intentType: z.enum(["capture-evidence", "refresh-library"]).optional(),
   desiredOutcome: z.string().min(1).optional(),
   sourceIds: z.array(z.string().min(1)).optional(),
+  codeSurfaceId: z.enum(CODE_SURFACE_IDS).optional(),
+  codeSurfaceAlternatives: z.array(z.enum(CODE_SURFACE_IDS)).optional(),
   captureIdsBySource: z.record(z.array(z.string().min(1))).optional(),
   warnings: z.array(z.string().min(1)).optional()
 });
@@ -45,6 +50,17 @@ const promptNormalizationResponseJsonSchema = {
       type: "array",
       items: {
         type: "string"
+      }
+    },
+    codeSurfaceId: {
+      type: "string",
+      enum: [...CODE_SURFACE_IDS]
+    },
+    codeSurfaceAlternatives: {
+      type: "array",
+      items: {
+        type: "string",
+        enum: [...CODE_SURFACE_IDS]
       }
     },
     captureIdsBySource: {
@@ -90,6 +106,7 @@ function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string
     "Do not invent source ids or capture ids.",
     "If you are unsure about a field, omit it instead of guessing.",
     "Choose sourceIds only from the configured source list.",
+    `Choose codeSurfaceId only from: ${CODE_SURFACE_IDS.join(", ")}.`,
     "Choose captureIdsBySource[sourceId] only from that source's configured capture ids.",
     ...(input.requestedSourceIds && input.requestedSourceIds.length > 0
       ? [

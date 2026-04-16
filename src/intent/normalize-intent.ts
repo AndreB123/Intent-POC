@@ -5,6 +5,7 @@ import {
   ResolvedAgentStageConfig,
   resolveAgentStageConfig
 } from "./agent-stage-config";
+import { CodeSurfaceId, inferCodeSurface, isCodeSurfaceId } from "./code-surface";
 import {
   normalizePromptWithGemini,
   PromptNormalizationHints,
@@ -51,6 +52,8 @@ interface NormalizationResolution {
   sourceIds: string[];
   selectionReason: SourceSelectionReason;
   desiredOutcome: string;
+  codeSurfaceId?: CodeSurfaceId;
+  codeSurfaceAlternatives?: CodeSurfaceId[];
   captureIdsBySource: Record<string, string[] | undefined>;
   normalizationSource: NormalizationSource;
   normalizationWarnings: string[];
@@ -997,6 +1000,12 @@ function sanitizeListEntries(values: string[] | undefined): string[] {
   return dedupeValues((values ?? []).map((value) => value.trim()).filter((value) => value.length > 0));
 }
 
+function sanitizeCodeSurfaceIds(codeSurfaceIds: string[] | undefined): CodeSurfaceId[] {
+  return Array.from(
+    new Set((codeSurfaceIds ?? []).filter((codeSurfaceId): codeSurfaceId is CodeSurfaceId => isCodeSurfaceId(codeSurfaceId)))
+  );
+}
+
 function classifyAcceptanceCriterionOrigin(
   prompt: string,
   description: string,
@@ -1183,6 +1192,8 @@ function buildAgentResolution(
     sourceIds,
     selectionReason,
     desiredOutcome: sanitizeText(hints.desiredOutcome) ?? rulesResolution.desiredOutcome,
+    codeSurfaceId: hints.codeSurfaceId,
+    codeSurfaceAlternatives: sanitizeCodeSurfaceIds(hints.codeSurfaceAlternatives),
     captureIdsBySource,
     normalizationSource: "llm",
     normalizationWarnings
@@ -1339,6 +1350,13 @@ function buildNormalizedIntent(
     AGENT_STAGE_SEQUENCE.map((stageId) => buildSkippedStageMeta(resolveAgentStageConfig(options.agent, stageId)));
   const draft = buildIntentDraft(trimmedPrompt, options, resolution, input.planningRefinement);
   const intentId = `${new Date().toISOString().replace(/[.:]/g, "-")}-${sanitizeFileSegment(draft.summary)}`;
+  const codeSurface = inferCodeSurface({
+    prompt: trimmedPrompt,
+    primarySourceId: draft.primarySourceId,
+    sourceIds: resolution.sourceIds,
+    hintedCodeSurfaceId: resolution.codeSurfaceId,
+    hintedAlternativeIds: resolution.codeSurfaceAlternatives
+  });
 
   return {
     intentId,
@@ -1346,6 +1364,7 @@ function buildNormalizedIntent(
     rawPrompt: trimmedPrompt,
     summary: draft.summary,
     intentType: resolution.intentType,
+    codeSurface,
     businessIntent: {
       statement: draft.statement,
       desiredOutcome: draft.desiredOutcome,

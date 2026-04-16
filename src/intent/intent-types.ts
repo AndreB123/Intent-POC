@@ -1,4 +1,5 @@
 import type { AgentStageId } from "./agent-stage-config";
+import type { CodeSurfaceSelection } from "./code-surface";
 
 export type IntentType = "capture-evidence" | "refresh-library";
 export type NormalizationSource = "llm" | "rules" | "fallback";
@@ -178,6 +179,7 @@ export interface NormalizedIntent {
   rawPrompt: string;
   summary: string;
   intentType: IntentType;
+  codeSurface?: CodeSurfaceSelection;
   businessIntent: BusinessIntent;
   planning: PlanningContext;
   executionPlan: ExecutionPlan;

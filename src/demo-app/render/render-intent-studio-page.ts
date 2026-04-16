@@ -103,7 +103,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
       .masthead {
         display: grid;
         gap: 18px;
-        grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr);
+        grid-template-columns: minmax(0, 1fr) 380px;
         margin-bottom: 24px;
       }
 
@@ -215,6 +215,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
       .notice,
       .timeline-meta {
         color: var(--muted);
+        overflow-wrap: break-word;
       }
 
       .meta-value,
@@ -238,7 +239,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
       .layout {
         display: grid;
         gap: 18px;
-        grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.82fr);
+        grid-template-columns: minmax(0, 1fr) 380px;
       }
 
       .main-stack,
@@ -455,6 +456,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
       .timeline-item {
         padding: 16px 18px;
+        min-width: 0;
+        overflow-wrap: break-word;
       }
 
       .timeline-head {
@@ -468,6 +471,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         margin-top: 12px;
         font-weight: 700;
         line-height: 1.45;
+        overflow-wrap: break-word;
       }
 
       .timeline-details {
@@ -509,12 +513,15 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         color: var(--muted);
         font-size: 13px;
         line-height: 1.5;
+        overflow-wrap: break-word;
       }
 
       .plan-item {
         padding: 14px;
         display: grid;
         gap: 8px;
+        min-width: 0;
+        overflow-wrap: break-word;
       }
 
       .plan-item-title {

@@ -23,8 +23,9 @@ function main(): void {
   const { runnerArgs, testTargets } = splitArgs(process.argv.slice(2));
   const selectedTargets = testTargets.length === 0 ? [DEFAULT_TEST_GLOB] : testTargets;
 
-  const child = spawn(process.execPath, [tsxCliPath, "--test", ...runnerArgs, ...selectedTargets], {
-    stdio: "inherit"
+  const child = spawn(`"${process.execPath}"`, [`"${tsxCliPath}"`, "--test", ...runnerArgs, ...selectedTargets], {
+    stdio: "inherit",
+    shell: true
   });
 
   child.on("exit", (code, signal) => {
