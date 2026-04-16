@@ -161,6 +161,9 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   assert.match(pageHtml, /id="source-scope"/);
   assert.match(pageHtml, /id="source-editor-form"/);
   assert.match(pageHtml, /Open config in editor/);
+  assert.match(pageHtml, /5\. Planned Execution/);
+  assert.match(pageHtml, /id="plan-execution-note"/);
+  assert.doesNotMatch(pageHtml, /5\. Execution Plan/);
 });
 
 test("startIntentStudioServer rejects Studio requests that enable implementation without a provider", async (t) => {

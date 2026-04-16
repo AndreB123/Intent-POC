@@ -181,6 +181,18 @@ Run only the code tests without refreshing tracked screenshots:
 npm run test:code
 ```
 
+Run one or more specific test files without accidentally expanding back to the full suite:
+
+```bash
+npm run test:code -- src/demo-app/server/start-intent-studio-server.test.ts
+```
+
+Run the full stack explicitly: full code suite plus tracked demo screenshot refresh:
+
+```bash
+npm run test:stack
+```
+
 Run the conservative local smart selector. It inspects Git-changed files and chooses between `npm run test:code` and the full `npm test` workflow. Theme, demo surface, capture, comparison, evidence, orchestrator, and tracked baseline changes escalate to the full run:
 
 ```bash

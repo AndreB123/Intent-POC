@@ -1252,8 +1252,9 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 <div class="lifecycle-step-content" id="plan-work-items"></div>
               </div>
               <div class="lifecycle-step" id="step-plan">
-                <div class="lifecycle-step-title">5. Execution Plan</div>
+                <div class="lifecycle-step-title">5. Planned Execution</div>
                 <div class="lifecycle-step-content">
+                  <div class="plan-note" id="plan-execution-note"></div>
                   <div id="plan-sources"></div>
                   <div id="plan-tools"></div>
                   <div id="plan-destinations"></div>
@@ -1325,6 +1326,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         const planIntentText = document.getElementById("plan-intent-text");
         const planIntentOutcome = document.getElementById("plan-intent-outcome");
         const planPlanNotes = document.getElementById("plan-plan-notes");
+        const planExecutionNote = document.getElementById("plan-execution-note");
         const planCriteria = document.getElementById("plan-criteria");
         const planScenarios = document.getElementById("plan-scenarios");
         const planWorkItems = document.getElementById("plan-work-items");
@@ -1839,6 +1841,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             planIntentText.textContent = "Type an intent to preview the plan.";
             planIntentOutcome.textContent = "";
             planPlanNotes.textContent = "";
+            planExecutionNote.textContent = "";
             renderPlanList(planLinear, [], null, "Pending prompt…");
             renderPlanList(planCriteria, [], null, "Pending prompt…");
             renderPlanList(planScenarios, [], null, "Pending prompt…");
@@ -1894,7 +1897,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             "No work items defined."
           );
 
-          // 5. Execution Plan
+          // 5. Planned Execution
+          planExecutionNote.textContent = run
+            ? "Execution snapshot for the current run. This is the planned source, tool, and destination graph; live work appears in Steps 6 and 7."
+            : "Preview only. The source, tool, and destination graph below shows what will run after you start a session.";
+
           renderPlanList(
             planSources,
             activePlan.executionPlan.sources,
@@ -1941,7 +1948,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               implItems.push({ title: formatSourceLabel(state, sr.sourceId), meta: meta });
             });
           }
-          renderPlanList(planImplementation, implItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "Implementation will show here during run.");
+          renderPlanList(planImplementation, implItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "Implementation activity will show here after a run starts.");
 
           // 7. QA Verification
           const qaItems = [];
@@ -1967,18 +1974,49 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               qaItems.push({ title: "Status", meta: ["Verified"] });
             }
           }
-          renderPlanList(planQa, qaItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "QA results will show here after capture.");
+          renderPlanList(planQa, qaItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "QA results will show here after a run reaches verification.");
+        }
+
+        function hasImplementationActivity(run) {
+          if (!run || !run.sourceRuns) {
+            return false;
+          }
+
+          return run.sourceRuns.some(function (sourceRun) {
+            return Boolean(sourceRun.latestImplementationSummary)
+              || Boolean(sourceRun.latestImplementationFileOperations && sourceRun.latestImplementationFileOperations.length > 0)
+              || sourceRun.latestFailureStage === "implementation";
+          });
+        }
+
+        function hasQaActivity(run) {
+          if (!run) {
+            return false;
+          }
+
+          if (run.captures && run.captures.length > 0) {
+            return true;
+          }
+
+          if (!run.sourceRuns) {
+            return false;
+          }
+
+          return run.sourceRuns.some(function (sourceRun) {
+            return sourceRun.latestFailureStage === "qa-verification" || Boolean(sourceRun.comparisonIssueSummary);
+          });
         }
 
         function updateLifecycleProgress(activePlan, run) {
+          const previewPlanReady = !run && activePlan && activePlan.executionPlan.sources.length > 0;
           const steps = [
             { id: "step-normalization", data: activePlan && activePlan.summary },
             { id: "step-linear", data: activePlan && (activePlan.linear.createIssue || activePlan.planning.linearPlan.issueReference) },
             { id: "step-bdd", data: activePlan && (activePlan.businessIntent.acceptanceCriteria.length > 0 || activePlan.businessIntent.scenarios.length > 0) },
             { id: "step-tdd", data: activePlan && activePlan.businessIntent.workItems.length > 0 },
-            { id: "step-plan", data: activePlan && activePlan.executionPlan.sources.length > 0 },
-            { id: "step-implementation", data: run && run.sourceRuns && run.sourceRuns.some(function(sr) { return sr.status === "completed" || sr.status === "running"; }) },
-            { id: "step-qa", data: run && (run.status === "completed" || run.captures.length > 0) }
+            { id: "step-plan", data: run && activePlan && activePlan.executionPlan.sources.length > 0 },
+            { id: "step-implementation", data: hasImplementationActivity(run) },
+            { id: "step-qa", data: hasQaActivity(run) }
           ];
 
           let foundActive = false;
@@ -1990,6 +2028,9 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             node.classList.toggle("completed", isCompleted);
             
             let isActive = !isCompleted && !foundActive;
+            if (step.id === "step-plan" && previewPlanReady) {
+              isActive = true;
+            }
             if (step.id === "step-implementation" && run && run.status === "running") {
                isActive = true;
                foundActive = true;
