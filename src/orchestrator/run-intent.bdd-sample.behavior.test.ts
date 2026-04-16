@@ -143,9 +143,9 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-bdd-sample-"));
   const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot, {
     sources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource(tmpRoot)
+      "intent-poc-app": buildDemoCatalogBehaviorSource(tmpRoot)
     },
-    defaultSourceId: "demo-catalog"
+    defaultSourceId: "intent-poc-app"
   });
   const executedSources: string[] = [];
   const events: RunIntentEvent[] = [];
@@ -225,7 +225,7 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
       attempts: result.sourceRuns[0]!.attempts
     });
 
-    assert.deepEqual(executedSources, ["demo-catalog"]);
+    assert.deepEqual(executedSources, ["intent-poc-app"]);
     assert.equal(result.status, "completed");
     assert.equal(result.hasDrift, false);
     assert.equal(result.sourceRuns.length, 1);
@@ -237,7 +237,7 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
     );
     assertIntentPocBddSamplePlan(result.normalizedIntent);
     assert.equal(planLifecycle?.summary, INTENT_POC_BDD_SAMPLE.expected.summary);
-    assert.equal(planLifecycle?.sources[0]?.sourceId, "demo-catalog");
+    assert.equal(planLifecycle?.sources[0]?.sourceId, "intent-poc-app");
     assert.equal(planLifecycle?.sources[0]?.selectionReason, INTENT_POC_BDD_SAMPLE.expected.selectionReason);
     assert.deepEqual(
       planLifecycle?.planning.repoCandidates.map((repo) => ({

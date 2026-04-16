@@ -1,10 +1,10 @@
 # Intent POC Source Run Summary
 
 - Run ID: <generated-run-id>
-- Source: demo-catalog
+- Source: intent-poc-app
 - Status: completed
 - Intent: Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
-- Normalized summary: capture evidence for demo-catalog
+- Normalized summary: capture evidence for intent-poc-app
 - Capture workflow: active
 - Linear issue: not created
 - Has drift: no
@@ -22,10 +22,10 @@
 
 ## Source Plan
 
-- Selection reason: Source demo-catalog was referenced directly in the prompt.
+- Selection reason: Source intent-poc-app matched the prompt alias 'demo-catalog'.
 - Configured captures: 3
 - Executed captures: 1
-- Capture scope: all configured captures
+- Capture scope: library-index, component-button-primary, page-analytics-overview
 - Warnings: none
 
 ## Business Intent
@@ -38,7 +38,7 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - publish a reviewable evidence package for GitHub and documentation stakeholders
 - leave a visible business process gate for baseline review
 - product and engineering leads can inspect the baseline without reading implementation details
-- Intent is translated into executable work for demo-catalog.
+- Intent is translated into executable work for intent-poc-app.
 - Evidence is captured and packaged for review.
 - Results are packaged so they can be distributed consistently, with the desired outcome of: product and engineering leads can inspect the baseline without reading implementation details.
 
@@ -53,10 +53,10 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Then publish a reviewable evidence package for GitHub and documentation stakeholders
 
 ### QA-runnable visual evidence is defined for applicable sources
-- Given Source demo-catalog is available for execution.
+- Given Source intent-poc-app is available for execution.
 - When TDD planning prepares Playwright screenshot verification for the applicable sources.
 - When The runner maps the configured capture surfaces into QA-runnable checkpoints.
-- Then QA can run a Playwright screenshot flow for demo-catalog.
+- Then QA can run a Playwright screenshot flow for intent-poc-app.
 - Then Each applicable source has executable visual evidence coverage that captures reviewable screenshots.
 
 ### Results are distributed consistently
@@ -71,8 +71,8 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 
 - QA-runnable visual evidence is defined for applicable sources
   - Type: QA-runnable Playwright screenshot spec
-  - Outcome: QA can run a Playwright screenshot flow for demo-catalog.
-  - Verification: QA can run a Playwright screenshot flow for demo-catalog.
+  - Outcome: QA can run a Playwright screenshot flow for intent-poc-app.
+  - Verification: QA can run a Playwright screenshot flow for intent-poc-app.
   - Order: 1
   - Depends on: none
   - Playwright specs: 1
@@ -101,10 +101,10 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 
 ## Artifacts
 
-- Manifest: artifacts/runs/<generated-run-id>/sources/demo-catalog/manifest.json
-- Hashes: artifacts/runs/<generated-run-id>/sources/demo-catalog/hashes.json
-- Comparison: artifacts/runs/<generated-run-id>/sources/demo-catalog/comparison.json
-- App log: artifacts/runs/<generated-run-id>/sources/demo-catalog/logs/app.log
+- Manifest: artifacts/runs/<generated-run-id>/sources/intent-poc-app/manifest.json
+- Hashes: artifacts/runs/<generated-run-id>/sources/intent-poc-app/hashes.json
+- Comparison: artifacts/runs/<generated-run-id>/sources/intent-poc-app/comparison.json
+- App log: artifacts/runs/<generated-run-id>/sources/intent-poc-app/logs/app.log
 
 ## Changed Captures
 

@@ -20,7 +20,7 @@ npm run dev -- run --config ./intent-poc.yaml --intent "Create a baseline screen
 
 ## Why This Prompt Is Canonical
 
-- It names the source explicitly with the exact source id.
+- It exercises the legacy `demo-catalog` alias that now resolves onto the unified `intent-poc-app` source.
 - It includes prompt-driven acceptance language through `must`, `should`, and `needs to`.
 - It includes a `so that` business outcome.
 - It exercises planned destinations beyond controller artifacts by mentioning GitHub, documentation, and process-level rollout.

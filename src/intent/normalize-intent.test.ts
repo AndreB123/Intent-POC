@@ -174,6 +174,49 @@ const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture
   }
 };
 
+const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
+  "intent-poc-app": {
+    aliases: ["intent-poc-app", "demo", "demo-app", "demo-catalog", "demo-components", "components", "surface-catalog"],
+    planning: {
+      repoId: "intent-poc",
+      repoLabel: "Intent POC",
+      role: "controller-and-demo-source",
+      notes: []
+    },
+    source: {
+      type: "local",
+      localPath: "/tmp/intent-poc"
+    },
+    capture: {
+      basePathPrefix: "",
+      publishToLibrary: false,
+      waitAfterLoadMs: 500,
+      injectCss: [],
+      defaultFullPage: false,
+      items: [
+        { id: "library-index", name: "Demo Catalog Index", path: "/library", fullPage: true, maskSelectors: [], delayMs: 0 },
+        {
+          id: "component-button-primary",
+          name: "Demo Primary Button",
+          path: "/library/component-button-primary",
+          locator: "[data-testid='component-button-primary']",
+          waitForSelector: "[data-testid='component-button-primary']",
+          maskSelectors: [],
+          delayMs: 0
+        },
+        {
+          id: "page-analytics-overview",
+          name: "Demo Analytics Overview",
+          path: "/library/page-analytics-overview",
+          fullPage: true,
+          maskSelectors: [],
+          delayMs: 0
+        }
+      ]
+    }
+  }
+};
+
 test("normalizeIntent infers baseline mode from free-text prompt", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Create baseline screenshots for client-systems roach pages",
@@ -302,6 +345,23 @@ test("normalizeIntent prefers exact source tokens over overlapping aliases", () 
     ["demo-catalog"]
   );
   assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source demo-catalog was referenced directly in the prompt.");
+});
+
+test("normalizeIntent preserves the legacy demo-catalog prompt contract on the unified app source", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Create a baseline screenshot library for the demo-catalog source so that the baseline is reviewable.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: intentPocAppSources
+  });
+
+  assert.equal(normalized.sourceId, "intent-poc-app");
+  assert.equal(normalized.executionPlan.primarySourceId, "intent-poc-app");
+  assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source intent-poc-app matched the prompt alias 'demo-catalog'.");
+  assert.deepEqual(normalized.captureScope, {
+    mode: "subset",
+    captureIds: ["library-index", "component-button-primary", "page-analytics-overview"]
+  });
 });
 
 test("normalizeIntent infers the intent studio code surface while preserving source scope", () => {
@@ -576,6 +636,71 @@ test("normalizeIntentWithAgent still narrows capture scope when the prompt expli
     captureIds: ["page-analytics-overview"]
   });
   assert.deepEqual(normalized.executionPlan.sources[0]?.warnings, []);
+});
+
+test("normalizeIntentWithAgent narrows generic evidence specs to the scenario-matching captures", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Prepare reviewable evidence for the built-in demo surfaces.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: true
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "capture-and-evidence"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        statement: "Prepare reviewable evidence for the built-in demo surfaces.",
+        desiredOutcome: "Each requested demo surface has a reviewable screenshot artifact.",
+        acceptanceCriteria: [
+          { description: "The primary button component has reviewable evidence." },
+          { description: "The analytics overview page has reviewable evidence." }
+        ],
+        scenarios: [
+          {
+            title: "Capture visual evidence for primary button component",
+            goal: "Capture the demo primary button component for review.",
+            given: ["The built-in demo surfaces are available."],
+            when: ["The screenshot flow runs for the primary button component."],
+            then: ["The primary button component is captured for review."],
+            applicableSourceIds: ["intent-poc-app"]
+          },
+          {
+            title: "Capture visual evidence for analytics overview page",
+            goal: "Capture the analytics overview page for review.",
+            given: ["The built-in demo surfaces are available."],
+            when: ["The screenshot flow runs for the analytics overview page."],
+            then: ["The analytics overview page is captured for review."],
+            applicableSourceIds: ["intent-poc-app"]
+          }
+        ]
+      })
+    }
+  );
+
+  const primaryButtonWorkItem = normalized.businessIntent.workItems.find((workItem) =>
+    workItem.title.toLowerCase().includes("primary button")
+  );
+  const analyticsOverviewWorkItem = normalized.businessIntent.workItems.find((workItem) =>
+    workItem.title.toLowerCase().includes("analytics overview")
+  );
+
+  assert.ok(primaryButtonWorkItem);
+  assert.ok(analyticsOverviewWorkItem);
+  assert.deepEqual(
+    primaryButtonWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.captureId).filter(Boolean),
+    ["component-button-primary"]
+  );
+  assert.deepEqual(
+    analyticsOverviewWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.captureId).filter(Boolean),
+    ["page-analytics-overview"]
+  );
 });
 
 test("normalizeIntentWithAgent applies Gemini planning refinement when the planning stage is enabled", async () => {

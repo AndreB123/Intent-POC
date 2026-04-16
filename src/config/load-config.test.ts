@@ -109,7 +109,7 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
-test("loadConfig expands the built-in demo surface catalog and resolves tracked roots", async () => {
+test("loadConfig expands the built-in demo surface catalog for the unified app source", async () => {
   const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-config-catalog-test-"));
   const configPath = path.join(tmpDir, "intent-poc.yaml");
 
@@ -127,7 +127,9 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
       "agent:",
       "  mode: bounded-runner",
       "sources:",
-      "  demo-components:",
+      "  intent-poc-app:",
+      "    aliases:",
+      "      - demo-catalog",
       "    source:",
       "      type: local",
       `      localPath: ${JSON.stringify(tmpDir)}`,
@@ -142,7 +144,16 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
       "        url: http://127.0.0.1:3000",
       "    capture:",
       "      catalog: demo-surface-catalog",
-      "      publishToLibrary: true",
+      "      publishToLibrary: false",
+      "      items:",
+      "        - id: library-index",
+      "          path: /library",
+      "          fullPage: true",
+      "        - id: component-button-primary",
+      "          path: /library/component-button-primary",
+      "        - id: page-analytics-overview",
+      "          path: /library/page-analytics-overview",
+      "          fullPage: true",
       "playwright:",
       "  browser: chromium",
       "artifacts:",
@@ -151,7 +162,7 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
       "comparison:",
       "  hashAlgorithm: sha256",
       "run:",
-      "  sourceId: demo-components",
+      "  sourceId: intent-poc-app",
       "  captureIds: []",
       "  continueOnCaptureError: false",
       "  metadata: {}",
@@ -161,10 +172,23 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
   );
 
   const loaded = await loadConfig(configPath);
-  assert.equal(loaded.config.sources["demo-components"].capture.catalog, "demo-surface-catalog");
-  assert.equal(loaded.config.sources["demo-components"].capture.items.length, 46);
-  assert.equal(loaded.config.sources["demo-components"].capture.items[0]?.relativeOutputPath?.startsWith("components/"), true);
-  assert.equal(loaded.config.sources["demo-components"].app.reuseExistingServer, false);
+  assert.equal(loaded.config.sources["intent-poc-app"].capture.catalog, "demo-surface-catalog");
+  assert.equal(loaded.config.sources["intent-poc-app"].capture.items.length, 47);
+  assert.equal(
+    loaded.config.sources["intent-poc-app"].capture.items.some((item) => item.id === "library-index" && item.fullPage === true),
+    true
+  );
+  assert.equal(
+    loaded.config.sources["intent-poc-app"].capture.items.some(
+      (item) => item.id === "component-button-primary" && item.relativeOutputPath?.startsWith("components/")
+    ),
+    true
+  );
+  assert.equal(
+    loaded.config.sources["intent-poc-app"].capture.items.some((item) => item.id === "page-analytics-overview" && item.fullPage === true),
+    true
+  );
+  assert.equal(loaded.config.sources["intent-poc-app"].app.reuseExistingServer, false);
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });

@@ -38,6 +38,8 @@ Everything else is kept as the real structured sample output that the runner cur
 
 Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
 
+The prompt intentionally uses the legacy `demo-catalog` wording. The live runner resolves that alias onto the single configured app source, `intent-poc-app`, while preserving the historical three-capture baseline scope.
+
 ## What To Read
 
 - `normalized-intent.json` is the machine-readable sample AI should build from.

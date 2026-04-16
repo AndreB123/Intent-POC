@@ -22,18 +22,23 @@ agent:
   allowQAVerification: false
   fallbackToRules: true
 sources:
-  demo-catalog:
+  intent-poc-app:
     aliases:
+      - intent-poc-app
       - demo
       - demo-app
       - demo-catalog
+      - demo-components
+      - components
+      - surface-catalog
     planning:
       repoId: intent-poc
       repoLabel: Intent POC
       role: controller-and-demo-source
-      summary: Current workspace used to bootstrap resumable IDD planning and demo evidence flows.
+      summary: Current workspace source for Intent Studio, demo evidence flows, and built-in demo surface screenshots.
       notes:
-        - Use this repo as the first concrete repo-context example while agent access is pending.
+        - Use this source for prompt-planning, Studio changes, and built-in demo surface evidence.
+        - Demo screenshot regeneration routes through this source with an explicit library publish opt-in.
     studio:
       displayName: Current app
     testing:
@@ -61,10 +66,12 @@ sources:
         timeoutMs: 120000
         intervalMs: 500
     capture:
+      catalog: demo-surface-catalog
+      publishToLibrary: false
       waitAfterLoadMs: 300
       injectCss:
         - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
-      defaultFullPage: true
+      defaultFullPage: false
       items:
         - id: library-index
           name: Demo Catalog Index
@@ -79,52 +86,6 @@ sources:
           name: Demo Analytics Overview
           path: /library/page-analytics-overview
           fullPage: true
-  demo-components:
-    aliases:
-      - demo-components
-      - components
-      - surface-catalog
-    planning:
-      repoId: intent-poc
-      repoLabel: Intent POC Demo Components
-      role: tracked demo screenshot source
-      summary: Built-in demo surface catalog used to regenerate tracked screenshots through the shared runner path.
-      notes:
-        - Use this source for tracked screenshot refreshes under artifacts/library/demo-components.
-        - Keep demo screenshot regeneration on runIntent rather than adding a parallel capture implementation.
-    studio:
-      displayName: Demo components
-    testing:
-      playwright:
-        enabled: false
-    source:
-      type: local
-      localPath: .
-    workspace:
-      checkoutMode: existing
-      installTimeoutMs: 600000
-      env: {}
-    app:
-      workdir: .
-      startCommand: npm run demo:serve -- --port 6006
-      baseUrl: http://127.0.0.1:6006
-      reuseExistingServer: true
-      startTimeoutMs: 120000
-      env: {}
-      readiness:
-        type: http
-        url: http://127.0.0.1:6006/health
-        expectedStatus: 200
-        timeoutMs: 120000
-        intervalMs: 500
-    capture:
-      catalog: demo-surface-catalog
-      publishToLibrary: true
-      waitAfterLoadMs: 300
-      injectCss:
-        - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
-      defaultFullPage: false
-      items: []
 playwright:
   browser: chromium
   headless: true
@@ -154,7 +115,7 @@ comparison:
   onMissingBaseline: error
   writeDiffImages: true
 run:
-  sourceId: demo-catalog
+  sourceId: intent-poc-app
   intent: Capture the built-in demo catalog evidence and write reviewable artifacts.
   resumeIssue:
   captureIds: []

@@ -91,7 +91,7 @@ You can switch demo library variants in the browser with:
 http://127.0.0.1:6010/library?variant=v2
 ```
 
-The sample `intent-poc.yaml` now starts with two visible Studio scope sources: `Current app` and `Demo components`. Add more repos under `sources` when you want broader scope.
+The sample `intent-poc.yaml` now starts with one visible Studio scope source: `Current app`. Add more repos under `sources` when you want broader scope.
 
 ## Run
 
@@ -110,7 +110,7 @@ npm run dev -- run --config ./intent-poc.yaml --intent "Create and maintain a sc
 Live Gemini dry run using the example local config:
 
 ```bash
-npm run dev -- run --config ./intent-poc.local-no-linear.yaml --source demo-catalog --intent "Prepare a lightweight visual evidence review for the demo-catalog source in the Intent Driven Development POC so the current built-in demo experience is easy to inspect." --dry-run
+npm run dev -- run --config ./intent-poc.local-no-linear.yaml --source intent-poc-app --intent "Prepare a lightweight visual evidence review for the intent-poc-app source in the Intent Driven Development POC so the current built-in demo experience is easy to inspect." --dry-run
 ```
 
 `--source` now requests source scope rather than overriding a single source. Repeat the flag or pass a comma-separated list when the run should stay inside a specific set of configured sources.

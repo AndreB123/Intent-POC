@@ -87,6 +87,7 @@ export interface RunIntentOptions {
   configPath: string;
   intent?: string;
   sourceIds?: string[];
+  publishToLibrary?: boolean;
   agentOverrides?: RunAgentConfigOverride;
   resumeIssue?: string;
   dryRun?: boolean;
@@ -1895,7 +1896,9 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       sourceErrors.push("Capture run stopped early because continueOnCaptureError is disabled.");
     }
 
-    if (input.config.sources[input.sourcePlan.sourceId]?.capture.publishToLibrary) {
+    const shouldPublishToLibrary = input.options.publishToLibrary ?? input.config.sources[input.sourcePlan.sourceId]?.capture.publishToLibrary;
+
+    if (shouldPublishToLibrary) {
       try {
         const libraryResult = await updateScreenshotLibrary({
           config: input.config,

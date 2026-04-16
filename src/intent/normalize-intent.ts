@@ -45,12 +45,14 @@ type SourceSelectionReason = "requested-scope" | "prompt-match" | "business-wide
 interface SourceSelection {
   sourceIds: string[];
   selectionReason: SourceSelectionReason;
+  promptMatchValues?: Record<string, string>;
 }
 
 interface NormalizationResolution {
   intentType: NormalizedIntent["intentType"];
   sourceIds: string[];
   selectionReason: SourceSelectionReason;
+  promptMatchValues: Record<string, string>;
   desiredOutcome: string;
   codeSurfaceId?: CodeSurfaceId;
   codeSurfaceAlternatives?: CodeSurfaceId[];
@@ -144,23 +146,35 @@ function matchesPromptValue(normalizedPrompt: string, promptTokens: Set<string>,
   return normalizedPrompt.includes(normalizedValue);
 }
 
-function pickMentionedSourceIds(prompt: string, options: NormalizeIntentOptions): string[] {
+function pickMentionedSources(
+  prompt: string,
+  options: NormalizeIntentOptions
+): { sourceIds: string[]; promptMatchValues: Record<string, string> } {
   const loweredPrompt = prompt.toLowerCase();
   const promptTokens = tokenizePrompt(prompt);
   const matches: string[] = [];
+  const promptMatchValues: Record<string, string> = {};
 
   for (const [sourceId, source] of Object.entries(options.availableSources)) {
     if (matchesPromptValue(loweredPrompt, promptTokens, sourceId)) {
       matches.push(sourceId);
+      promptMatchValues[sourceId] = sourceId;
       continue;
     }
 
-    if (source.aliases.some((alias) => matchesPromptValue(loweredPrompt, promptTokens, alias))) {
+    const matchedAlias = source.aliases.find((alias) => matchesPromptValue(loweredPrompt, promptTokens, alias));
+    if (matchedAlias) {
       matches.push(sourceId);
+      promptMatchValues[sourceId] = matchedAlias;
     }
   }
 
-  return dedupeValues(matches);
+  const sourceIds = dedupeValues(matches);
+
+  return {
+    sourceIds,
+    promptMatchValues: Object.fromEntries(sourceIds.map((sourceId) => [sourceId, promptMatchValues[sourceId] ?? sourceId]))
+  };
 }
 
 function getRequestedSourceIds(options: NormalizeIntentOptions): string[] | undefined {
@@ -188,28 +202,32 @@ function pickApplicableSourceIds(prompt: string, options: NormalizeIntentOptions
   if (requestedSourceIds) {
     return {
       sourceIds: requestedSourceIds,
-      selectionReason: "requested-scope"
+      selectionReason: "requested-scope",
+      promptMatchValues: {}
     };
   }
 
-  const matchedSourceIds = pickMentionedSourceIds(prompt, options);
-  if (matchedSourceIds.length > 0) {
+  const matchedSources = pickMentionedSources(prompt, options);
+  if (matchedSources.sourceIds.length > 0) {
     return {
-      sourceIds: matchedSourceIds,
-      selectionReason: "prompt-match"
+      sourceIds: matchedSources.sourceIds,
+      selectionReason: "prompt-match",
+      promptMatchValues: matchedSources.promptMatchValues
     };
   }
 
   if (businessWideIntentPattern.test(prompt)) {
     return {
       sourceIds: Object.keys(options.availableSources),
-      selectionReason: "business-wide"
+      selectionReason: "business-wide",
+      promptMatchValues: {}
     };
   }
 
   return {
     sourceIds: [options.defaultSourceId],
-    selectionReason: "default"
+    selectionReason: "default",
+    promptMatchValues: {}
   };
 }
 
@@ -609,11 +627,16 @@ function buildPlaywrightSpecs(input: {
   sourceIds: string[];
   desiredOutcome: string;
   acceptanceCriteria: string[];
+  captureScope: NormalizedIntent["captureScope"];
   availableSources: Record<string, AvailableSourceDescriptor>;
 }): PlaywrightSpecArtifact[] {
   return input.sourceIds.map((sourceId) => {
     const source = input.availableSources[sourceId];
-    const captureItems = source?.capture.items ?? [];
+    const captureItems = selectRelevantCaptureItemsForScenario({
+      scenario: input.scenario,
+      captureItems: source?.capture.items ?? [],
+      captureScope: input.captureScope
+    });
 
     return {
       framework: "playwright",
@@ -636,6 +659,103 @@ function buildPlaywrightSpecs(input: {
 
 function buildScenarioNarrativeText(scenario: BDDScenario): string {
   return [scenario.title, scenario.goal, ...scenario.when, ...scenario.then].join(" ").toLowerCase();
+}
+
+function tokenizeCaptureMatchText(text: string): string[] {
+  const stopWords = new Set([
+    "again",
+    "catalog",
+    "component",
+    "components",
+    "demo",
+    "evidence",
+    "image",
+    "images",
+    "library",
+    "page",
+    "pages",
+    "review",
+    "screen",
+    "screens",
+    "shot",
+    "shots",
+    "source",
+    "sources",
+    "surface",
+    "surfaces",
+    "view",
+    "views",
+    "visual"
+  ]);
+
+  return (text.match(/[a-z0-9]+/g) ?? []).filter((token) => token.length > 2 && !stopWords.has(token));
+}
+
+function filterCaptureItemsByScope(
+  captureItems: CaptureItemConfig[],
+  captureScope: NormalizedIntent["captureScope"]
+): CaptureItemConfig[] {
+  if (captureScope.mode !== "subset") {
+    return captureItems;
+  }
+
+  const selectedCaptureIds = new Set(captureScope.captureIds);
+  return captureItems.filter((item) => selectedCaptureIds.has(item.id));
+}
+
+function buildCaptureItemSearchText(item: CaptureItemConfig): string {
+  return [item.id, item.name ?? "", item.path, item.relativeOutputPath ?? "", item.locator ?? "", item.waitForSelector ?? ""]
+    .join(" ")
+    .toLowerCase();
+}
+
+function selectRelevantCaptureItemsForScenario(input: {
+  scenario?: BDDScenario;
+  captureItems: CaptureItemConfig[];
+  captureScope: NormalizedIntent["captureScope"];
+}): CaptureItemConfig[] {
+  const scopedCaptureItems = filterCaptureItemsByScope(input.captureItems, input.captureScope);
+
+  if (!input.scenario || scopedCaptureItems.length <= 1) {
+    return scopedCaptureItems;
+  }
+
+  const scenarioText = buildScenarioNarrativeText(input.scenario);
+  const exactMatches = scopedCaptureItems.filter((item) => {
+    const normalizedId = item.id.toLowerCase();
+    const normalizedName = item.name?.toLowerCase();
+
+    return scenarioText.includes(normalizedId) || (normalizedName ? scenarioText.includes(normalizedName) : false);
+  });
+
+  if (exactMatches.length > 0) {
+    return exactMatches;
+  }
+
+  const scenarioTokens = new Set(tokenizeCaptureMatchText(scenarioText));
+  const scoredCaptureItems = scopedCaptureItems
+    .map((item) => {
+      const itemTokens = tokenizeCaptureMatchText(buildCaptureItemSearchText(item));
+      const overlapCount = itemTokens.filter((token) => scenarioTokens.has(token)).length;
+      const pathBonus = scenarioText.includes(item.path.toLowerCase()) ? 2 : 0;
+
+      return {
+        item,
+        score: overlapCount + pathBonus
+      };
+    })
+    .filter((entry) => entry.score > 0);
+
+  if (scoredCaptureItems.length === 0) {
+    return scopedCaptureItems;
+  }
+
+  const bestScore = Math.max(...scoredCaptureItems.map((entry) => entry.score));
+  if (bestScore < 2) {
+    return scopedCaptureItems;
+  }
+
+  return scoredCaptureItems.filter((entry) => entry.score === bestScore).map((entry) => entry.item);
 }
 
 function tokenizeScenarioText(text: string): string[] {
@@ -708,6 +828,7 @@ function buildWorkItems(input: {
   codeSurface: CodeSurfaceSelection;
   scenarios: NormalizedIntent["businessIntent"]["scenarios"];
   acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
+  sourcePlans: NormalizedIntent["executionPlan"]["sources"];
   sourceIds: string[];
   desiredOutcome: string;
   availableSources: Record<string, AvailableSourceDescriptor>;
@@ -722,6 +843,10 @@ function buildWorkItems(input: {
       const userVisibleOutcome = scenario.then[0] ?? input.desiredOutcome;
       const verification = buildWorkItemVerification(scenario);
       const relevantAcceptanceCriteria = selectRelevantAcceptanceCriteria(scenario, input.acceptanceCriteria);
+      const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
+        mode: "all",
+        captureIds: []
+      };
 
       scenarioItems.push({
         id,
@@ -747,6 +872,7 @@ function buildWorkItems(input: {
             sourceIds: [sourceId],
             desiredOutcome: userVisibleOutcome,
             acceptanceCriteria: relevantAcceptanceCriteria,
+            captureScope,
             availableSources: input.availableSources
           })
         }
@@ -764,6 +890,10 @@ function buildWorkItems(input: {
     const scenarioIds = input.scenarios
       .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
       .map((scenario) => scenario.id);
+    const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
+      mode: "all",
+      captureIds: []
+    };
 
     return [
       {
@@ -789,6 +919,7 @@ function buildWorkItems(input: {
             sourceIds: [sourceId],
             desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
             acceptanceCriteria: [],
+            captureScope,
             availableSources: input.availableSources
           })
         }
@@ -1021,13 +1152,21 @@ function buildToolPlans(input: {
   ];
 }
 
-function describeSelectionReason(reason: SourceSelection["selectionReason"], sourceId: string): string {
+function describeSelectionReason(
+  reason: SourceSelection["selectionReason"],
+  sourceId: string,
+  promptMatchValue?: string
+): string {
   switch (reason) {
     case "llm":
       return `Source ${sourceId} was selected by Gemini prompt normalization.`;
     case "requested-scope":
       return `Source ${sourceId} was selected in the requested source scope.`;
     case "prompt-match":
+      if (promptMatchValue && promptMatchValue !== sourceId) {
+        return `Source ${sourceId} matched the prompt alias '${promptMatchValue}'.`;
+      }
+
       return `Source ${sourceId} was referenced directly in the prompt.`;
     case "business-wide":
       return `Source ${sourceId} is included because the prompt describes a business-wide or cross-system intent.`;
@@ -1037,9 +1176,14 @@ function describeSelectionReason(reason: SourceSelection["selectionReason"], sou
   }
 }
 
-function describeRepoSelectionReason(reason: SourceSelection["selectionReason"], repoId: string, sourceIds: string[]): string {
+function describeRepoSelectionReason(
+  reason: SourceSelection["selectionReason"],
+  repoId: string,
+  sourceIds: string[],
+  promptMatchValues: Record<string, string>
+): string {
   if (sourceIds.length === 1) {
-    return describeSelectionReason(reason, sourceIds[0]);
+    return describeSelectionReason(reason, sourceIds[0], promptMatchValues[sourceIds[0]]);
   }
 
   switch (reason) {
@@ -1135,7 +1279,12 @@ function buildRepoCandidates(input: {
         selectionStatus,
         reason:
           selectionStatus === "selected"
-            ? describeRepoSelectionReason(input.sourceSelection.selectionReason, entry.repoId, entry.selectedSourceIds)
+            ? describeRepoSelectionReason(
+                input.sourceSelection.selectionReason,
+                entry.repoId,
+                entry.selectedSourceIds,
+                input.sourceSelection.promptMatchValues ?? {}
+              )
             : `Repo ${entry.repoId} remains available in the configured shortlist for future plan expansion.`,
         summary: entry.summary,
         sourceTypes: Array.from(entry.sourceTypes),
@@ -1208,6 +1357,7 @@ function buildRulesResolution(trimmedPrompt: string, options: NormalizeIntentOpt
     intentType: inferIntentType(trimmedPrompt),
     sourceIds: sourceSelection.sourceIds,
     selectionReason: sourceSelection.selectionReason,
+    promptMatchValues: sourceSelection.promptMatchValues ?? {},
     desiredOutcome: extractDesiredOutcome(trimmedPrompt),
     captureIdsBySource: {},
     normalizationSource: "rules",
@@ -1477,6 +1627,7 @@ function buildAgentResolution(
     intentType: hints.intentType ?? rulesResolution.intentType,
     sourceIds,
     selectionReason,
+    promptMatchValues: selectionReason === rulesResolution.selectionReason ? rulesResolution.promptMatchValues : {},
     desiredOutcome: sanitizeText(hints.desiredOutcome) ?? rulesResolution.desiredOutcome,
     codeSurfaceId: hints.codeSurfaceId,
     codeSurfaceAlternatives: sanitizeCodeSurfaceIds(hints.codeSurfaceAlternatives),
@@ -1498,6 +1649,23 @@ function pickCaptureScopeForSource(
       captureScope: explicitCaptureScope,
       warnings: []
     };
+  }
+
+  const promptMatchValue = resolution.promptMatchValues[sourceId];
+  if (sourceId === "intent-poc-app" && promptMatchValue === "demo-catalog") {
+    const legacyDemoCatalogCaptureIds = ["library-index", "component-button-primary", "page-analytics-overview"];
+    const availableCaptureIds = new Set(options.availableSources[sourceId].capture.items.map((item) => item.id));
+    const compatibleCaptureIds = legacyDemoCatalogCaptureIds.filter((captureId) => availableCaptureIds.has(captureId));
+
+    if (compatibleCaptureIds.length > 0) {
+      return {
+        captureScope: {
+          mode: "subset",
+          captureIds: compatibleCaptureIds
+        },
+        warnings: []
+      };
+    }
   }
 
   const hintedCaptureIds = resolution.captureIdsBySource[sourceId];
@@ -1529,7 +1697,7 @@ function buildIntentDraft(
 
     return {
       sourceId,
-      selectionReason: describeSelectionReason(resolution.selectionReason, sourceId),
+      selectionReason: describeSelectionReason(resolution.selectionReason, sourceId, resolution.promptMatchValues[sourceId]),
       captureScope: captureSelection.captureScope,
       warnings: captureSelection.warnings
     };
@@ -1560,6 +1728,7 @@ function buildIntentDraft(
           codeSurface,
           scenarios,
           acceptanceCriteria,
+          sourcePlans,
           sourceIds: resolution.sourceIds,
           desiredOutcome,
           availableSources: options.availableSources
@@ -1588,7 +1757,8 @@ function buildIntentDraft(
     availableSources: options.availableSources,
     sourceSelection: {
       sourceIds: resolution.sourceIds,
-      selectionReason: resolution.selectionReason
+      selectionReason: resolution.selectionReason,
+      promptMatchValues: resolution.promptMatchValues
     }
   });
   const planningReviewNotes = buildPlanningReviewNotes({

@@ -70,6 +70,7 @@ export async function captureTarget(
   const outputPath = resolveCaptureOutputPath(item, capturesDir);
   const url = new URL(`${workspace.source.capture.basePathPrefix}${item.path}`, workspace.baseUrl).toString();
   const viewport = item.viewport ?? config.playwright.viewport;
+  const captureAsLocator = Boolean(item.locator) && !(item.fullPage ?? workspace.source.capture.defaultFullPage);
 
   try {
     await ensureDirectory(path.dirname(outputPath));
@@ -95,8 +96,13 @@ export async function captureTarget(
     const mask = buildMaskLocators(page, item);
     let screenshot: Buffer;
 
-    if (item.locator) {
-      const locator = page.locator(item.locator);
+    if (captureAsLocator) {
+      const locatorSelector = item.locator;
+      if (!locatorSelector) {
+        throw new Error(`Capture '${item.id}' is configured for locator capture without a locator selector.`);
+      }
+
+      const locator = page.locator(locatorSelector);
       await locator.waitFor();
       screenshot = await locator.screenshot({
         animations: config.playwright.disableAnimations ? "disabled" : "allow",
@@ -119,12 +125,12 @@ export async function captureTarget(
       name: item.name,
       path: item.path,
       url,
-      kind: item.locator ? "locator" : "page",
+      kind: captureAsLocator ? "locator" : "page",
       outputPath,
       relativeOutputPath: path.relative(capturesDir, outputPath),
       durationMs: Date.now() - startedAt,
       viewport,
-      locator: item.locator,
+      locator: captureAsLocator ? item.locator : undefined,
       status: "captured",
       hash: hashBuffer(screenshot),
       width: png.width,
@@ -137,12 +143,12 @@ export async function captureTarget(
       name: item.name,
       path: item.path,
       url,
-      kind: item.locator ? "locator" : "page",
+      kind: captureAsLocator ? "locator" : "page",
       outputPath,
       relativeOutputPath: path.relative(capturesDir, outputPath),
       durationMs: Date.now() - startedAt,
       viewport,
-      locator: item.locator,
+      locator: captureAsLocator ? item.locator : undefined,
       status: "failed",
       error: error instanceof Error ? error.message : String(error),
       warnings: []

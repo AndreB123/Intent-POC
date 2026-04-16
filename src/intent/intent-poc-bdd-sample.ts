@@ -51,7 +51,7 @@ const acceptanceCriteria = [
   "publish a reviewable evidence package for GitHub and documentation stakeholders",
   "leave a visible business process gate for baseline review",
   desiredOutcome,
-  "Intent is translated into executable work for demo-catalog.",
+  "Intent is translated into executable work for intent-poc-app.",
   "Evidence is captured and packaged for review.",
   `Results are packaged so they can be distributed consistently, with the desired outcome of: ${desiredOutcome}.`
 ];
@@ -91,20 +91,20 @@ export const INTENT_POC_BDD_SAMPLE = {
   prompt,
   expected: {
     intentType: "capture-evidence",
-    sourceId: "demo-catalog",
-    summary: "capture evidence for demo-catalog",
+    sourceId: "intent-poc-app",
+    summary: "capture evidence for intent-poc-app",
     desiredOutcome,
-    selectionReason: "Source demo-catalog was referenced directly in the prompt.",
+    selectionReason: "Source intent-poc-app matched the prompt alias 'demo-catalog'.",
     orchestrationStrategy: "single-source",
     captureScope: {
-      mode: "all",
-      captureIds: []
+      mode: "subset",
+      captureIds: ["library-index", "component-button-primary", "page-analytics-overview"]
     },
     executionReviewNotes: [
       "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
     ],
     planningReviewNotes: [],
-    repoCandidates: [{ repoId: "intent-poc", selectionStatus: "selected", sourceIds: ["demo-catalog"] }],
+    repoCandidates: [{ repoId: "intent-poc", selectionStatus: "selected", sourceIds: ["intent-poc-app"] }],
     acceptanceCriteria,
     scenarioTitles,
     workItemTitles,
@@ -117,7 +117,7 @@ export const INTENT_POC_BDD_SAMPLE = {
       `- ${acceptanceCriteria[0]}`,
       "## BDD Scenarios",
       `### ${scenarioTitles[0]}`,
-      "- Sources: demo-catalog",
+      "- Sources: intent-poc-app",
       `- Given A business intent has been captured: ${prompt}`,
       "## TDD Work Items",
       "- QA-runnable visual evidence is defined for applicable sources",

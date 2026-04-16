@@ -122,6 +122,10 @@ function includesAnyPhrase(prompt: string, phrases: string[]): boolean {
   return phrases.some((phrase) => prompt.includes(phrase));
 }
 
+function isIntentPocAppSource(sourceId: string): boolean {
+  return sourceId === "intent-poc-app" || sourceId === "demo-catalog";
+}
+
 function buildAlternative(id: CodeSurfaceId, reason: string): CodeSurfaceAlternative {
   return {
     id,
@@ -214,7 +218,7 @@ export function inferCodeSurface(input: {
 }): CodeSurfaceSelection {
   const normalizedPrompt = input.prompt.toLowerCase();
 
-  if (input.primarySourceId === "demo-catalog" && includesAnyPhrase(normalizedPrompt, INTENT_STUDIO_UI_KEYWORDS)) {
+  if (isIntentPocAppSource(input.primarySourceId) && includesAnyPhrase(normalizedPrompt, INTENT_STUDIO_UI_KEYWORDS)) {
     return {
       sourceId: input.primarySourceId,
       id: "intent-studio",
@@ -295,7 +299,7 @@ export function inferCodeSurface(input: {
     };
   }
 
-  if (input.sourceIds.includes("demo-catalog") && includesAnyPhrase(normalizedPrompt, UI_AFFORDANCE_KEYWORDS)) {
+  if (input.sourceIds.some((sourceId) => isIntentPocAppSource(sourceId)) && includesAnyPhrase(normalizedPrompt, UI_AFFORDANCE_KEYWORDS)) {
     return {
       sourceId: input.primarySourceId,
       id: "shared-source",

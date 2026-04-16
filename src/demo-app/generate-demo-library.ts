@@ -70,7 +70,8 @@ async function runDemoLibrary(): Promise<void> {
 
   const result = await runIntent({
     configPath,
-    sourceIds: ["demo-components"],
+    sourceIds: ["intent-poc-app"],
+    publishToLibrary: true,
     intent: "Create a baseline for the deterministic screenshot library for the built-in demo surface catalog."
   });
 

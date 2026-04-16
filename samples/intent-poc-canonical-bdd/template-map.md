@@ -8,8 +8,8 @@ Prompt sentence:
 `Create a baseline screenshot library for the demo-catalog source.`
 Effect:
 - sets the intent type to `baseline`
-- selects `demo-catalog` as the execution source
-- keeps capture scope at `all`
+- resolves the legacy `demo-catalog` prompt alias to the `intent-poc-app` execution source
+- preserves the legacy three-capture subset for the catalog index, primary button, and analytics overview entrypoints
 
 Prompt sentence:
 `The plan must turn the request into acceptance-ready work for the built-in catalog experience.`
