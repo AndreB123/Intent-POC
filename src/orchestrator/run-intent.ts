@@ -18,9 +18,14 @@ import {
   writeSourceEvidenceFiles
 } from "../evidence/write-manifest";
 import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evidence/write-summary";
-import { resolveGeminiApiKey } from "../intent/gemini-client";
 import { NormalizedIntent, TDDWorkItem } from "../intent/intent-types";
-import { ResolvedAgentStageConfig, RunAgentConfigOverride, applyAgentOverrides, resolveAgentStageConfig } from "../intent/agent-stage-config";
+import {
+  ResolvedAgentStageConfig,
+  RunAgentConfigOverride,
+  applyAgentOverrides,
+  assertImplementationStageReady,
+  resolveAgentStageConfig
+} from "../intent/agent-stage-config";
 import { normalizeIntentWithAgent } from "../intent/normalize-intent";
 import { executeImplementationStage as executeGeminiImplementationStage } from "../implementation/execute-implementation";
 import { LinearClient, LinearIssueRef } from "../linear/linear-client";
@@ -244,22 +249,6 @@ function buildSkippedStageExecutionRecord(summary: string): SourceStageExecution
     commands: [],
     fileOperations: []
   };
-}
-
-function assertImplementationStageReady(stage: ResolvedAgentStageConfig): void {
-  if (!stage.enabled) {
-    return;
-  }
-
-  if (!stage.provider) {
-    throw new Error("Implementation stage requires an explicit provider when the stage is enabled.");
-  }
-
-  if (stage.provider !== "gemini") {
-    throw new Error(`Implementation stage provider '${stage.provider}' is not supported. Supported providers: gemini.`);
-  }
-
-  resolveGeminiApiKey({ apiKeyEnv: stage.apiKeyEnv });
 }
 
 function buildAttemptFailureMessage(sourceId: string, attempt: SourceRunAttemptRecord): string {

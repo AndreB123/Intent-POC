@@ -4,12 +4,13 @@ import { AddressInfo } from "node:net";
 import path from "node:path";
 import YAML from "yaml";
 import { loadConfig } from "../../config/load-config";
-import { RunMode } from "../../config/schema";
+import { AgentConfig, RunMode } from "../../config/schema";
 import { toRelativePath } from "../../evidence/paths";
 import {
   AGENT_STAGE_SEQUENCE,
   RunAgentConfigOverride,
   applyAgentOverrides,
+  assertImplementationStageReady,
   resolveAgentStageConfig
 } from "../../intent/agent-stage-config";
 import { normalizeIntentWithAgent } from "../../intent/normalize-intent";
@@ -154,6 +155,8 @@ interface StudioSourceMetadataUpdate {
   role?: string;
   summary?: string;
 }
+
+const STUDIO_IMPLEMENTATION_GUIDANCE = "Start Studio with './intent-poc.local-no-linear.yaml' or add 'agent.provider: gemini' plus a Gemini API key environment variable before enabling Implementation.";
 
 function formatSourceLabel(sourceId: string): string {
   return sourceId
@@ -502,6 +505,20 @@ function normalizeAgentOverrides(value: unknown): RunAgentConfigOverride | undef
   return Object.keys(stages).length > 0 ? { stages } : undefined;
 }
 
+function assertStudioAgentConfigurationReady(agent: AgentConfig): void {
+  const implementationStage = resolveAgentStageConfig(agent, "implementation");
+
+  try {
+    assertImplementationStageReady(implementationStage);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`${error.message} ${STUDIO_IMPLEMENTATION_GUIDANCE}`);
+    }
+
+    throw error;
+  }
+}
+
 function buildStudioAgentStages(agent: Awaited<ReturnType<typeof loadConfig>>["config"]["agent"]): StudioAgentStageSummary[] {
   return AGENT_STAGE_SEQUENCE.map((stageId) => {
     const stage = resolveAgentStageConfig(agent, stageId);
@@ -545,6 +562,8 @@ async function previewNormalizedIntent(input: {
 }): Promise<NormalizedIntent> {
   const loaded = await loadConfig(input.configPath);
   const agent = applyAgentOverrides(loaded.config.agent, input.agentOverrides);
+
+  assertStudioAgentConfigurationReady(agent);
 
   return await normalizeIntentWithAgent({
     rawPrompt: input.prompt,
@@ -957,6 +976,9 @@ export async function startIntentStudioServer(
           ? body.resumeIssue.trim()
           : undefined;
         const dryRun = body.dryRun === true;
+        const loaded = await loadConfig(configPath);
+
+        assertStudioAgentConfigurationReady(applyAgentOverrides(loaded.config.agent, agentOverrides));
 
         startRun({ prompt, sourceIds, agentOverrides, resumeIssue, dryRun });
         sendJson(res, 202, { ok: true });

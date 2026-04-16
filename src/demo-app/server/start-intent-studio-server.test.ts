@@ -4,10 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { startIntentStudioServer } from "./start-intent-studio-server";
 
-test("startIntentStudioServer exposes all configured sources and saves source metadata edits", async (t) => {
-  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
-  const configPath = path.join(tmpDir, "intent-poc.yaml");
-
+async function writeStudioConfig(configPath: string, tmpDir: string): Promise<void> {
   await fs.writeFile(
     configPath,
     [
@@ -88,6 +85,13 @@ test("startIntentStudioServer exposes all configured sources and saves source me
     ].join("\n"),
     "utf8"
   );
+}
+
+test("startIntentStudioServer exposes all configured sources and saves source metadata edits", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
 
   const server = await startIntentStudioServer({ configPath, port: 0 });
 
@@ -158,4 +162,60 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   assert.match(pageHtml, /id="source-scope"/);
   assert.match(pageHtml, /id="source-editor-form"/);
   assert.match(pageHtml, /Open config in editor/);
+});
+
+test("startIntentStudioServer rejects Studio requests that enable implementation without a provider", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const payload = {
+    prompt: "Implement dark mode for the app.",
+    agentOverrides: {
+      stages: {
+        implementation: {
+          enabled: true
+        }
+      }
+    }
+  };
+
+  const planResponse = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  assert.equal(planResponse.status, 400);
+  const planBody = (await planResponse.json()) as { error?: string };
+  assert.match(planBody.error ?? "", /Implementation stage requires an explicit provider/);
+  assert.match(planBody.error ?? "", /intent-poc\.local-no-linear\.yaml/);
+
+  const runResponse = await fetch(`${server.baseUrl}/api/runs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  assert.equal(runResponse.status, 400);
+  const runBody = (await runResponse.json()) as { error?: string };
+  assert.match(runBody.error ?? "", /Implementation stage requires an explicit provider/);
+  assert.match(runBody.error ?? "", /agent.provider: gemini/);
+
+  const stateResponse = await fetch(`${server.baseUrl}/api/state`);
+  assert.equal(stateResponse.status, 200);
+  const state = (await stateResponse.json()) as { currentRun: unknown };
+  assert.equal(state.currentRun, null);
 });

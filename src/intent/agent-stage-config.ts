@@ -1,4 +1,5 @@
 import { AgentConfig } from "../config/schema";
+import { resolveGeminiApiKey } from "./gemini-client";
 
 export const AGENT_STAGE_SEQUENCE = [
   "promptNormalization",
@@ -161,6 +162,22 @@ export function resolveAgentStageConfig(
     apiVersion: stageConfig.apiVersion ?? agent?.apiVersion,
     fallbackToRules: stageConfig.fallbackToRules ?? agent?.fallbackToRules ?? true
   };
+}
+
+export function assertImplementationStageReady(stage: ResolvedAgentStageConfig): void {
+  if (!stage.enabled) {
+    return;
+  }
+
+  if (!stage.provider) {
+    throw new Error("Implementation stage requires an explicit provider when the stage is enabled.");
+  }
+
+  if (stage.provider !== "gemini") {
+    throw new Error(`Implementation stage provider '${stage.provider}' is not supported. Supported providers: gemini.`);
+  }
+
+  resolveGeminiApiKey({ apiKeyEnv: stage.apiKeyEnv });
 }
 
 export function applyAgentOverrides(agent: AgentConfig, overrides?: RunAgentConfigOverride): AgentConfig {
