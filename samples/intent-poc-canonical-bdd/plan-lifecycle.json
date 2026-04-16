@@ -3,8 +3,7 @@
   "runId": "<generated-run-id>",
   "updatedAt": "<generated-timestamp>",
   "intentId": "<generated-intent-id>",
-  "summary": "create baseline evidence for demo-catalog",
-  "mode": "baseline",
+  "summary": "capture evidence for demo-catalog",
   "planning": {
     "repoCandidates": [
       {
@@ -126,7 +125,6 @@
       "sourceId": "demo-catalog",
       "status": "planned",
       "selectionReason": "Source demo-catalog was referenced directly in the prompt.",
-      "runMode": "baseline",
       "linearIssue": null,
       "attemptCount": 0,
       "attempts": []

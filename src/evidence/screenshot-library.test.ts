@@ -4,11 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { CaptureOutcome } from "../capture/capture-target";
-import { ComparisonSummary } from "../compare/run-comparison";
-import { configSchema, RunMode } from "../config/schema";
+import { configSchema } from "../config/schema";
 import { NormalizedIntent } from "../intent/intent-types";
 import { readJsonFile } from "../shared/fs";
-import { ScreenshotLibraryUpdateMode, updateScreenshotLibrary } from "./screenshot-library";
+import { updateScreenshotLibrary } from "./screenshot-library";
+
+type ComparisonMode = "baseline" | "compare" | "approve-baseline";
 
 function buildConfig(tmpRoot: string) {
   return configSchema.parse({
@@ -47,6 +48,7 @@ function buildConfig(tmpRoot: string) {
           }
         },
         capture: {
+          publishToLibrary: true,
           items: [
             {
               id: "home",
@@ -87,23 +89,21 @@ function buildConfig(tmpRoot: string) {
     },
     run: {
       sourceId: "library",
-      mode: "baseline",
       captureIds: [],
       continueOnCaptureError: false,
-      allowBaselinePromotion: false,
       metadata: {},
       dryRun: false
     }
   });
 }
 
-function buildNormalizedIntent(runMode: RunMode): NormalizedIntent {
+function buildNormalizedIntent(intentType: NormalizedIntent["intentType"]): NormalizedIntent {
   return {
     intentId: "intent-1",
     receivedAt: "2026-04-15T00:00:00.000Z",
     rawPrompt: "Refresh the screenshot library.",
     summary: "refresh screenshot library",
-    intentType: runMode,
+    intentType,
     businessIntent: {
       statement: "Refresh the screenshot library.",
       desiredOutcome: "Library reflects the latest approved captures.",
@@ -135,15 +135,13 @@ function buildNormalizedIntent(runMode: RunMode): NormalizedIntent {
     artifacts: {
       requireScreenshots: true,
       requireManifest: true,
-      requireHashes: true,
-      requireComparison: true
+      requireHashes: true
     },
     linear: {
       createIssue: false,
       issueTitle: "IDD: refresh screenshot library"
     },
     execution: {
-      runMode,
       continueOnCaptureError: false
     },
     normalizationMeta: {
@@ -151,31 +149,6 @@ function buildNormalizedIntent(runMode: RunMode): NormalizedIntent {
       warnings: [],
       stages: []
     }
-  };
-}
-
-function buildComparison(mode: RunMode): ComparisonSummary {
-  return {
-    mode,
-    hasDrift: false,
-    counts: {
-      "baseline-written": 1,
-      unchanged: 0,
-      changed: 0,
-      "missing-baseline": 0,
-      "capture-failed": 0,
-      "diff-error": 0
-    },
-    items: [
-      {
-        captureId: "home",
-        status: "baseline-written",
-        currentPath: "pages/home.png",
-        baselinePath: "pages/home.png",
-        currentHash: "capture-hash",
-        baselineHash: "capture-hash"
-      }
-    ]
   };
 }
 
@@ -195,68 +168,34 @@ function buildCapture(outputPath: string): CaptureOutcome {
   };
 }
 
-test("updateScreenshotLibrary writes captured assets for baseline and approve-baseline modes", async () => {
+test("updateScreenshotLibrary writes captured assets for tracked screenshot sources", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-screenshot-library-"));
 
   try {
-    for (const mode of ["baseline", "approve-baseline"] as ScreenshotLibraryUpdateMode[]) {
+    for (const intentType of ["capture-evidence", "refresh-library"] as NormalizedIntent["intentType"][]) {
       const config = buildConfig(tmpRoot);
-      const stagedRoot = path.join(tmpRoot, `staged-${mode}`);
+      const stagedRoot = path.join(tmpRoot, `staged-${intentType}`);
       const capturePath = path.join(stagedRoot, "pages", "home.png");
       await fs.mkdir(path.dirname(capturePath), { recursive: true });
-      await fs.writeFile(capturePath, `${mode}-capture`, "utf8");
+      await fs.writeFile(capturePath, `${intentType}-capture`, "utf8");
 
       const result = await updateScreenshotLibrary({
         config,
         sourceId: "library",
-        runId: `run-${mode}`,
-        mode,
+        runId: `run-${intentType}`,
         captures: [buildCapture(capturePath)],
-        comparison: buildComparison(mode),
-        normalizedIntent: buildNormalizedIntent(mode)
+        normalizedIntent: buildNormalizedIntent(intentType)
       });
 
       const copiedImagePath = path.join(result.sourceLibraryRoot, "pages", "home.png");
       const manifestPath = path.join(result.sourceLibraryRoot, "manifest.json");
-      const manifest = await readJsonFile<{ mode: RunMode; runId: string; captureCount: number }>(manifestPath);
+      const manifest = await readJsonFile<{ runId: string; captureCount: number; failedCaptureCount: number }>(manifestPath);
 
-      assert.equal(await fs.readFile(copiedImagePath, "utf8"), `${mode}-capture`);
-      assert.equal(manifest?.mode, mode);
-      assert.equal(manifest?.runId, `run-${mode}`);
+      assert.equal(await fs.readFile(copiedImagePath, "utf8"), `${intentType}-capture`);
+      assert.equal(manifest?.runId, `run-${intentType}`);
       assert.equal(manifest?.captureCount, 1);
+      assert.equal(manifest?.failedCaptureCount, 0);
     }
-  } finally {
-    await fs.rm(tmpRoot, { recursive: true, force: true });
-  }
-});
-
-test("updateScreenshotLibrary rejects compare mode to keep the library read-only during comparisons", async () => {
-  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-screenshot-library-compare-"));
-
-  try {
-    const config = buildConfig(tmpRoot);
-    const stagedRoot = path.join(tmpRoot, "staged-compare");
-    const capturePath = path.join(stagedRoot, "pages", "home.png");
-    await fs.mkdir(path.dirname(capturePath), { recursive: true });
-    await fs.writeFile(capturePath, "compare-capture", "utf8");
-
-    await assert.rejects(
-      updateScreenshotLibrary({
-        config,
-        sourceId: "library",
-        runId: "run-compare",
-        mode: "compare" as ScreenshotLibraryUpdateMode,
-        captures: [buildCapture(capturePath)],
-        comparison: {
-          ...buildComparison("compare"),
-          mode: "compare"
-        },
-        normalizedIntent: buildNormalizedIntent("compare")
-      }),
-      /only supported for baseline runs/
-    );
-
-    await assert.rejects(fs.access(path.join(tmpRoot, "library", "library")));
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }

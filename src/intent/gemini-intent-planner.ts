@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { RunMode } from "../config/schema";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
 import { createGeminiClient } from "./gemini-client";
 import { PromptNormalizerSourceDescriptor } from "./gemini-prompt-normalizer";
@@ -8,7 +7,6 @@ import { IntentType } from "./intent-types";
 export interface GeminiIntentPlanningInput {
   rawPrompt: string;
   intentType: IntentType;
-  runMode: RunMode;
   sourceIds: string[];
   requestedSourceIds?: string[];
   availableSources: Record<string, PromptNormalizerSourceDescriptor>;
@@ -137,12 +135,11 @@ function buildPlanningPrompt(input: GeminiIntentPlanningInput): string {
   return [
     "You are refining a bounded intent-driven development plan for a visual evidence runner.",
     "Return only JSON that matches the provided schema.",
-    "Do not invent source ids, capture ids, destinations, tools, or run modes.",
+    "Do not invent source ids, capture ids, destinations, or tools.",
     "You may rewrite the business statement, desired outcome, acceptance criteria, and scenarios to make the plan clearer and more execution-ready.",
     "Keep all scenarios within the provided source ids.",
     "If you are unsure, omit the field instead of guessing.",
     `Intent type: ${input.intentType}`,
-    `Run mode: ${input.runMode}`,
     `Selected source ids: ${input.sourceIds.join(", ")}`,
     ...(input.requestedSourceIds && input.requestedSourceIds.length > 0
       ? [`Requested source scope: ${input.requestedSourceIds.join(", ")}`]

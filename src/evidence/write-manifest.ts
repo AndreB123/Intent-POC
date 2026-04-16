@@ -73,7 +73,6 @@ export interface PlanLifecycleRecord {
   updatedAt: string;
   intentId: string;
   summary: string;
-  mode: AppConfig["run"]["mode"];
   planning: NormalizedIntent["planning"];
   normalizationMeta: NormalizedIntent["normalizationMeta"];
   linear: BusinessLinearPublication | null;
@@ -81,7 +80,6 @@ export interface PlanLifecycleRecord {
     sourceId: string;
     status: SourceEvidenceRecord["status"];
     selectionReason?: string;
-    runMode?: AppConfig["run"]["mode"];
     linearIssue?: LinearIssueRef | null;
     attemptCount?: number;
     attempts?: Array<{
@@ -182,7 +180,6 @@ export async function writeSourceEvidenceFiles(input: {
     source: {
       id: input.paths.sourceId,
       purpose: sourcePlan?.selectionReason,
-      runMode: sourcePlan?.runMode,
       captureScope: sourcePlan?.captureScope,
       configuredCaptureCount,
       executedCaptureCount,
@@ -230,7 +227,6 @@ export async function writeSourceEvidenceFiles(input: {
       sourceIds: input.normalizedIntent.executionPlan.sources.map((source) => source.sourceId),
       destinationIds: input.normalizedIntent.executionPlan.destinations.map((destination) => destination.id)
     },
-    mode: comparison?.mode ?? input.normalizedIntent.execution.runMode,
     hasDrift: comparison?.hasDrift ?? false,
     counts: comparison?.counts ?? emptyComparisonCounts(),
     captureCoverage: {
@@ -341,7 +337,6 @@ export async function writeBusinessEvidenceFiles(input: {
 
   const comparisonJson = {
     runId: input.paths.runId,
-    mode: input.normalizedIntent.execution.runMode,
     status: input.status,
     errors: input.errors,
     hasDrift: input.hasDrift,
@@ -350,7 +345,6 @@ export async function writeBusinessEvidenceFiles(input: {
       sourceId: sourceRun.sourceId,
       status: sourceRun.status,
       error: sourceRun.error,
-      mode: sourceRun.comparison?.mode ?? input.normalizedIntent.execution.runMode,
       hasDrift: sourceRun.comparison?.hasDrift ?? false,
       counts: sourceRun.comparison?.counts ?? emptyComparisonCounts(),
       items: (sourceRun.comparison?.items ?? []).map((item) => ({
@@ -380,7 +374,6 @@ export async function writePlanLifecycleFile(input: {
     updatedAt: new Date().toISOString(),
     intentId: input.normalizedIntent.intentId,
     summary: input.normalizedIntent.summary,
-    mode: input.normalizedIntent.execution.runMode,
     planning: input.normalizedIntent.planning,
     normalizationMeta: input.normalizedIntent.normalizationMeta,
     linear: input.linearPublication,
@@ -391,7 +384,6 @@ export async function writePlanLifecycleFile(input: {
         sourceId: sourceRun.sourceId,
         status: sourceRun.status,
         selectionReason: sourcePlan?.selectionReason,
-        runMode: sourcePlan?.runMode,
         linearIssue: sourceRun.linearIssue ?? input.linearPublication?.sourceIssues[sourceRun.sourceId] ?? null,
         attemptCount: sourceRun.attempts.length,
         attempts: sourceRun.attempts.map((attempt) => ({

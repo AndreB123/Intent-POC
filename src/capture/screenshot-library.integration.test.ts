@@ -86,10 +86,8 @@ function buildConfig(baseUrl: string) {
     },
     run: {
       sourceId: "component-library",
-      mode: "compare",
       captureIds: [],
       continueOnCaptureError: false,
-      allowBaselinePromotion: false,
       metadata: {},
       dryRun: false
     }

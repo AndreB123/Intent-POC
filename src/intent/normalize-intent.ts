@@ -1,4 +1,4 @@
-import { AgentConfig, CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
+import { AgentConfig, CaptureItemConfig, SourceConfig } from "../config/schema";
 import { sanitizeFileSegment } from "../shared/fs";
 import {
   AGENT_STAGE_SEQUENCE,
@@ -28,7 +28,6 @@ export type PlanningDepth = "scoping" | "full";
 
 export interface NormalizeIntentOptions {
   rawPrompt: string;
-  runMode: RunMode;
   defaultSourceId: string;
   continueOnCaptureError: boolean;
   availableSources: Record<string, AvailableSourceDescriptor>;
@@ -67,7 +66,6 @@ interface IntentPlanningRefinement {
 
 interface IntentDraft {
   statement: string;
-  effectiveRunMode: RunMode;
   primarySourceId: string;
   sourcePlans: NormalizedIntent["executionPlan"]["sources"];
   primaryCaptureScope: NormalizedIntent["captureScope"];
@@ -114,24 +112,12 @@ interface SanitizedIdSelection {
 const businessWideIntentPattern =
   /\b(all targets|all systems|all sources|multiple targets|multiple systems|across\b|business[- ]wide|organization[- ]wide|org[- ]wide|everywhere|cross[- ]target|cross[- ]system)\b/i;
 
-function inferIntentType(prompt: string, fallback: RunMode): NormalizedIntent["intentType"] {
-  if (/approve|promote.+baseline|bless.+baseline/i.test(prompt)) {
-    return "approve-baseline";
-  }
-
-  if (/create.+baseline|initialize.+baseline|bootstrap.+baseline/i.test(prompt)) {
-    return "baseline";
-  }
-
+function inferIntentType(prompt: string): NormalizedIntent["intentType"] {
   if (/refresh|rebuild|maintain|update.+library/i.test(prompt)) {
     return "refresh-library";
   }
 
-  if (/compare|drift|changed|diff/i.test(prompt)) {
-    return "compare";
-  }
-
-  return fallback;
+  return "capture-evidence";
 }
 
 function dedupeValues(values: string[]): string[] {
@@ -255,32 +241,11 @@ function summarizeIntent(intentType: NormalizedIntent["intentType"], sourceIds: 
   const scope = sourceIds.length === 1 ? sourceIds[0] : `${sourceIds.length} sources`;
 
   switch (intentType) {
-    case "baseline":
-      return `create baseline evidence for ${scope}`;
-    case "approve-baseline":
-      return `approve latest evidence as baseline for ${scope}`;
     case "refresh-library":
       return `refresh evidence library for ${scope}`;
-    case "compare":
     default:
-      return `compare evidence drift for ${scope}`;
+      return `capture evidence for ${scope}`;
   }
-}
-
-function mapIntentTypeToRunMode(intentType: NormalizedIntent["intentType"], fallback: RunMode): RunMode {
-  if (intentType === "baseline") {
-    return "baseline";
-  }
-
-  if (intentType === "approve-baseline") {
-    return "approve-baseline";
-  }
-
-  if (intentType === "compare") {
-    return "compare";
-  }
-
-  return fallback;
 }
 
 function createPlanId(prefix: string, input: string, index: number): string {
@@ -326,13 +291,9 @@ function buildAcceptanceCriteria(
     sourceIds.length === 1
       ? `Intent is translated into executable work for ${sourceIds[0]}.`
       : `Intent is translated into executable work across ${sourceIds.length} applicable sources.`,
-    intentType === "baseline"
-      ? "Evidence is captured and stored as a baseline that can be reviewed later."
-      : intentType === "approve-baseline"
-        ? "Latest evidence is promoted as the approved baseline for future verification."
-        : intentType === "refresh-library"
-          ? "Evidence artifacts are refreshed and ready for review."
-          : "Evidence is compared against the current baseline and drift is made visible.",
+    intentType === "refresh-library"
+      ? "Tracked screenshot library artifacts are refreshed and ready for Git review."
+      : "Evidence is captured and packaged for review.",
     `Results are packaged so they can be distributed consistently, with the desired outcome of: ${desiredOutcome}.`
   ]
     .filter((description) => !explicitCriteria.some((item) => item.description.toLowerCase() === description.toLowerCase()))
@@ -350,7 +311,6 @@ function buildScenarios(input: {
   desiredOutcome: string;
   sourceIds: string[];
   acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
-  runMode: RunMode;
 }): NormalizedIntent["businessIntent"]["scenarios"] {
   const criteriaDescriptions = input.acceptanceCriteria.map((criterion) => criterion.description);
 
@@ -378,7 +338,7 @@ function buildScenarios(input: {
           : `${input.sourceIds.length} sources are applicable to the intent.`
       ],
       when: [
-        `Execution is prepared in ${input.runMode} mode.`,
+        "Execution is prepared for capture-based evidence collection.",
         "Visible evidence tooling is assigned to each applicable source."
       ],
       then: [
@@ -718,17 +678,6 @@ function buildToolPlans(input: {
       details: ["Playwright screenshots remain one execution tool rather than the top-level product model."]
     },
     {
-      id: "evidence-comparison",
-      type: "comparison",
-      label: "Evidence comparison",
-      enabled: input.intentType === "compare" || input.intentType === "approve-baseline",
-      reason:
-        input.intentType === "compare" || input.intentType === "approve-baseline"
-          ? "The intent requires comparing current evidence against a baseline."
-          : "Comparison is not required for a baseline-only execution.",
-      details: ["Uses pixel diff today; future tools can add non-visual verification."]
-    },
-    {
       id: "environment-deployment",
       type: "environment-deployment",
       label: "Environment deployment",
@@ -951,7 +900,7 @@ function buildPlanningReviewNotes(input: {
   }
 
   if (input.sourceIds.length > 1) {
-    notes.push("The current executor still applies a single run mode across all selected repos; mixed per-repo modes are not yet supported.");
+    notes.push("The current executor still applies one capture workflow across all selected repos.");
   }
 
   return notes;
@@ -967,7 +916,7 @@ function buildRulesResolution(trimmedPrompt: string, options: NormalizeIntentOpt
   const sourceSelection = pickApplicableSourceIds(trimmedPrompt, options);
 
   return {
-    intentType: inferIntentType(trimmedPrompt, options.runMode),
+    intentType: inferIntentType(trimmedPrompt),
     sourceIds: sourceSelection.sourceIds,
     selectionReason: sourceSelection.selectionReason,
     desiredOutcome: extractDesiredOutcome(trimmedPrompt),
@@ -1276,7 +1225,6 @@ function buildIntentDraft(
   planningRefinement?: IntentPlanningRefinement
 ): IntentDraft {
   const planningDepth = options.planningDepth ?? "full";
-  const effectiveRunMode = mapIntentTypeToRunMode(resolution.intentType, options.runMode);
   const primarySourceId = resolution.sourceIds[0] ?? options.defaultSourceId;
   const sourcePlans = resolution.sourceIds.map((sourceId) => {
     const captureSelection = pickCaptureScopeForSource(trimmedPrompt, sourceId, options, resolution);
@@ -1284,7 +1232,6 @@ function buildIntentDraft(
     return {
       sourceId,
       selectionReason: describeSelectionReason(resolution.selectionReason, sourceId),
-      runMode: effectiveRunMode,
       captureScope: captureSelection.captureScope,
       warnings: captureSelection.warnings
     };
@@ -1306,8 +1253,7 @@ function buildIntentDraft(
           statement,
           desiredOutcome,
           sourceIds: resolution.sourceIds,
-          acceptanceCriteria,
-          runMode: effectiveRunMode
+          acceptanceCriteria
         });
   const workItems =
     planningDepth === "scoping"
@@ -1366,7 +1312,6 @@ function buildIntentDraft(
 
   return {
     statement,
-    effectiveRunMode,
     primarySourceId,
     sourcePlans,
     primaryCaptureScope,
@@ -1434,15 +1379,13 @@ function buildNormalizedIntent(
     artifacts: {
       requireScreenshots: true,
       requireManifest: true,
-      requireHashes: true,
-      requireComparison: draft.effectiveRunMode === "compare"
+      requireHashes: true
     },
     linear: {
       createIssue: true,
       issueTitle: `IDD: ${trimmedPrompt.slice(0, 96)}`
     },
     execution: {
-      runMode: draft.effectiveRunMode,
       continueOnCaptureError: options.continueOnCaptureError
     },
     normalizationMeta: {
@@ -1555,7 +1498,6 @@ export async function normalizeIntentWithAgent(
     try {
       const hints = await activeDependencies.normalizePromptWithGemini({
         rawPrompt: trimmedPrompt,
-        runMode: options.runMode,
         defaultSourceId: options.defaultSourceId,
         availableSources: promptStageSources,
         requestedSourceIds,
@@ -1648,7 +1590,6 @@ export async function normalizeIntentWithAgent(
       const refinement = await activeDependencies.refineIntentPlanWithGemini({
         rawPrompt: trimmedPrompt,
         intentType: resolution.intentType,
-        runMode: draft.effectiveRunMode,
         sourceIds: resolution.sourceIds,
         requestedSourceIds,
         availableSources: planningStageSources,

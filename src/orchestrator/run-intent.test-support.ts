@@ -2,14 +2,15 @@ import path from "node:path";
 import { CaptureOutcome } from "../capture/capture-target";
 import { ComparisonSummary } from "../compare/run-comparison";
 import { LoadedConfig } from "../config/load-config";
-import { AppConfig, RunMode, SourceConfig, configSchema } from "../config/schema";
+import { AppConfig, SourceConfig, configSchema } from "../config/schema";
 import { SourceRunAttemptRecord, SourceStageExecutionRecord } from "../evidence/write-manifest";
 import { ExecuteSourceRunInput, SourceRunResult } from "./run-intent";
+
+type ComparisonMode = "baseline" | "compare" | "approve-baseline";
 
 interface BehaviorTestConfigOptions {
   sources?: AppConfig["sources"];
   defaultSourceId?: string;
-  mode?: RunMode;
   linearEnabled?: boolean;
   storageMode?: AppConfig["artifacts"]["storageMode"];
 }
@@ -76,6 +77,7 @@ export function buildBehaviorSource(input: BehaviorSourceInput): SourceConfig {
     capture: {
       catalog: input.catalog,
       basePathPrefix: "",
+      publishToLibrary: false,
       waitAfterLoadMs: input.waitAfterLoadMs ?? 0,
       injectCss: input.injectCss ?? [],
       defaultFullPage: input.defaultFullPage ?? false,
@@ -228,10 +230,8 @@ export function buildBehaviorTestConfig(rootDir: string, options: BehaviorTestCo
     },
     run: {
       sourceId: defaultSourceId,
-      mode: options.mode ?? "compare",
       captureIds: [],
       continueOnCaptureError: false,
-      allowBaselinePromotion: false,
       metadata: {},
       dryRun: false
     }
@@ -259,7 +259,7 @@ function buildComparisonCounts(overrides: Partial<ComparisonSummary["counts"]> =
 }
 
 export function buildComparisonSummary(input: {
-  mode?: RunMode;
+  mode?: ComparisonMode;
   hasDrift?: boolean;
   counts?: Partial<ComparisonSummary["counts"]>;
   items?: ComparisonSummary["items"];

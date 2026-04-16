@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RunMode, SourceConfig } from "../config/schema";
+import { SourceConfig } from "../config/schema";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
 import { createGeminiClient } from "./gemini-client";
 import { IntentType } from "./intent-types";
@@ -8,7 +8,6 @@ export type PromptNormalizerSourceDescriptor = Pick<SourceConfig, "aliases" | "c
 
 export interface GeminiPromptNormalizationInput {
   rawPrompt: string;
-  runMode: RunMode;
   defaultSourceId: string;
   availableSources: Record<string, PromptNormalizerSourceDescriptor>;
   requestedSourceIds?: string[];
@@ -24,7 +23,7 @@ export interface PromptNormalizationHints {
 }
 
 const promptNormalizationHintsSchema: z.ZodType<PromptNormalizationHints> = z.object({
-  intentType: z.enum(["baseline", "compare", "approve-baseline", "refresh-library"]).optional(),
+  intentType: z.enum(["capture-evidence", "refresh-library"]).optional(),
   desiredOutcome: z.string().min(1).optional(),
   sourceIds: z.array(z.string().min(1)).optional(),
   captureIdsBySource: z.record(z.array(z.string().min(1))).optional(),
@@ -37,7 +36,7 @@ const promptNormalizationResponseJsonSchema = {
   properties: {
     intentType: {
       type: "string",
-      enum: ["baseline", "compare", "approve-baseline", "refresh-library"]
+      enum: ["capture-evidence", "refresh-library"]
     },
     desiredOutcome: {
       type: "string"
@@ -98,9 +97,8 @@ function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string
           "Keep any returned sourceIds inside the requested source scope."
         ]
       : []),
-    "The supported intentType values are baseline, compare, approve-baseline, and refresh-library.",
+    "The supported intentType values are capture-evidence and refresh-library.",
     `Configured default source id: ${input.defaultSourceId}`,
-    `Configured fallback run mode: ${input.runMode}`,
     "Configured sources:",
     buildSourceSummary(input.availableSources),
     "User prompt:",

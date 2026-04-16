@@ -116,6 +116,7 @@ sources:
         intervalMs: 500
     capture:
       catalog: demo-surface-catalog
+      publishToLibrary: true
       waitAfterLoadMs: 300
       injectCss:
         - "*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }"
@@ -151,11 +152,9 @@ comparison:
   writeDiffImages: true
 run:
   sourceId: demo-catalog
-  mode: baseline
-  intent: Create a baseline screenshot library for the built-in demo catalog.
+  intent: Capture the built-in demo catalog evidence and write reviewable artifacts.
   resumeIssue:
   captureIds: []
   continueOnCaptureError: false
-  allowBaselinePromotion: false
   metadata: {}
   dryRun: false

@@ -1,7 +1,6 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import { LoadedConfig } from "../config/load-config";
-import { RunMode } from "../config/schema";
 import { ensureDirectory, removeDirectory, sanitizeFileSegment } from "../shared/fs";
 
 export interface SourceRunPaths {
@@ -39,12 +38,11 @@ export interface RunPaths {
 
 export async function createRunPaths(
   loadedConfig: LoadedConfig,
-  sourceIds: string[],
-  mode: RunMode
+  sourceIds: string[]
 ): Promise<RunPaths> {
   const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
   const sourceScope = sourceIds.length === 1 ? sourceIds[0] : `${sourceIds.length}-sources`;
-  const runId = `${timestamp}-${sanitizeFileSegment(mode)}-${sanitizeFileSegment(sourceScope)}`;
+  const runId = `${timestamp}-${sanitizeFileSegment(sourceScope)}`;
   const runDir = path.join(loadedConfig.config.artifacts.runRoot, runId);
 
   if (loadedConfig.config.artifacts.cleanBeforeRun) {

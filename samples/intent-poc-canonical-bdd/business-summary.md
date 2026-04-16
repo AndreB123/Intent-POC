@@ -3,9 +3,9 @@
 - Run ID: <generated-run-id>
 - Status: completed
 - Intent: Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
-- Normalized summary: create baseline evidence for demo-catalog
+- Normalized summary: capture evidence for demo-catalog
 - Primary source: demo-catalog
-- Mode: baseline
+- Capture workflow: active
 - Linear parent issue: not created
 - Has drift: no
 - Desired outcome: product and engineering leads can inspect the baseline without reading implementation details
@@ -30,7 +30,7 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - leave a visible business process gate for baseline review
 - product and engineering leads can inspect the baseline without reading implementation details
 - Intent is translated into executable work for demo-catalog.
-- Evidence is captured and stored as a baseline that can be reviewed later.
+- Evidence is captured and packaged for review.
 - Results are packaged so they can be distributed consistently, with the desired outcome of: product and engineering leads can inspect the baseline without reading implementation details.
 
 ## BDD Scenarios
@@ -47,7 +47,7 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 ### Executable evidence is prepared for applicable sources
 - Sources: demo-catalog
 - Given Source demo-catalog is available for execution.
-- When Execution is prepared in baseline mode.
+- When Execution is prepared for capture-based evidence collection.
 - When Visible evidence tooling is assigned to each applicable source.
 - Then Evidence is ready to be gathered from demo-catalog.
 - Then The resulting work remains understandable without a specific agent implementation.
@@ -93,7 +93,7 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Orchestration strategy: single-source
 - Planned sources: demo-catalog
 - Destinations: Controller artifacts [active], Linear parent issue [planned], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]
-- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual evidence capture [enabled], Evidence comparison [planned], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]
+- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual evidence capture [enabled], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]
 
 ## Source Runs
 

@@ -61,6 +61,7 @@ const captureSchema = z
   .object({
     catalog: captureCatalogSchema.optional(),
     basePathPrefix: z.string().default(""),
+    publishToLibrary: z.boolean().default(false),
     waitAfterLoadMs: z.number().int().nonnegative().default(500),
     injectCss: z.array(z.string()).default([]),
     defaultFullPage: z.boolean().default(false),
@@ -148,12 +149,10 @@ const artifactsSchema = z.object({
 
 const runSchema = z.object({
   sourceId: z.string().min(1),
-  mode: z.enum(["baseline", "compare", "approve-baseline"]).default("compare"),
   intent: z.string().optional(),
   resumeIssue: z.string().min(1).optional(),
   captureIds: z.array(z.string()).default([]),
   continueOnCaptureError: z.boolean().default(false),
-  allowBaselinePromotion: z.boolean().default(false),
   metadata: z.record(z.string()).default({}),
   dryRun: z.boolean().default(false)
 });
@@ -253,4 +252,3 @@ export type SourceConfig = AppConfig["sources"][string];
 export type TargetConfig = SourceConfig;
 export type CaptureItemConfig = SourceConfig["capture"]["items"][number];
 export type CaptureCatalogName = z.infer<typeof captureCatalogSchema>;
-export type RunMode = AppConfig["run"]["mode"];

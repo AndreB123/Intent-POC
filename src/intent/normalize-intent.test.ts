@@ -50,6 +50,7 @@ const availableSources: Record<string, Pick<SourceConfig, "aliases" | "capture" 
     },
     capture: {
       basePathPrefix: "",
+      publishToLibrary: false,
       waitAfterLoadMs: 500,
       injectCss: [],
       defaultFullPage: true,
@@ -79,6 +80,7 @@ const availableSources: Record<string, Pick<SourceConfig, "aliases" | "capture" 
     },
     capture: {
       basePathPrefix: "",
+      publishToLibrary: false,
       waitAfterLoadMs: 500,
       injectCss: [],
       defaultFullPage: true,
@@ -102,6 +104,7 @@ const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "captu
     },
     capture: {
       basePathPrefix: "",
+      publishToLibrary: false,
       waitAfterLoadMs: 500,
       injectCss: [],
       defaultFullPage: true,
@@ -122,6 +125,7 @@ const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "captu
     },
     capture: {
       basePathPrefix: "",
+      publishToLibrary: false,
       waitAfterLoadMs: 500,
       injectCss: [],
       defaultFullPage: true,
@@ -145,6 +149,7 @@ const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture
     },
     capture: {
       basePathPrefix: "",
+      publishToLibrary: false,
       waitAfterLoadMs: 500,
       injectCss: [],
       defaultFullPage: true,
@@ -172,14 +177,12 @@ const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture
 test("normalizeIntent infers baseline mode from free-text prompt", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Create baseline screenshots for client-systems roach pages",
-    runMode: "compare",
     defaultSourceId: "client-systems-roach-admin",
     continueOnCaptureError: false,
     availableSources
   });
 
-  assert.equal(normalized.intentType, "baseline");
-  assert.equal(normalized.execution.runMode, "baseline");
+  assert.equal(normalized.intentType, "capture-evidence");
   assert.equal(normalized.sourceId, "client-systems-roach-admin");
   assert.equal(normalized.executionPlan.primarySourceId, "client-systems-roach-admin");
   assert.equal(normalized.executionPlan.sources.length, 1);
@@ -204,7 +207,6 @@ test("normalizeIntent infers baseline mode from free-text prompt", () => {
 test("normalizeIntent defers BDD and TDD details during the Linear scoping pass", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Compare drift only for cockroach statements on client-systems.",
-    runMode: "baseline",
     defaultSourceId: "client-systems-roach-admin",
     continueOnCaptureError: false,
     planningDepth: "scoping",
@@ -231,7 +233,6 @@ test("normalizeIntent defers BDD and TDD details during the Linear scoping pass"
 test("normalizeIntent maps explicit capture names to subset mode", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Compare drift only for cockroach statements on client-systems",
-    runMode: "compare",
     defaultSourceId: "client-systems-roach-admin",
     continueOnCaptureError: false,
     availableSources
@@ -245,7 +246,6 @@ test("normalizeIntent maps explicit capture names to subset mode", () => {
 test("normalizeIntent can plan across multiple sources for business-wide intent", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Create a business-wide hard gate so evidence is visible across client-systems and docs.",
-    runMode: "compare",
     defaultSourceId: "client-systems-roach-admin",
     continueOnCaptureError: false,
     linearEnabled: false,
@@ -265,14 +265,13 @@ test("normalizeIntent can plan across multiple sources for business-wide intent"
   );
   assert.ok(normalized.businessIntent.workItems.length >= 3);
   assert.ok(
-    normalized.planning.reviewNotes.some((note) => note.includes("single run mode"))
+    normalized.planning.reviewNotes.some((note) => note.includes("capture workflow"))
   );
 });
 
 test("normalizeIntent carries explicit resume targets into the planning context", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Continue the client-systems visual verification plan",
-    runMode: "compare",
     defaultSourceId: "client-systems-roach-admin",
     continueOnCaptureError: false,
     resumeIssue: "ENG-321",
@@ -289,7 +288,6 @@ test("normalizeIntent carries explicit resume targets into the planning context"
 test("normalizeIntent prefers exact source tokens over overlapping aliases", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Create a baseline screenshot library for the demo-catalog source so that the baseline is reviewable.",
-    runMode: "compare",
     defaultSourceId: "demo-catalog",
     continueOnCaptureError: false,
     availableSources: ambiguousDemoSources
@@ -305,7 +303,6 @@ test("normalizeIntent prefers exact source tokens over overlapping aliases", () 
 test("normalizeIntent honors the requested source scope across multiple sources", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Prepare reviewable visual evidence for the current release.",
-    runMode: "compare",
     defaultSourceId: "client-systems-roach-admin",
     continueOnCaptureError: false,
     availableSources,
@@ -327,7 +324,6 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
   const normalized = await normalizeIntentWithAgent(
     {
       rawPrompt: "Refresh the documentation screenshots so the docs site is reviewable.",
-      runMode: "compare",
       defaultSourceId: "client-systems-roach-admin",
       continueOnCaptureError: false,
       availableSources,
@@ -335,7 +331,7 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     },
     {
       normalizePromptWithGemini: async () => ({
-        intentType: "baseline",
+        intentType: "capture-evidence",
         desiredOutcome: "The documentation screenshots are reviewable by stakeholders.",
         sourceIds: ["docs-portal"],
         captureIdsBySource: {
@@ -346,8 +342,7 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     }
   );
 
-  assert.equal(normalized.intentType, "baseline");
-  assert.equal(normalized.execution.runMode, "baseline");
+  assert.equal(normalized.intentType, "capture-evidence");
   assert.equal(normalized.sourceId, "docs-portal");
   assert.deepEqual(normalized.captureScope, {
     mode: "all",
@@ -375,7 +370,6 @@ test("normalizeIntentWithAgent preserves full demo-catalog capture scope when Ge
   const normalized = await normalizeIntentWithAgent(
     {
       rawPrompt: "Compare the demo-catalog evidence so we can tell whether the dark mode work is visible.",
-      runMode: "compare",
       defaultSourceId: "demo-catalog",
       continueOnCaptureError: false,
       availableSources: demoCatalogSources,
@@ -411,7 +405,6 @@ test("normalizeIntentWithAgent still narrows capture scope when the prompt expli
   const normalized = await normalizeIntentWithAgent(
     {
       rawPrompt: "Compare only page-analytics-overview in demo-catalog so we can inspect that page.",
-      runMode: "compare",
       defaultSourceId: "demo-catalog",
       continueOnCaptureError: false,
       availableSources: demoCatalogSources,
@@ -442,7 +435,6 @@ test("normalizeIntentWithAgent applies Gemini planning refinement when the plann
   const normalized = await normalizeIntentWithAgent(
     {
       rawPrompt: "Prepare the documentation screenshots so release managers can review the docs lane.",
-      runMode: "compare",
       defaultSourceId: "client-systems-roach-admin",
       continueOnCaptureError: false,
       availableSources,
@@ -519,7 +511,6 @@ test("normalizeIntentWithAgent keeps the requested source scope when Gemini retu
   const normalized = await normalizeIntentWithAgent(
     {
       rawPrompt: "Prepare reviewable evidence for the release.",
-      runMode: "compare",
       defaultSourceId: "client-systems-roach-admin",
       continueOnCaptureError: false,
       availableSources,
@@ -549,7 +540,6 @@ test("normalizeIntentWithAgent falls back to rules when Gemini normalization fai
   const normalized = await normalizeIntentWithAgent(
     {
       rawPrompt: "Compare drift only for cockroach statements on client-systems",
-      runMode: "compare",
       defaultSourceId: "client-systems-roach-admin",
       continueOnCaptureError: false,
       availableSources,

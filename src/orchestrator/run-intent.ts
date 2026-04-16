@@ -1,12 +1,12 @@
 import path from "node:path";
 import { LoadedConfig, loadConfig } from "../config/load-config";
-import { AppConfig, CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
+import { AppConfig, CaptureItemConfig, SourceConfig } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
 import { runCapture } from "../capture/run-capture";
-import { ComparisonStatus, ComparisonSummary, resolveMissingBaselinePolicy, runComparison } from "../compare/run-comparison";
+import { ComparisonStatus, ComparisonSummary } from "../compare/run-comparison";
 import { RunPaths, SourceRunPaths, createRunPaths, retainRecentRuns, toRelativePath } from "../evidence/paths";
 import { publishArtifactsToSourceIfConfigured } from "../evidence/publish-artifacts";
-import { isScreenshotLibraryUpdateMode, updateScreenshotLibrary } from "../evidence/screenshot-library";
+import { updateScreenshotLibrary } from "../evidence/screenshot-library";
 import {
   BusinessLinearPublication,
   SourceRunAttemptRecord,
@@ -56,7 +56,6 @@ export interface RunIntentEvent {
     | "qa-verification"
     | "app"
     | "capture"
-    | "comparison"
     | "artifacts"
     | "run";
   message: string;
@@ -70,7 +69,6 @@ export interface SourceRunResult extends SourceEvidenceRecord {
 export interface RunIntentResult {
   status: "completed" | "failed";
   sourceId: string;
-  mode: RunMode;
   dryRun: boolean;
   normalizedIntent: NormalizedIntent;
   paths: RunPaths;
@@ -579,7 +577,7 @@ function buildExecutionSourcesMarkdown(normalizedIntent: NormalizedIntent): stri
     normalizedIntent.executionPlan.sources
       .map(
         (source) =>
-          `- ${source.sourceId} (${source.runMode}, ${source.captureScope.mode === "subset" ? source.captureScope.captureIds.join(", ") : "all captures"})`
+          `- ${source.sourceId} (${source.captureScope.mode === "subset" ? source.captureScope.captureIds.join(", ") : "all captures"})`
       )
       .join("\n") || "- None"
   );
@@ -679,7 +677,7 @@ function buildLinearScopingSourceIssueDescription(input: {
     `## Source Lane`,
     "",
     `- Source: ${input.sourceId}`,
-    `- Mode: ${sourcePlan?.runMode ?? input.normalizedIntent.execution.runMode}`,
+    `- Capture workflow: ${sourcePlan ? "configured" : "default"}`,
     `- Capture scope: ${describeSourceCaptureScope(sourcePlan)}`,
     `- Selection reason: ${sourcePlan?.selectionReason ?? "not recorded"}`,
     repoContext ? `- Repo context: ${repoContext.label} (${repoContext.repoId})` : `- Repo context: not linked`,
@@ -807,7 +805,7 @@ function buildSourceIssueDescription(input: {
     `## Source Lane`,
     "",
     `- Source: ${input.sourceId}`,
-    `- Mode: ${sourcePlan?.runMode ?? input.normalizedIntent.execution.runMode}`,
+    `- Capture workflow: ${sourcePlan ? "configured" : "default"}`,
     `- Capture scope: ${describeSourceCaptureScope(sourcePlan)}`,
     `- Selection reason: ${sourcePlan?.selectionReason ?? "not recorded"}`,
     repoContext ? `- Repo context: ${repoContext.label} (${repoContext.repoId})` : `- Repo context: not linked`,
@@ -1142,7 +1140,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       task: async () => {
         await input.linearClient!.createComment(
           input.parentIssue!.id,
-          `Source lane started for '${input.sourcePlan.sourceId}' in mode '${input.sourcePlan.runMode}'.`
+          `Source lane started for '${input.sourcePlan.sourceId}' in the capture workflow.`
         );
       }
     });
@@ -1435,7 +1433,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
     if (input.sourcePlan.warnings.length > 0) {
       emitRunEvent(
         input.options,
-        "comparison",
+        "capture",
         "Source plan preserved configured capture coverage.",
         {
           sourceId: input.sourcePlan.sourceId,
@@ -1447,66 +1445,17 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       );
     }
 
-    emitRunEvent(input.options, "comparison", "Running comparison.", {
-      sourceId: input.sourcePlan.sourceId,
-      mode: input.sourcePlan.runMode,
-      captureCount: captures.length,
-      captureScope: input.sourcePlan.captureScope,
-      sourceWarnings: input.sourcePlan.warnings
-    });
-
-    try {
-      comparison = await runComparison(
-        input.config,
-        input.sourcePlan.runMode,
-        captures,
-        input.sourcePaths.baselineSourceDir,
-        input.sourcePaths.diffsDir
-      );
-    } catch (error) {
-      emitRunEvent(
-        input.options,
-        "comparison",
-        "Comparison failed.",
-        {
-          sourceId: input.sourcePlan.sourceId,
-          captureScope: input.sourcePlan.captureScope,
-          error: captureErrorMessage(error)
-        },
-        "error"
-      );
-      throw error;
-    }
-
-    emitRunEvent(input.options, "comparison", "Comparison complete.", {
-      sourceId: input.sourcePlan.sourceId,
-      hasDrift: comparison.hasDrift,
-      counts: comparison.counts,
-      captureScope: input.sourcePlan.captureScope,
-      sourceWarnings: input.sourcePlan.warnings
-    });
-
     if (captureResult.abortedDueToError) {
       sourceErrors.push("Capture run stopped early because continueOnCaptureError is disabled.");
     }
 
-    if (comparison.counts["missing-baseline"] > 0 && resolveMissingBaselinePolicy(input.config, input.sourcePlan.runMode) === "error") {
-      sourceErrors.push("One or more captures are missing a baseline image.");
-    }
-
-    if (comparison.hasDrift && input.config.comparison.failOnChange) {
-      sourceErrors.push("Visual drift detected and comparison.failOnChange is enabled.");
-    }
-
-    if (isScreenshotLibraryUpdateMode(input.sourcePlan.runMode)) {
+    if (input.config.sources[input.sourcePlan.sourceId]?.capture.publishToLibrary) {
       try {
         const libraryResult = await updateScreenshotLibrary({
           config: input.config,
           sourceId: input.sourcePlan.sourceId,
           runId: input.runPaths.runId,
-          mode: input.sourcePlan.runMode,
           captures,
-          comparison,
           normalizedIntent: input.normalizedIntent
         });
 
@@ -1645,8 +1594,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
         sourceId: input.sourcePlan.sourceId,
         status,
         summaryPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.summaryPath),
-        hasDrift: comparison.hasDrift,
-        counts: comparison.counts,
+        hasDrift: comparison?.hasDrift ?? false,
+        counts: comparison?.counts,
         attemptCount: attempts.length,
         latestFailureStage: latestAttempt?.failureStage,
         captureScope: input.sourcePlan.captureScope,
@@ -1802,7 +1751,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     const config = loadedConfig.config;
     const agent = applyAgentOverrides(config.agent, options.agentOverrides);
     const requestedSourceIds = options.sourceIds?.length ? Array.from(new Set(options.sourceIds)) : undefined;
-    const mode = config.run.mode;
     const rawPrompt = options.intent ?? config.run.intent;
     const resumeIssue = options.resumeIssue ?? config.run.resumeIssue;
     const dryRun = options.dryRun ?? config.run.dryRun;
@@ -1855,7 +1803,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     if (linearClient && shouldManageLinearPlan) {
       scopingIntent = await dependencies.normalizeIntent({
         rawPrompt,
-        runMode: mode,
         defaultSourceId: config.run.sourceId,
         continueOnCaptureError: config.run.continueOnCaptureError,
         agent,
@@ -1910,7 +1857,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
 
     const normalizedIntent = await dependencies.normalizeIntent({
       rawPrompt,
-      runMode: mode,
       defaultSourceId: config.run.sourceId,
       continueOnCaptureError: config.run.continueOnCaptureError,
       agent,
@@ -1973,7 +1919,7 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     }
 
     const sourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
-    const paths = await dependencies.createRunPaths(loadedConfig, sourceIds, normalizedIntent.execution.runMode);
+    const paths = await dependencies.createRunPaths(loadedConfig, sourceIds);
     await dependencies.writeJsonFile(paths.normalizedIntentPath, normalizedIntent);
 
     emitRunEvent(options, "intent", "Intent normalized.", {
@@ -1982,7 +1928,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       sourceId: normalizedIntent.executionPlan.primarySourceId,
       sourceIds,
       requestedSourceIds,
-      runMode: normalizedIntent.execution.runMode,
       normalizedIntent,
       businessIntent: normalizedIntent.businessIntent,
       executionPlan: normalizedIntent.executionPlan
@@ -2022,7 +1967,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       emitRunEvent(options, "run", "Dry run complete.", {
         sourceId: normalizedIntent.executionPlan.primarySourceId,
         sourceIds,
-        mode: normalizedIntent.execution.runMode,
         normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
         planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
       });
@@ -2030,7 +1974,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       log.info("Dry run complete.", {
         sourceId: normalizedIntent.executionPlan.primarySourceId,
         sourceIds,
-        mode: normalizedIntent.execution.runMode,
         normalizedIntentPath: toRelativePath(paths.controllerRoot, paths.normalizedIntentPath),
         planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
       });
@@ -2039,7 +1982,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       return {
         status: "completed",
         sourceId: normalizedIntent.executionPlan.primarySourceId,
-        mode: normalizedIntent.execution.runMode,
         dryRun: true,
         normalizedIntent,
         paths,
@@ -2179,7 +2121,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       runId: paths.runId,
       sourceId: normalizedIntent.executionPlan.primarySourceId,
       sourceIds,
-      mode: normalizedIntent.execution.runMode,
       summaryPath: toRelativePath(paths.controllerRoot, paths.summaryPath),
       manifestPath: toRelativePath(paths.controllerRoot, paths.manifestPath),
       hasDrift,
@@ -2193,7 +2134,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     return {
       status,
       sourceId: normalizedIntent.executionPlan.primarySourceId,
-      mode: normalizedIntent.execution.runMode,
       dryRun: false,
       normalizedIntent,
       paths,

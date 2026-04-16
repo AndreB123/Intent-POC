@@ -1,9 +1,7 @@
-import { RunMode } from "../config/schema";
 import { ExecutionDestinationStatus, IntentType, NormalizedIntent, RepoContextStatus } from "./intent-types";
 
 interface IntentPocBddSampleExpectation {
   intentType: IntentType;
-  runMode: RunMode;
   sourceId: string;
   summary: string;
   desiredOutcome: string;
@@ -54,7 +52,7 @@ const acceptanceCriteria = [
   "leave a visible business process gate for baseline review",
   desiredOutcome,
   "Intent is translated into executable work for demo-catalog.",
-  "Evidence is captured and stored as a baseline that can be reviewed later.",
+  "Evidence is captured and packaged for review.",
   `Results are packaged so they can be distributed consistently, with the desired outcome of: ${desiredOutcome}.`
 ];
 
@@ -80,7 +78,6 @@ const toolStates: IntentPocBddSampleExpectation["toolStates"] = [
   { label: "BDD planning", enabled: true },
   { label: "Playwright TDD generation", enabled: true },
   { label: "Visual evidence capture", enabled: true },
-  { label: "Evidence comparison", enabled: false },
   { label: "Environment deployment", enabled: false },
   { label: "Implementation loop", enabled: false },
   { label: "QA verification", enabled: false },
@@ -93,10 +90,9 @@ export const INTENT_POC_BDD_SAMPLE = {
   title: "Intent POC canonical BDD sample",
   prompt,
   expected: {
-    intentType: "baseline",
-    runMode: "baseline",
+    intentType: "capture-evidence",
     sourceId: "demo-catalog",
-    summary: "create baseline evidence for demo-catalog",
+    summary: "capture evidence for demo-catalog",
     desiredOutcome,
     selectionReason: "Source demo-catalog was referenced directly in the prompt.",
     orchestrationStrategy: "single-source",
@@ -128,7 +124,7 @@ export const INTENT_POC_BDD_SAMPLE = {
       "  - Playwright specs: 1",
       "  - Checkpoints: 3",
       "- Destinations: Controller artifacts [active], Linear parent issue [planned], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]",
-      "- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual evidence capture [enabled], Evidence comparison [planned], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]"
+      "- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual evidence capture [enabled], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]"
     ]
   }
 } satisfies IntentPocBddSampleContract;

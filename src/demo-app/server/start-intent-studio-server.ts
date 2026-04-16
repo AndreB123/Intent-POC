@@ -4,7 +4,7 @@ import { AddressInfo } from "node:net";
 import path from "node:path";
 import YAML from "yaml";
 import { loadConfig } from "../../config/load-config";
-import { AgentConfig, RunMode } from "../../config/schema";
+import { AgentConfig } from "../../config/schema";
 import { toRelativePath } from "../../evidence/paths";
 import {
   AGENT_STAGE_SEQUENCE,
@@ -91,7 +91,6 @@ interface StudioRunRecord {
   requestedSourceIds?: string[];
   agentOverrides?: RunAgentConfigOverride;
   sourceId?: string;
-  mode?: RunMode;
   resumeIssue?: string;
   intentPlan?: NormalizedIntent;
   dryRun: boolean;
@@ -144,7 +143,6 @@ interface StudioState {
   linearEnabled: boolean;
   defaultPrompt?: string;
   defaultSourceId?: string;
-  defaultMode?: RunMode;
   agentStages: StudioAgentStageSummary[];
   sources: StudioSourceSummary[];
   currentRun: StudioRunRecord | null;
@@ -571,7 +569,6 @@ async function previewNormalizedIntent(input: {
 
   return await normalizeIntentWithAgent({
     rawPrompt: input.prompt,
-    runMode: loaded.config.run.mode,
     defaultSourceId: loaded.config.run.sourceId,
     continueOnCaptureError: loaded.config.run.continueOnCaptureError,
     agent,
@@ -640,7 +637,6 @@ function summarizeComparisonIssue(sourceRun: RunIntentResult["sourceRuns"][numbe
 
 function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
   run.sourceId = result.sourceId;
-  run.mode = result.mode;
   run.runId = result.paths.runId;
   run.normalizedSummary = result.normalizedIntent.summary;
   run.intentPlan = result.normalizedIntent;
@@ -726,7 +722,6 @@ export async function startIntentStudioServer(
         linearEnabled: loaded.config.linear.enabled,
         defaultPrompt: loaded.config.run.intent,
         defaultSourceId: loaded.config.run.sourceId,
-        defaultMode: loaded.config.run.mode,
         agentStages: buildStudioAgentStages(loaded.config.agent),
         sources,
         currentRun: currentRun ? cloneRun(currentRun) : null,
@@ -778,12 +773,10 @@ export async function startIntentStudioServer(
       const details = event.details as {
         summary?: string;
         sourceId?: string;
-        runMode?: RunMode;
         normalizedIntent?: NormalizedIntent;
       };
       run.normalizedSummary = details.summary ?? run.normalizedSummary;
       run.sourceId = details.sourceId ?? run.sourceId;
-      run.mode = details.runMode ?? run.mode;
       run.intentPlan = details.normalizedIntent ?? run.intentPlan;
     }
 

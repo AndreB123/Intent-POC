@@ -42,7 +42,6 @@ test("buildSourceSummaryMarkdown surfaces capture coverage and missing baseline 
   });
   const normalizedIntent = normalizeIntent({
     rawPrompt: "Compare the demo-catalog evidence so we can tell whether the dark mode work is visible.",
-    runMode: "compare",
     defaultSourceId: "demo-catalog",
     continueOnCaptureError: false,
     availableSources: config.sources
@@ -93,7 +92,6 @@ test("buildSourceSummaryMarkdown surfaces invalid baseline preflight failures", 
   });
   const normalizedIntent = normalizeIntent({
     rawPrompt: "Compare the demo-catalog evidence so we can tell whether the dark mode work is visible.",
-    runMode: "compare",
     defaultSourceId: "demo-catalog",
     continueOnCaptureError: false,
     availableSources: config.sources

@@ -26,7 +26,7 @@ function buildNormalizedIntent(sourceId: string): NormalizedIntent {
     receivedAt: "2026-01-01T00:00:00.000Z",
     rawPrompt: "Add the requested dashboard affordance.",
     summary: "Add the requested dashboard affordance.",
-    intentType: "compare",
+    intentType: "capture-evidence",
     businessIntent: {
       statement: "Add the requested dashboard affordance.",
       desiredOutcome: "Users can see the new dashboard affordance.",
@@ -89,7 +89,6 @@ function buildNormalizedIntent(sourceId: string): NormalizedIntent {
         {
           sourceId,
           selectionReason: "Unit test source lane.",
-          runMode: "compare",
           captureScope: {
             mode: "all",
             captureIds: []
@@ -110,15 +109,13 @@ function buildNormalizedIntent(sourceId: string): NormalizedIntent {
     artifacts: {
       requireScreenshots: true,
       requireManifest: true,
-      requireHashes: true,
-      requireComparison: true
+      requireHashes: true
     },
     linear: {
       createIssue: false,
       issueTitle: ""
     },
     execution: {
-      runMode: "compare",
       continueOnCaptureError: false
     },
     normalizationMeta: {
@@ -223,7 +220,6 @@ async function createImplementationInput(): Promise<{
       sourcePlan: {
         sourceId,
         selectionReason: "Unit test source lane.",
-        runMode: "compare",
         captureScope: {
           mode: "all",
           captureIds: []

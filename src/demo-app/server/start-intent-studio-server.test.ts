@@ -64,6 +64,7 @@ async function writeStudioConfig(configPath: string, tmpDir: string): Promise<vo
       "        type: http",
       "        url: http://127.0.0.1:3001",
       "    capture:",
+      "      publishToLibrary: true",
       "      items:",
       "        - id: hidden",
       "          path: /hidden",
@@ -76,10 +77,8 @@ async function writeStudioConfig(configPath: string, tmpDir: string): Promise<vo
       "  hashAlgorithm: sha256",
       "run:",
       "  sourceId: app",
-      "  mode: compare",
       "  captureIds: []",
       "  continueOnCaptureError: false",
-      "  allowBaselinePromotion: false",
       "  metadata: {}",
       "  dryRun: true"
     ].join("\n"),

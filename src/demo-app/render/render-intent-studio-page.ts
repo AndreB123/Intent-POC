@@ -1706,14 +1706,13 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         function updateSelectionGuidance(state) {
           const selectedSources = selectedSourceRecords(state);
           const defaultSourceText = state.defaultSourceId ? formatSourceReference(state, state.defaultSourceId) : "none";
-          const defaultModeText = state.defaultMode ? state.defaultMode : "none";
 
           if (selectedSources.length === 0) {
             selectionTitle.textContent = "No work scope selected";
             selectionStatus.textContent = "optional";
             selectionStatus.className = "target-badge target-ready";
             selectionSummary.textContent = "The runner can infer sources from your prompt by matching configured source ids or aliases, then fall back to the config default source if needed.";
-            selectionDefaults.textContent = "Blank work scope falls back to prompt matching and business-wide expansion, then config default: " + defaultSourceText + ". Run behavior still falls back to config mode: " + defaultModeText + ".";
+            selectionDefaults.textContent = "Blank work scope falls back to prompt matching and business-wide expansion, then config default: " + defaultSourceText + ".";
             selectionDetails.textContent = "Leave every card clear when the prompt should decide. Check cards only when you want to constrain the run.";
             return;
           }
@@ -1782,7 +1781,6 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
           const items = [
             ["Primary", primarySource],
-            ["Mode", run.mode || "—"],
             ["AI Stages", aiStages],
             ["Result", run.error || (run.hasDrift ? "Drift" : run.status === "completed" ? "Success" : run.status)]
           ];
@@ -1902,7 +1900,6 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             activePlan.executionPlan.sources,
             function (source) {
               const meta = [
-                source.runMode,
                 source.captureScope && source.captureScope.mode === "subset"
                   ? "Captures: " + source.captureScope.captureIds.join(", ")
                   : "Captures: all configured"
@@ -2137,7 +2134,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 }).join(", ")
               : "prompt/config decides";
             card.appendChild(create("div", "recent-title", run.prompt));
-            card.appendChild(create("div", "recent-meta", "Scope: " + scopeText + " • Primary source: " + (run.sourceId ? formatSourceReference(state, run.sourceId) : "—") + " • " + run.mode + " • " + run.status));
+            card.appendChild(create("div", "recent-meta", "Scope: " + scopeText + " • Primary source: " + (run.sourceId ? formatSourceReference(state, run.sourceId) : "—") + " • " + run.status));
             card.appendChild(create("div", "recent-meta", "Finished: " + formatTime(run.finishedAt)));
 
             if (run.artifacts && run.artifacts.summaryPath) {

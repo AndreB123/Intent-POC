@@ -1,7 +1,6 @@
 import type { AgentStageId } from "./agent-stage-config";
-import { RunMode } from "../config/schema";
 
-export type IntentType = RunMode | "refresh-library";
+export type IntentType = "capture-evidence" | "refresh-library";
 export type NormalizationSource = "llm" | "rules" | "fallback";
 export type AgentStageSource = NormalizationSource | "skipped";
 export type ExecutionStrategy = "single-source" | "multi-source";
@@ -19,7 +18,6 @@ export type ExecutionToolType =
   | "linear-scoping"
   | "playwright-tdd"
   | "screenshot"
-  | "comparison"
   | "environment-deployment"
   | "implementation"
   | "qa-verification"
@@ -94,7 +92,6 @@ export interface BusinessIntent {
 export interface ExecutionSourcePlan {
   sourceId: string;
   selectionReason: string;
-  runMode: RunMode;
   captureScope: {
     mode: "all" | "subset";
     captureIds: string[];
@@ -193,14 +190,12 @@ export interface NormalizedIntent {
     requireScreenshots: true;
     requireManifest: true;
     requireHashes: true;
-    requireComparison: boolean;
   };
   linear: {
     createIssue: boolean;
     issueTitle: string;
   };
   execution: {
-    runMode: RunMode;
     continueOnCaptureError: boolean;
   };
   normalizationMeta: {

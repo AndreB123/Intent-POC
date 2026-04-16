@@ -43,7 +43,6 @@ test("writeGeneratedPlaywrightTests overwrites the generated source subtree", as
 
   const normalizedIntent = normalizeIntent({
     rawPrompt: "Create a baseline screenshot library for the demo source.",
-    runMode: "baseline",
     defaultSourceId: "demo-source",
     continueOnCaptureError: false,
     availableSources: {

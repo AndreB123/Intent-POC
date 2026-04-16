@@ -46,7 +46,6 @@ function assertIntentPocBddSamplePlan(normalizedIntent: NormalizedIntent): void 
   const expected = INTENT_POC_BDD_SAMPLE.expected;
 
   assert.equal(normalizedIntent.intentType, expected.intentType);
-  assert.equal(normalizedIntent.execution.runMode, expected.runMode);
   assert.equal(normalizedIntent.sourceId, expected.sourceId);
   assert.equal(normalizedIntent.summary, expected.summary);
   assert.equal(normalizedIntent.businessIntent.desiredOutcome, expected.desiredOutcome);
@@ -78,14 +77,12 @@ function assertIntentPocBddSamplePlan(normalizedIntent: NormalizedIntent): void 
     normalizedIntent.executionPlan.sources.map((source) => ({
       sourceId: source.sourceId,
       selectionReason: source.selectionReason,
-      runMode: source.runMode,
       captureScope: source.captureScope
     })),
     [
       {
         sourceId: expected.sourceId,
         selectionReason: expected.selectionReason,
-        runMode: expected.runMode,
         captureScope: expected.captureScope
       }
     ]
@@ -148,8 +145,7 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
     sources: {
       "demo-catalog": buildDemoCatalogBehaviorSource(tmpRoot)
     },
-    defaultSourceId: "demo-catalog",
-    mode: "baseline"
+    defaultSourceId: "demo-catalog"
   });
   const executedSources: string[] = [];
   const events: RunIntentEvent[] = [];
@@ -195,11 +191,10 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
 
     const planLifecycle = await readJsonFile<{
       summary: string;
-      mode: string;
       planning: {
         repoCandidates: Array<{ repoId: string; selectionStatus: string }>;
       };
-      sources: Array<{ sourceId: string; selectionReason?: string; runMode?: string }>;
+      sources: Array<{ sourceId: string; selectionReason?: string }>;
     }>(result.paths.planLifecyclePath);
     const manifest = await readJsonFile<{
       status: string;
@@ -242,10 +237,8 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
     );
     assertIntentPocBddSamplePlan(result.normalizedIntent);
     assert.equal(planLifecycle?.summary, INTENT_POC_BDD_SAMPLE.expected.summary);
-    assert.equal(planLifecycle?.mode, "baseline");
     assert.equal(planLifecycle?.sources[0]?.sourceId, "demo-catalog");
     assert.equal(planLifecycle?.sources[0]?.selectionReason, INTENT_POC_BDD_SAMPLE.expected.selectionReason);
-    assert.equal(planLifecycle?.sources[0]?.runMode, "baseline");
     assert.deepEqual(
       planLifecycle?.planning.repoCandidates.map((repo) => ({
         repoId: repo.repoId,

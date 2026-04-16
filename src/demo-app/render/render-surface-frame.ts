@@ -20,10 +20,12 @@ export function renderSurfaceFrame(input: {
     <section data-testid="${input.testId}" class="surface-frame ${input.isDark ? "dark-mode" : ""}">
       <header class="surface-header">
         <div class="header-left">
-          <button id="theme-toggle" aria-label="${toggle.label}">${toggle.icon}</button>
           <h1>${input.title}</h1>
         </div>
-        <span class="chip chip-${input.layer}">${layerLabel(input.layer)}</span>
+        <div class="header-right">
+          <button id="theme-toggle" aria-label="${toggle.label}">${toggle.icon}</button>
+          <span class="chip chip-${input.layer}">${layerLabel(input.layer)}</span>
+        </div>
       </header>
       ${input.body}
     </section>
@@ -77,6 +79,11 @@ export function renderSurfaceFrame(input: {
         margin-bottom: var(--space-md);
       }
       .header-left {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+      }
+      .header-right {
         display: flex;
         align-items: center;
         gap: var(--space-md);

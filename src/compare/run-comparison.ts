@@ -1,10 +1,12 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
-import { AppConfig, RunMode } from "../config/schema";
+import { AppConfig } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
 import { copyFile, ensureDirectory, pathExists, readJsonFile } from "../shared/fs";
 import { hashFile } from "./hash-image";
 import { generatePixelDiff } from "./pixel-diff";
+
+type ComparisonMode = "baseline" | "compare" | "approve-baseline";
 
 export type ComparisonStatus =
   | "baseline-written"
@@ -28,14 +30,14 @@ export interface ComparisonItem {
 }
 
 export interface ComparisonSummary {
-  mode: RunMode;
+  mode: ComparisonMode;
   hasDrift: boolean;
   counts: Record<ComparisonStatus, number>;
   items: ComparisonItem[];
 }
 
 interface BaselineLibraryManifest {
-  mode?: RunMode;
+  mode?: ComparisonMode;
   runId?: string;
 }
 
@@ -82,12 +84,12 @@ async function copyCapturesToBaseline(captures: CaptureOutcome[], baselineRoot: 
 
 export function resolveMissingBaselinePolicy(
   config: AppConfig,
-  mode: RunMode
+  mode: ComparisonMode
 ): AppConfig["comparison"]["onMissingBaseline"] {
   return mode === "compare" ? "error" : config.comparison.onMissingBaseline;
 }
 
-async function validateCompareBaselineRoot(mode: RunMode, baselineRoot: string): Promise<void> {
+async function validateCompareBaselineRoot(mode: ComparisonMode, baselineRoot: string): Promise<void> {
   if (mode !== "compare") {
     return;
   }
@@ -103,7 +105,7 @@ async function validateCompareBaselineRoot(mode: RunMode, baselineRoot: string):
 
 export async function runComparison(
   config: AppConfig,
-  mode: RunMode,
+  mode: ComparisonMode,
   captures: CaptureOutcome[],
   baselineRoot: string,
   diffDir: string
