@@ -53,7 +53,7 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
 
   if (checkpoint.action === "goto") {
     lines.push(
-      `      await page.goto(new URL(${quote(checkpoint.path ?? "/")}, baseUrl).toString(), { waitUntil: "networkidle" });`
+      `      await page.goto(new URL(${quote(checkpoint.path ?? "/")}, baseUrl).toString(), { waitUntil: ${quote(checkpoint.waitUntil ?? "networkidle")} });`
     );
   }
 
@@ -61,9 +61,18 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
     lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
   }
 
-  if (checkpoint.action === "click" || checkpoint.action === "fill" || checkpoint.action === "assert-visible") {
+  if (
+    checkpoint.action === "click" ||
+    checkpoint.action === "fill" ||
+    checkpoint.action === "assert-visible" ||
+    checkpoint.action === "assert-hidden"
+  ) {
     lines.push(`      const target = page.locator(${quote(checkpoint.target ?? checkpoint.locator ?? "body")});`);
-    lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible();`);
+    if (checkpoint.action === "assert-hidden") {
+      lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeHidden();`);
+    } else {
+      lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible();`);
+    }
 
     if (checkpoint.action === "click") {
       lines.push(`      await target.click();`);

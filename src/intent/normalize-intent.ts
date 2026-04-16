@@ -5,7 +5,7 @@ import {
   ResolvedAgentStageConfig,
   resolveAgentStageConfig
 } from "./agent-stage-config";
-import { CodeSurfaceId, inferCodeSurface, isCodeSurfaceId } from "./code-surface";
+import { CodeSurfaceId, CodeSurfaceSelection, inferCodeSurface, isCodeSurfaceId } from "./code-surface";
 import {
   normalizePromptWithGemini,
   PromptNormalizationHints,
@@ -384,10 +384,20 @@ function buildPlaywrightSpecRelativePath(sourceId: string, workItemId: string): 
 }
 
 function buildPlaywrightCheckpoints(input: {
+  codeSurface: CodeSurfaceSelection;
+  scenario?: BDDScenario;
   captureItems: CaptureItemConfig[];
   workItemTitle: string;
   desiredOutcome: string;
 }): PlaywrightCheckpoint[] {
+  if (input.codeSurface.id === "intent-studio") {
+    return buildIntentStudioPlaywrightCheckpoints({
+      scenario: input.scenario,
+      workItemTitle: input.workItemTitle,
+      desiredOutcome: input.desiredOutcome
+    });
+  }
+
   if (input.captureItems.length === 0) {
     const label = `Open the primary flow for ${input.workItemTitle}`;
     return [
@@ -414,11 +424,97 @@ function buildPlaywrightCheckpoints(input: {
     captureId: item.id,
     locator: item.locator,
     waitForSelector: item.waitForSelector,
-    target: item.locator
+    target: item.locator,
+    waitUntil: item.waitForSelector ? "load" : "networkidle"
   }));
 }
 
+function buildIntentStudioPlaywrightCheckpoints(input: {
+  scenario?: BDDScenario;
+  workItemTitle: string;
+  desiredOutcome: string;
+}): PlaywrightCheckpoint[] {
+  const scenarioText = [
+    input.workItemTitle,
+    ...(input.scenario?.when ?? []),
+    ...(input.scenario?.then ?? [])
+  ]
+    .join(" ")
+    .toLowerCase();
+  const isCollapseFlow = /\bcollapse|collapsed|collapsable|collapsible|hide\b/i.test(scenarioText);
+  const isExpandFlow = /\bexpand|expanded|show|restore\b/i.test(scenarioText);
+  const checkpoints: PlaywrightCheckpoint[] = [
+    {
+      id: createPlanId("checkpoint", `${input.workItemTitle}-open-intent-studio`, 0),
+      label: "Intent Studio Prompt Run",
+      action: "goto",
+      assertion: "The Intent Studio prompt input is visible and ready for interaction.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-intent-studio`, 0),
+      path: "/",
+      waitForSelector: "#prompt-input",
+      waitUntil: "domcontentloaded"
+    },
+    {
+      id: createPlanId("checkpoint", `${input.workItemTitle}-stage-grid-visible`, 1),
+      label: "Configuration Section Visible",
+      action: "assert-visible",
+      assertion: "The optional configuration section is visible before interaction.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-configuration-visible`, 1),
+      target: "#agent-stages-grid",
+      waitForSelector: "#agent-stages-grid"
+    }
+  ];
+
+  if (isCollapseFlow || isExpandFlow) {
+    checkpoints.push({
+      id: createPlanId("checkpoint", `${input.workItemTitle}-collapse-toggle`, checkpoints.length),
+      label: "Collapse Optional Configuration",
+      action: "click",
+      assertion: "The collapse toggle is available for the optional configuration section.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-collapse-toggle`, checkpoints.length),
+      target: "#toggle-stages-visibility",
+      waitForSelector: "#toggle-stages-visibility"
+    });
+    checkpoints.push({
+      id: createPlanId("checkpoint", `${input.workItemTitle}-collapsed-state`, checkpoints.length),
+      label: "Configuration Section Collapsed",
+      action: "assert-hidden",
+      assertion: isCollapseFlow
+        ? input.desiredOutcome
+        : "The optional configuration section can be hidden before it is expanded again.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-collapsed-state`, checkpoints.length),
+      target: "#agent-stages-grid",
+      waitForSelector: "#agent-stages-grid"
+    });
+  }
+
+  if (isExpandFlow) {
+    checkpoints.push({
+      id: createPlanId("checkpoint", `${input.workItemTitle}-expand-toggle`, checkpoints.length),
+      label: "Expand Optional Configuration",
+      action: "click",
+      assertion: "The expand toggle is available when the configuration section is collapsed.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-expand-toggle`, checkpoints.length),
+      target: "#toggle-stages-visibility",
+      waitForSelector: "#toggle-stages-visibility"
+    });
+    checkpoints.push({
+      id: createPlanId("checkpoint", `${input.workItemTitle}-expanded-state`, checkpoints.length),
+      label: "Configuration Section Expanded",
+      action: "assert-visible",
+      assertion: input.desiredOutcome,
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-expanded-state`, checkpoints.length),
+      target: "#promptNormalization-enabled",
+      waitForSelector: "#promptNormalization-enabled"
+    });
+  }
+
+  return checkpoints;
+}
+
 function buildPlaywrightSpecs(input: {
+  codeSurface: CodeSurfaceSelection;
+  scenario?: BDDScenario;
   workItemId: string;
   title: string;
   scenarioIds: string[];
@@ -438,6 +534,8 @@ function buildPlaywrightSpecs(input: {
       testName: input.title,
       scenarioIds: input.scenarioIds,
       checkpoints: buildPlaywrightCheckpoints({
+        codeSurface: input.codeSurface,
+        scenario: input.scenario,
         captureItems,
         workItemTitle: input.title,
         desiredOutcome: input.desiredOutcome
@@ -480,6 +578,7 @@ function buildWorkItemVerification(scenario: BDDScenario): string {
 }
 
 function buildWorkItems(input: {
+  codeSurface: CodeSurfaceSelection;
   scenarios: NormalizedIntent["businessIntent"]["scenarios"];
   sourceIds: string[];
   desiredOutcome: string;
@@ -511,6 +610,8 @@ function buildWorkItems(input: {
         playwright: {
           generatedBy: "rules",
           specs: buildPlaywrightSpecs({
+            codeSurface: input.codeSurface,
+            scenario,
             workItemId: id,
             title: scenario.title,
             scenarioIds: [scenario.id],
@@ -551,6 +652,7 @@ function buildWorkItems(input: {
         playwright: {
           generatedBy: "rules",
           specs: buildPlaywrightSpecs({
+            codeSurface: input.codeSurface,
             workItemId: id,
             title: `Capture reviewable evidence for ${sourceId}`,
             scenarioIds,
@@ -1286,6 +1388,7 @@ function buildIntentDraft(
   trimmedPrompt: string,
   options: NormalizeIntentOptions,
   resolution: NormalizationResolution,
+  codeSurface: CodeSurfaceSelection,
   planningRefinement?: IntentPlanningRefinement
 ): IntentDraft {
   const planningDepth = options.planningDepth ?? "full";
@@ -1323,6 +1426,7 @@ function buildIntentDraft(
     planningDepth === "scoping"
       ? []
       : buildWorkItems({
+          codeSurface,
           scenarios,
           sourceIds: resolution.sourceIds,
           desiredOutcome,
@@ -1401,15 +1505,16 @@ function buildNormalizedIntent(
   const stageMetas =
     input.stageMetas ??
     AGENT_STAGE_SEQUENCE.map((stageId) => buildSkippedStageMeta(resolveAgentStageConfig(options.agent, stageId)));
-  const draft = buildIntentDraft(trimmedPrompt, options, resolution, input.planningRefinement);
-  const intentId = `${new Date().toISOString().replace(/[.:]/g, "-")}-${sanitizeFileSegment(draft.summary)}`;
+  const primarySourceId = resolution.sourceIds[0] ?? options.defaultSourceId;
   const codeSurface = inferCodeSurface({
     prompt: trimmedPrompt,
-    primarySourceId: draft.primarySourceId,
+    primarySourceId,
     sourceIds: resolution.sourceIds,
     hintedCodeSurfaceId: resolution.codeSurfaceId,
     hintedAlternativeIds: resolution.codeSurfaceAlternatives
   });
+  const draft = buildIntentDraft(trimmedPrompt, options, resolution, codeSurface, input.planningRefinement);
+  const intentId = `${new Date().toISOString().replace(/[.:]/g, "-")}-${sanitizeFileSegment(draft.summary)}`;
 
   return {
     intentId,
@@ -1639,7 +1744,14 @@ export async function normalizeIntentWithAgent(
     });
   }
 
-  const draft = buildIntentDraft(trimmedPrompt, options, resolution);
+  const draftCodeSurface = inferCodeSurface({
+    prompt: trimmedPrompt,
+    primarySourceId: resolution.sourceIds[0] ?? options.defaultSourceId,
+    sourceIds: resolution.sourceIds,
+    hintedCodeSurfaceId: resolution.codeSurfaceId,
+    hintedAlternativeIds: resolution.codeSurfaceAlternatives
+  });
+  const draft = buildIntentDraft(trimmedPrompt, options, resolution, draftCodeSurface);
   const planningStage = resolveAgentStageConfig(options.agent, "bddPlanning");
   let planningRefinement: IntentPlanningRefinement | undefined;
   const planningStageSources = Object.fromEntries(

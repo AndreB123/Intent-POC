@@ -9,6 +9,7 @@ import { TDDWorkItem } from "../intent/intent-types";
 import { readJsonFile } from "../shared/fs";
 import {
   buildBehaviorTestLoadedConfig,
+  buildDemoCatalogBehaviorSource,
   buildCapturedOutcome,
   buildComparisonSummary,
   buildSourceRunAttemptRecord,
@@ -16,6 +17,7 @@ import {
 } from "./run-intent.test-support";
 import {
   RunIntentEvent,
+  buildQAVerificationExecutionPlan,
   createRunIntentRunner,
   runSourceAttemptLoop
 } from "./run-intent";
@@ -203,6 +205,58 @@ test("runSourceAttemptLoop Given ordered work items When one batch passes QA The
   assert.deepEqual(result.attempts[0]?.remainingWorkItemIds, ["work-2"]);
   assert.deepEqual(result.attempts[1]?.completedWorkItemIds, ["work-1", "work-2"]);
   assert.equal(result.resource, "ready-app-2");
+});
+
+test("buildQAVerificationExecutionPlan Given active Playwright work without generated specs When QA planning runs Then it raises a missing targeted test error", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: {
+      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "demo-catalog",
+    activeWorkItemIds: [normalizedIntent.businessIntent.workItems[0]!.id],
+    generatedPlaywrightTests: [],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.match(plan.error ?? "", /Missing targeted generated Playwright specs/);
+  assert.equal(plan.commands, undefined);
+});
+
+test("buildQAVerificationExecutionPlan Given active Playwright work with generated specs When QA planning runs Then it chooses focused generated Playwright regression", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: {
+      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "demo-catalog",
+    activeWorkItemIds: [normalizedIntent.businessIntent.workItems[0]!.id],
+    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/generated/demo-catalog/work-1.spec.ts"],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.equal(plan.error, undefined);
+  assert.deepEqual(
+    plan.commands?.map((command) => command.label),
+    ["typecheck", "generated-playwright"]
+  );
+  assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
 });
 
 test("runIntent Given a dry run When the plan is valid Then it writes plan lifecycle metadata and skips source execution", async () => {

@@ -42,6 +42,7 @@ import { sanitizeFileSegment, writeJsonFile, writeTextFile } from "../shared/fs"
 import { log } from "../shared/log";
 import { prepareSourceWorkspace } from "../target/prepare-workspace";
 import { ResolvedSourceWorkspace, resolveSourceWorkspace } from "../target/resolve-target";
+import { classifyChangedPaths } from "./test-impact-detector";
 import { writeGeneratedPlaywrightTests } from "../tdd/write-generated-playwright-tests";
 
 export interface RunIntentEvent {
@@ -147,6 +148,7 @@ export interface ExecuteQAVerificationStageInput {
   sourcePaths: SourceRunPaths;
   workspace: ResolvedSourceWorkspace;
   generatedPlaywrightTests: string[];
+  implementationFileOperations: SourceStageExecutionRecord["fileOperations"];
   attemptNumber: number;
   activeWorkItemIds: string[];
   completedWorkItemIds: string[];
@@ -198,6 +200,16 @@ export interface RunIntentDependencies {
   writeBusinessEvidenceFiles: typeof writeBusinessEvidenceFiles;
   writeBusinessSummaryMarkdown: typeof writeBusinessSummaryMarkdown;
   retainRecentRuns: typeof retainRecentRuns;
+}
+
+export interface QAVerificationCommandPlan {
+  label: string;
+  command: string;
+}
+
+export interface QAVerificationExecutionPlan {
+  commands?: QAVerificationCommandPlan[];
+  error?: string;
 }
 
 const MAX_SOURCE_ATTEMPTS = 3;
@@ -346,6 +358,61 @@ function buildCommandLogContent(command: SourceStageCommandRecord, stdout: strin
   ].join("\n");
 }
 
+export function buildQAVerificationExecutionPlan(input: {
+  normalizedIntent: NormalizedIntent;
+  sourceId: string;
+  activeWorkItemIds: string[];
+  generatedPlaywrightTests: string[];
+  implementationFileOperations: SourceStageExecutionRecord["fileOperations"];
+  workspaceRootDir: string;
+}): QAVerificationExecutionPlan {
+  const activeWorkItems = sortWorkItemsForExecution(
+    input.normalizedIntent.businessIntent.workItems.filter(
+      (workItem) => workItem.sourceIds.includes(input.sourceId) && input.activeWorkItemIds.includes(workItem.id)
+    )
+  );
+  const activeWorkItemIds = activeWorkItems.map((workItem) => workItem.id);
+  const expectsGeneratedPlaywright = activeWorkItems.some((workItem) => workItem.playwright.specs.length > 0);
+
+  if (expectsGeneratedPlaywright && input.generatedPlaywrightTests.length === 0) {
+    return {
+      error: `Missing targeted generated Playwright specs for active work items: ${activeWorkItemIds.join(", ")}.`
+    };
+  }
+
+  const implementationChangedPaths = Array.from(
+    new Set(
+      input.implementationFileOperations.map((operation) => operation.filePath.trim()).filter((filePath) => filePath.length > 0)
+    )
+  );
+  const impactDecision = classifyChangedPaths(implementationChangedPaths);
+  const allActiveWorkIsPlaywright = activeWorkItems.length > 0 && activeWorkItems.every((workItem) => workItem.type === "playwright-spec");
+
+  return {
+    commands: [
+      {
+        label: "typecheck",
+        command: "npm run typecheck"
+      },
+      ...(allActiveWorkIsPlaywright && input.generatedPlaywrightTests.length > 0
+        ? [
+            {
+              label: "generated-playwright",
+              command: `npx playwright test ${input.generatedPlaywrightTests
+                .map((filePath) => quoteShellArg(path.relative(input.workspaceRootDir, filePath)))
+                .join(" ")}`
+            }
+          ]
+        : [
+            {
+              label: impactDecision.scope === "full" ? "test-full" : "test-code",
+              command: impactDecision.command
+            }
+          ])
+    ]
+  };
+}
+
 async function runLoggedStageCommand(input: {
   stageId: "qaVerification";
   attemptNumber: number;
@@ -398,26 +465,28 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
     ...input.workspace.source.app.env,
     INTENT_POC_BASE_URL: input.workspace.baseUrl
   };
-  const commands = [
-    {
-      label: "typecheck",
-      command: "npm run typecheck"
-    },
-    {
-      label: "test-code",
-      command: "npm run test:code"
-    },
-    ...(input.generatedPlaywrightTests.length > 0
-      ? [
-          {
-            label: "generated-playwright",
-            command: `npx playwright test ${input.generatedPlaywrightTests
-              .map((filePath) => quoteShellArg(path.relative(input.workspace.rootDir, filePath)))
-              .join(" ")}`
-          }
-        ]
-      : [])
-  ];
+  const qaPlan = buildQAVerificationExecutionPlan({
+    normalizedIntent: input.normalizedIntent,
+    sourceId: input.sourcePlan.sourceId,
+    activeWorkItemIds: input.activeWorkItemIds,
+    generatedPlaywrightTests: input.generatedPlaywrightTests,
+    implementationFileOperations: input.implementationFileOperations,
+    workspaceRootDir: input.workspace.rootDir
+  });
+
+  if (qaPlan.error) {
+    return {
+      status: "failed",
+      summary: "QA verification failed before execution because targeted Playwright coverage was missing.",
+      error: qaPlan.error,
+      targetedWorkItemIds: input.activeWorkItemIds,
+      completedWorkItemIds: input.completedWorkItemIds,
+      remainingWorkItemIds: input.remainingWorkItemIds,
+      commands: [],
+      fileOperations: []
+    };
+  }
+  const commands = qaPlan.commands ?? [];
   const commandRecords: SourceStageCommandRecord[] = [];
 
   for (const command of commands) {
@@ -1396,6 +1465,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 sourcePaths: input.sourcePaths,
                 workspace: workspace!,
                 generatedPlaywrightTests,
+                implementationFileOperations: implementationResult.fileOperations,
                 attemptNumber,
                 activeWorkItemIds,
                 completedWorkItemIds,

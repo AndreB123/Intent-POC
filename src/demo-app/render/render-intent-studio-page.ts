@@ -1165,9 +1165,12 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
                 <div class="agent-stages-section">
                   <div class="field-head">
-                    <label>AI Orchestration Stages</label>
+                    <label>
+                      AI Orchestration Stages
+                      <button type="button" class="ghost-link" id="toggle-stages-visibility" style="margin-left: 10px; padding: 4px 8px; font-size: 10px;">Collapse</button>
+                    </label>
                   </div>
-                  <div class="agent-stages-grid">
+                  <div class="agent-stages-grid" id="agent-stages-grid">
                     ${agentStageFields}
                   </div>
                 </div>
@@ -1358,6 +1361,14 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         const darkModeToggle = document.getElementById("dark-mode-toggle");
         darkModeToggle.addEventListener("click", function() {
           document.body.classList.toggle("dark-mode");
+        });
+
+        const toggleStagesVisibility = document.getElementById("toggle-stages-visibility");
+        const agentStagesGrid = document.getElementById("agent-stages-grid");
+        toggleStagesVisibility.addEventListener("click", function() {
+          const isHidden = agentStagesGrid.style.display === "none";
+          agentStagesGrid.style.display = isHidden ? "grid" : "none";
+          toggleStagesVisibility.textContent = isHidden ? "Collapse" : "Expand";
         });
 
         const promptInput = document.getElementById("prompt-input");

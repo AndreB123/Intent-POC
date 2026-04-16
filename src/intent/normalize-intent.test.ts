@@ -336,6 +336,77 @@ test("normalizeIntent keeps ambiguous source-local UI requests broad when the co
   );
 });
 
+test("normalizeIntentWithAgent targets Intent Studio checkpoints for collapsible prompt-run configuration intents", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt:
+        "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+      defaultSourceId: "demo-catalog",
+      continueOnCaptureError: false,
+      availableSources: demoCatalogSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: true
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["demo-catalog"],
+        codeSurfaceId: "intent-studio"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        statement: "The configuration and setup section beneath the prompt run input can be collapsed or expanded.",
+        desiredOutcome: "Users can collapse and expand the optional Studio configuration section.",
+        acceptanceCriteria: [
+          { description: "The optional configuration section can be collapsed." },
+          { description: "The optional configuration section can be expanded again." }
+        ],
+        scenarios: [
+          {
+            title: "Collapse configuration section",
+            goal: "Verify that the user can hide optional configuration settings.",
+            given: ["The user is viewing the prompt run interface", "The configuration section is currently expanded"],
+            when: ["The user clicks the collapse toggle"],
+            then: ["The configuration section is no longer visible", "The prompt run input box remains accessible"],
+            applicableSourceIds: ["demo-catalog"]
+          },
+          {
+            title: "Expand configuration section",
+            goal: "Verify that the user can reveal optional configuration settings.",
+            given: ["The user is viewing the prompt run interface", "The configuration section is currently collapsed"],
+            when: ["The user clicks the expand toggle"],
+            then: ["The configuration section becomes visible", "The configuration settings are interactable"],
+            applicableSourceIds: ["demo-catalog"]
+          }
+        ]
+      })
+    }
+  );
+
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+  assert.equal(normalized.businessIntent.workItems.length, 2);
+
+  const collapseWorkItem = normalized.businessIntent.workItems.find((workItem) =>
+    workItem.title.toLowerCase().includes("collapse configuration section")
+  );
+  const expandWorkItem = normalized.businessIntent.workItems.find((workItem) =>
+    workItem.title.toLowerCase().includes("expand configuration section")
+  );
+
+  assert.ok(collapseWorkItem);
+  assert.ok(expandWorkItem);
+  assert.deepEqual(
+    collapseWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.target ?? checkpoint.path),
+    ["/", "#agent-stages-grid", "#toggle-stages-visibility", "#agent-stages-grid"]
+  );
+  assert.equal(collapseWorkItem?.playwright.specs[0]?.checkpoints[0]?.waitUntil, "domcontentloaded");
+  assert.equal(collapseWorkItem?.playwright.specs[0]?.checkpoints[3]?.action, "assert-hidden");
+  assert.deepEqual(
+    expandWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.target ?? checkpoint.path),
+    ["/", "#agent-stages-grid", "#toggle-stages-visibility", "#agent-stages-grid", "#toggle-stages-visibility", "#promptNormalization-enabled"]
+  );
+});
+
 test("normalizeIntent honors the requested source scope across multiple sources", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Prepare reviewable visual evidence for the current release.",

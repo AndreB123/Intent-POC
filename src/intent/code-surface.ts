@@ -84,12 +84,38 @@ const CONFIG_AND_SETTINGS_KEYWORDS = [
 const UI_AFFORDANCE_KEYWORDS = [
   "button",
   "toggle",
+  "collapse",
+  "collapsed",
+  "collapsible",
+  "expand",
+  "expanded",
+  "section",
+  "panel",
+  "input box",
+  "prompt input",
+  "prompt run",
+  "optional config",
+  "optional configuration",
   "header",
   "top right",
   "dark mode",
   "theme",
   "screen",
   "page"
+];
+
+const INTENT_STUDIO_UI_KEYWORDS = [
+  "prompt input",
+  "prompt run",
+  "input box",
+  "collapse",
+  "collapsible",
+  "expand",
+  "optional config",
+  "optional configuration",
+  "orchestration stages",
+  "agent stages",
+  "setup section"
 ];
 
 function includesAnyPhrase(prompt: string, phrases: string[]): boolean {
@@ -197,6 +223,20 @@ export function inferCodeSurface(input: {
       confidence: alternativeIds.length > 0 ? "medium" : "high",
       rationale: `Prompt normalization identified ${getCodeSurfaceLabel(input.hintedCodeSurfaceId)} as the most likely code surface within ${input.primarySourceId}.`,
       alternatives: alternativeIds.map((id) => buildAlternative(id, "Prompt normalization kept this as a fallback interpretation."))
+    };
+  }
+
+  if (input.primarySourceId === "demo-catalog" && includesAnyPhrase(normalizedPrompt, INTENT_STUDIO_UI_KEYWORDS)) {
+    return {
+      sourceId: input.primarySourceId,
+      id: "intent-studio",
+      label: getCodeSurfaceLabel("intent-studio"),
+      confidence: "high",
+      rationale: `The prompt describes Intent Studio form or configuration controls inside ${input.primarySourceId}.`,
+      alternatives: [
+        buildAlternative("config-and-settings", "The request may still require config-related behavior changes behind the Studio UI."),
+        buildAlternative("capture-and-evidence", "The request may also affect evidence-facing behavior after the Studio UI change.")
+      ]
     };
   }
 
