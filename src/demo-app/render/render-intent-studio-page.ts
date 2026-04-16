@@ -1901,7 +1901,13 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             planSources,
             activePlan.executionPlan.sources,
             function (source) {
-              return renderPlanItem(formatSourceLabel(state, source.sourceId), [source.runMode], [], source.sourceId === activePlan.executionPlan.primarySourceId ? ["primary"] : []);
+              const meta = [
+                source.runMode,
+                source.captureScope && source.captureScope.mode === "subset"
+                  ? "Captures: " + source.captureScope.captureIds.join(", ")
+                  : "Captures: all configured"
+              ].concat(source.warnings || []);
+              return renderPlanItem(formatSourceLabel(state, source.sourceId), meta, [], source.sourceId === activePlan.executionPlan.primarySourceId ? ["primary"] : []);
             },
             "No sources planned."
           );
@@ -1928,7 +1934,14 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           const implItems = [];
           if (run && run.sourceRuns) {
             run.sourceRuns.forEach(function(sr) {
-              implItems.push({ title: formatSourceLabel(state, sr.sourceId), meta: [sr.status, sr.latestImplementationSummary || "Waiting…"] });
+              const meta = [sr.status, sr.latestImplementationSummary || "Waiting…"];
+              if (sr.captureScopeSummary) {
+                meta.push(sr.captureScopeSummary);
+              }
+              if (sr.sourceWarnings && sr.sourceWarnings.length > 0) {
+                meta.push(sr.sourceWarnings[0]);
+              }
+              implItems.push({ title: formatSourceLabel(state, sr.sourceId), meta: meta });
             });
           }
           renderPlanList(planImplementation, implItems, function(item) { return renderPlanItem(item.title, item.meta, [], []); }, "Implementation will show here during run.");
@@ -1936,6 +1949,18 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           // 7. QA Verification
           const qaItems = [];
           if (run) {
+            if (run.sourceRuns) {
+              run.sourceRuns.forEach(function(sr) {
+                const meta = [sr.status];
+                if (typeof sr.executedCaptureCount === "number") {
+                  meta.push(sr.executedCaptureCount + " captures executed");
+                }
+                if (sr.comparisonIssueSummary) {
+                  meta.push(sr.comparisonIssueSummary);
+                }
+                qaItems.push({ title: formatSourceLabel(state, sr.sourceId), meta: meta });
+              });
+            }
             if (run.captures && run.captures.length > 0) {
               qaItems.push({ title: "Captures", meta: [run.captures.length + " screenshots"] });
             }

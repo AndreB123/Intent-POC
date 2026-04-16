@@ -69,6 +69,10 @@ interface StudioSourceRunSummary {
   status: "planned" | "completed" | "failed";
   error?: string;
   counts?: Record<string, number>;
+  executedCaptureCount?: number;
+  captureScopeSummary?: string;
+  sourceWarnings?: string[];
+  comparisonIssueSummary?: string;
   attemptCount?: number;
   latestAttemptStatus?: "completed" | "failed";
   latestFailureStage?: "implementation" | "qaVerification";
@@ -601,6 +605,39 @@ function toStudioCaptureSummaries(result: RunIntentResult): StudioCaptureSummary
   });
 }
 
+function summarizeCaptureScope(
+  sourcePlan: RunIntentResult["normalizedIntent"]["executionPlan"]["sources"][number] | undefined,
+  executedCaptureCount: number
+): string | undefined {
+  if (!sourcePlan) {
+    return executedCaptureCount > 0 ? `${executedCaptureCount} captures executed.` : undefined;
+  }
+
+  if (sourcePlan.captureScope.mode === "subset") {
+    return `Capture scope: ${sourcePlan.captureScope.captureIds.join(", ")}.`;
+  }
+
+  return `Capture scope: all configured captures (${executedCaptureCount} executed).`;
+}
+
+function summarizeComparisonIssue(sourceRun: RunIntentResult["sourceRuns"][number]): string | undefined {
+  if (sourceRun.error) {
+    return sourceRun.error;
+  }
+
+  const missingBaselineCount = sourceRun.comparison?.counts["missing-baseline"] ?? 0;
+  if (missingBaselineCount > 0) {
+    return `${missingBaselineCount} capture${missingBaselineCount === 1 ? " is" : "s are"} missing a baseline.`;
+  }
+
+  const diffErrorCount = sourceRun.comparison?.counts["diff-error"] ?? 0;
+  if (diffErrorCount > 0) {
+    return `${diffErrorCount} capture${diffErrorCount === 1 ? " hit" : "s hit"} a diff error.`;
+  }
+
+  return undefined;
+}
+
 function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
   run.sourceId = result.sourceId;
   run.mode = result.mode;
@@ -614,12 +651,17 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
   run.captures = toStudioCaptureSummaries(result);
   run.sourceRuns = result.sourceRuns.map((sourceRun) => {
     const latestAttempt = sourceRun.attempts.at(-1);
+    const sourcePlan = result.normalizedIntent.executionPlan.sources.find((plan) => plan.sourceId === sourceRun.sourceId);
 
     return {
       sourceId: sourceRun.sourceId,
       status: sourceRun.status,
       error: sourceRun.error,
       counts: sourceRun.comparison?.counts,
+      executedCaptureCount: sourceRun.captures.length,
+      captureScopeSummary: summarizeCaptureScope(sourcePlan, sourceRun.captures.length),
+      sourceWarnings: sourcePlan?.warnings ?? [],
+      comparisonIssueSummary: summarizeComparisonIssue(sourceRun),
       attemptCount: sourceRun.attempts.length,
       latestAttemptStatus: latestAttempt?.status,
       latestFailureStage: latestAttempt?.failureStage,

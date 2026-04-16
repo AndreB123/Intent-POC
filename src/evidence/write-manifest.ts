@@ -134,6 +134,19 @@ function emptyComparisonCounts(): Record<ComparisonStatus, number> {
   };
 }
 
+function dedupeStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function buildComparisonIssues(input: { comparison?: ComparisonSummary; error?: string }): string[] {
+  return dedupeStrings([
+    ...(input.error && /baseline/i.test(input.error) ? [input.error] : []),
+    ...((input.comparison?.items ?? [])
+      .filter((item) => item.status === "missing-baseline")
+      .map((item) => `Missing baseline for ${item.captureId}: ${item.note ?? "Baseline image not found."}`))
+  ]);
+}
+
 export async function writeSourceEvidenceFiles(input: {
   loadedConfig: LoadedConfig;
   config: AppConfig;
@@ -152,6 +165,9 @@ export async function writeSourceEvidenceFiles(input: {
 }): Promise<void> {
   const sourcePlan = input.normalizedIntent.executionPlan.sources.find((source) => source.sourceId === input.paths.sourceId);
   const comparison = input.comparison;
+  const configuredCaptureCount = input.config.sources[input.paths.sourceId]?.capture.items.length ?? 0;
+  const executedCaptureCount = input.captures.length;
+  const comparisonIssues = buildComparisonIssues({ comparison, error: input.error });
 
   const manifest = {
     version: input.config.version,
@@ -168,6 +184,8 @@ export async function writeSourceEvidenceFiles(input: {
       purpose: sourcePlan?.selectionReason,
       runMode: sourcePlan?.runMode,
       captureScope: sourcePlan?.captureScope,
+      configuredCaptureCount,
+      executedCaptureCount,
       sourceType: input.workspace?.sourceType,
       rootDir: input.workspace?.rootDir,
       appDir: input.workspace?.appDir,
@@ -183,7 +201,8 @@ export async function writeSourceEvidenceFiles(input: {
     playwright: input.config.playwright,
     captures: input.captures,
     summary: comparison,
-    warnings: sourcePlan?.warnings ?? []
+    warnings: sourcePlan?.warnings ?? [],
+    comparisonIssues
   };
 
   const hashes = {
@@ -214,6 +233,14 @@ export async function writeSourceEvidenceFiles(input: {
     mode: comparison?.mode ?? input.normalizedIntent.execution.runMode,
     hasDrift: comparison?.hasDrift ?? false,
     counts: comparison?.counts ?? emptyComparisonCounts(),
+    captureCoverage: {
+      configuredCaptureCount,
+      executedCaptureCount,
+      scopeMode: sourcePlan?.captureScope.mode ?? "all",
+      scopeCaptureIds: sourcePlan?.captureScope.captureIds ?? []
+    },
+    warnings: sourcePlan?.warnings ?? [],
+    comparisonIssues,
     items: (comparison?.items ?? []).map((item) => ({
       ...item,
       baselinePath: toRelativePath(input.paths.controllerRoot, item.baselinePath),

@@ -130,6 +130,45 @@ const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "captu
   }
 };
 
+const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
+  "demo-catalog": {
+    aliases: ["demo", "demo-app", "demo-catalog"],
+    planning: {
+      repoId: "intent-poc",
+      repoLabel: "Intent POC",
+      role: "controller-and-demo-source",
+      notes: []
+    },
+    source: {
+      type: "local",
+      localPath: "/tmp/intent-poc"
+    },
+    capture: {
+      basePathPrefix: "",
+      waitAfterLoadMs: 500,
+      injectCss: [],
+      defaultFullPage: true,
+      items: [
+        { id: "library-index", name: "Demo Catalog Index", path: "/library", maskSelectors: [], delayMs: 0 },
+        {
+          id: "component-button-primary",
+          name: "Demo Primary Button",
+          path: "/library/component-button-primary",
+          maskSelectors: [],
+          delayMs: 0
+        },
+        {
+          id: "page-analytics-overview",
+          name: "Demo Analytics Overview",
+          path: "/library/page-analytics-overview",
+          maskSelectors: [],
+          delayMs: 0
+        }
+      ]
+    }
+  }
+};
+
 test("normalizeIntent infers baseline mode from free-text prompt", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Create baseline screenshots for client-systems roach pages",
@@ -311,8 +350,8 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
   assert.equal(normalized.execution.runMode, "baseline");
   assert.equal(normalized.sourceId, "docs-portal");
   assert.deepEqual(normalized.captureScope, {
-    mode: "subset",
-    captureIds: ["docs-home"]
+    mode: "all",
+    captureIds: []
   });
   assert.equal(normalized.normalizationMeta.source, "llm");
   assert.deepEqual(
@@ -329,6 +368,74 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
   assert.ok(
     normalized.normalizationMeta.warnings.some((warning) => warning.includes("Gemini selected the documentation source"))
   );
+  assert.deepEqual(normalized.executionPlan.sources[0]?.warnings, []);
+});
+
+test("normalizeIntentWithAgent preserves full demo-catalog capture scope when Gemini narrows a conceptual prompt", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Compare the demo-catalog evidence so we can tell whether the dark mode work is visible.",
+      runMode: "compare",
+      defaultSourceId: "demo-catalog",
+      continueOnCaptureError: false,
+      availableSources: demoCatalogSources,
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["demo-catalog"],
+        captureIdsBySource: {
+          "demo-catalog": ["library-index"]
+        }
+      })
+    }
+  );
+
+  assert.deepEqual(normalized.captureScope, {
+    mode: "all",
+    captureIds: []
+  });
+  assert.deepEqual(normalized.executionPlan.sources[0]?.captureScope, {
+    mode: "all",
+    captureIds: []
+  });
+  assert.equal(normalized.executionPlan.sources[0]?.warnings.length, 1);
+  assert.ok(
+    normalized.executionPlan.sources[0]?.warnings[0]?.includes(
+      "Gemini suggested narrowing demo-catalog captures to library-index"
+    )
+  );
+});
+
+test("normalizeIntentWithAgent still narrows capture scope when the prompt explicitly names a capture", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Compare only page-analytics-overview in demo-catalog so we can inspect that page.",
+      runMode: "compare",
+      defaultSourceId: "demo-catalog",
+      continueOnCaptureError: false,
+      availableSources: demoCatalogSources,
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["demo-catalog"],
+        captureIdsBySource: {
+          "demo-catalog": ["library-index"]
+        }
+      })
+    }
+  );
+
+  assert.deepEqual(normalized.captureScope, {
+    mode: "subset",
+    captureIds: ["page-analytics-overview"]
+  });
+  assert.deepEqual(normalized.executionPlan.sources[0]?.captureScope, {
+    mode: "subset",
+    captureIds: ["page-analytics-overview"]
+  });
+  assert.deepEqual(normalized.executionPlan.sources[0]?.warnings, []);
 });
 
 test("normalizeIntentWithAgent applies Gemini planning refinement when the planning stage is enabled", async () => {

@@ -23,6 +23,8 @@
 ## Source Plan
 
 - Selection reason: Source demo-catalog was referenced directly in the prompt.
+- Configured captures: 3
+- Executed captures: 1
 - Capture scope: all configured captures
 - Warnings: none
 
@@ -104,6 +106,10 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Missing baseline: 0
 - Capture failed: 0
 - Diff error: 0
+
+## Comparison Issues
+
+- None
 
 ## Artifacts
 

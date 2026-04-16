@@ -3,7 +3,7 @@ import { LoadedConfig, loadConfig } from "../config/load-config";
 import { AppConfig, CaptureItemConfig, RunMode, SourceConfig } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
 import { runCapture } from "../capture/run-capture";
-import { ComparisonStatus, ComparisonSummary, runComparison } from "../compare/run-comparison";
+import { ComparisonStatus, ComparisonSummary, resolveMissingBaselinePolicy, runComparison } from "../compare/run-comparison";
 import { RunPaths, SourceRunPaths, createRunPaths, retainRecentRuns, toRelativePath } from "../evidence/paths";
 import { publishArtifactsToSourceIfConfigured } from "../evidence/publish-artifacts";
 import { isScreenshotLibraryUpdateMode, updateScreenshotLibrary } from "../evidence/screenshot-library";
@@ -1432,31 +1432,65 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
     captures = captureResult.outcomes;
 
+    if (input.sourcePlan.warnings.length > 0) {
+      emitRunEvent(
+        input.options,
+        "comparison",
+        "Source plan preserved configured capture coverage.",
+        {
+          sourceId: input.sourcePlan.sourceId,
+          captureScope: input.sourcePlan.captureScope,
+          warnings: input.sourcePlan.warnings,
+          captureCount: captures.length
+        },
+        "warn"
+      );
+    }
+
     emitRunEvent(input.options, "comparison", "Running comparison.", {
       sourceId: input.sourcePlan.sourceId,
       mode: input.sourcePlan.runMode,
-      captureCount: captures.length
+      captureCount: captures.length,
+      captureScope: input.sourcePlan.captureScope,
+      sourceWarnings: input.sourcePlan.warnings
     });
 
-    comparison = await runComparison(
-      input.config,
-      input.sourcePlan.runMode,
-      captures,
-      input.sourcePaths.baselineSourceDir,
-      input.sourcePaths.diffsDir
-    );
+    try {
+      comparison = await runComparison(
+        input.config,
+        input.sourcePlan.runMode,
+        captures,
+        input.sourcePaths.baselineSourceDir,
+        input.sourcePaths.diffsDir
+      );
+    } catch (error) {
+      emitRunEvent(
+        input.options,
+        "comparison",
+        "Comparison failed.",
+        {
+          sourceId: input.sourcePlan.sourceId,
+          captureScope: input.sourcePlan.captureScope,
+          error: captureErrorMessage(error)
+        },
+        "error"
+      );
+      throw error;
+    }
 
     emitRunEvent(input.options, "comparison", "Comparison complete.", {
       sourceId: input.sourcePlan.sourceId,
       hasDrift: comparison.hasDrift,
-      counts: comparison.counts
+      counts: comparison.counts,
+      captureScope: input.sourcePlan.captureScope,
+      sourceWarnings: input.sourcePlan.warnings
     });
 
     if (captureResult.abortedDueToError) {
       sourceErrors.push("Capture run stopped early because continueOnCaptureError is disabled.");
     }
 
-    if (comparison.counts["missing-baseline"] > 0 && input.config.comparison.onMissingBaseline === "error") {
+    if (comparison.counts["missing-baseline"] > 0 && resolveMissingBaselinePolicy(input.config, input.sourcePlan.runMode) === "error") {
       sourceErrors.push("One or more captures are missing a baseline image.");
     }
 
@@ -1615,6 +1649,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
         counts: comparison.counts,
         attemptCount: attempts.length,
         latestFailureStage: latestAttempt?.failureStage,
+        captureScope: input.sourcePlan.captureScope,
+        sourceWarnings: input.sourcePlan.warnings,
         error
       },
       status === "completed" ? "info" : "error"
@@ -1712,6 +1748,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       error: errorMessage,
       attemptCount: attempts.length,
       latestFailureStage: latestAttempt?.failureStage,
+      captureScope: input.sourcePlan.captureScope,
+      sourceWarnings: input.sourcePlan.warnings,
       summaryPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.summaryPath)
     }, "error");
 

@@ -83,6 +83,14 @@ interface IntentDraft {
   summary: string;
 }
 
+interface CaptureScopeSelection {
+  captureScope: {
+    mode: "all" | "subset";
+    captureIds: string[];
+  };
+  warnings: string[];
+}
+
 interface BuildNormalizedIntentInput {
   planningRefinement?: IntentPlanningRefinement;
   stageMetas?: AgentStageMeta[];
@@ -237,6 +245,10 @@ function pickCaptureIds(prompt: string, captureItems: CaptureItemConfig[]): { mo
   }
 
   return { mode: "subset", captureIds: matchedCaptureIds };
+}
+
+function describeIgnoredCaptureHint(sourceId: string, captureIds: string[]): string {
+  return `Gemini suggested narrowing ${sourceId} captures to ${captureIds.join(", ")}, but the prompt did not explicitly name those captures, so all configured captures were preserved.`;
 }
 
 function summarizeIntent(intentType: NormalizedIntent["intentType"], sourceIds: string[]): string {
@@ -1233,16 +1245,28 @@ function pickCaptureScopeForSource(
   sourceId: string,
   options: NormalizeIntentOptions,
   resolution: NormalizationResolution
-): { mode: "all" | "subset"; captureIds: string[] } {
-  const hintedCaptureIds = resolution.captureIdsBySource[sourceId];
-  if (hintedCaptureIds && hintedCaptureIds.length > 0) {
+): CaptureScopeSelection {
+  const explicitCaptureScope = pickCaptureIds(prompt, options.availableSources[sourceId].capture.items);
+  if (explicitCaptureScope.mode === "subset") {
     return {
-      mode: "subset",
-      captureIds: hintedCaptureIds
+      captureScope: explicitCaptureScope,
+      warnings: []
     };
   }
 
-  return pickCaptureIds(prompt, options.availableSources[sourceId].capture.items);
+  const hintedCaptureIds = resolution.captureIdsBySource[sourceId];
+  const totalCaptureCount = options.availableSources[sourceId].capture.items.length;
+  if (hintedCaptureIds && hintedCaptureIds.length > 0 && hintedCaptureIds.length < totalCaptureCount) {
+    return {
+      captureScope: explicitCaptureScope,
+      warnings: [describeIgnoredCaptureHint(sourceId, hintedCaptureIds)]
+    };
+  }
+
+  return {
+    captureScope: explicitCaptureScope,
+    warnings: []
+  };
 }
 
 function buildIntentDraft(
@@ -1254,13 +1278,17 @@ function buildIntentDraft(
   const planningDepth = options.planningDepth ?? "full";
   const effectiveRunMode = mapIntentTypeToRunMode(resolution.intentType, options.runMode);
   const primarySourceId = resolution.sourceIds[0] ?? options.defaultSourceId;
-  const sourcePlans = resolution.sourceIds.map((sourceId) => ({
-    sourceId,
-    selectionReason: describeSelectionReason(resolution.selectionReason, sourceId),
-    runMode: effectiveRunMode,
-    captureScope: pickCaptureScopeForSource(trimmedPrompt, sourceId, options, resolution),
-    warnings: []
-  }));
+  const sourcePlans = resolution.sourceIds.map((sourceId) => {
+    const captureSelection = pickCaptureScopeForSource(trimmedPrompt, sourceId, options, resolution);
+
+    return {
+      sourceId,
+      selectionReason: describeSelectionReason(resolution.selectionReason, sourceId),
+      runMode: effectiveRunMode,
+      captureScope: captureSelection.captureScope,
+      warnings: captureSelection.warnings
+    };
+  });
   const primaryCaptureScope =
     sourcePlans[0]?.captureScope ?? pickCaptureIds(trimmedPrompt, options.availableSources[primarySourceId].capture.items);
   const statement = planningRefinement?.statement ?? trimmedPrompt;

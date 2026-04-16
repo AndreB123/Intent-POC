@@ -24,6 +24,19 @@ function emptyComparisonCounts(): Record<ComparisonStatus, number> {
   };
 }
 
+function dedupeStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function buildComparisonIssues(input: { comparison?: ComparisonSummary; error?: string }): string[] {
+  return dedupeStrings([
+    ...(input.error && /baseline/i.test(input.error) ? [input.error] : []),
+    ...((input.comparison?.items ?? [])
+      .filter((item) => item.status === "missing-baseline")
+      .map((item) => `Missing baseline for ${item.captureId}: ${item.note ?? "Baseline image not found."}`))
+  ]);
+}
+
 function buildAgentStageMarkdown(stages: NormalizedIntent["normalizationMeta"]["stages"]): string {
   if (stages.length === 0) {
     return "- None";
@@ -119,6 +132,9 @@ export function buildSourceSummaryMarkdown(input: {
     (source) => source.sourceId === input.paths.sourceId
   );
   const counts = comparison?.counts ?? emptyComparisonCounts();
+  const configuredCaptureCount = input.config.sources[input.paths.sourceId]?.capture.items.length ?? 0;
+  const executedCaptureCount = input.captures.length;
+  const comparisonIssues = buildComparisonIssues({ comparison, error: input.error });
 
   return [
     `# Intent POC Source Run Summary`,
@@ -141,6 +157,8 @@ export function buildSourceSummaryMarkdown(input: {
     `## Source Plan`,
     "",
     `- Selection reason: ${currentSourcePlan?.selectionReason ?? "not recorded"}`,
+    `- Configured captures: ${configuredCaptureCount}`,
+    `- Executed captures: ${executedCaptureCount}`,
     `- Capture scope: ${currentSourcePlan?.captureScope.mode === "subset" ? currentSourcePlan.captureScope.captureIds.join(", ") : "all configured captures"}`,
     `- Warnings: ${currentSourcePlan?.warnings.length ? currentSourcePlan.warnings.join(" ") : "none"}`,
     "",
@@ -201,6 +219,10 @@ export function buildSourceSummaryMarkdown(input: {
     `- Missing baseline: ${counts["missing-baseline"]}`,
     `- Capture failed: ${counts["capture-failed"]}`,
     `- Diff error: ${counts["diff-error"]}`,
+    "",
+    `## Comparison Issues`,
+    "",
+    comparisonIssues.length === 0 ? `- None` : comparisonIssues.map((issue) => `- ${issue}`).join("\n"),
     "",
     `## Artifacts`,
     "",
