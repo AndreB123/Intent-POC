@@ -373,6 +373,96 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
   assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
 });
 
+test("buildQAVerificationExecutionPlan Given no active work items and demo app changes When QA planning runs Then it chooses targeted code regression", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: {
+      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "demo-catalog",
+    activeWorkItemIds: [],
+    generatedPlaywrightTests: [],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.equal(plan.error, undefined);
+  assert.deepEqual(
+    plan.commands?.map((command) => command.label),
+    ["typecheck", "test-code-targeted"]
+  );
+  assert.equal(
+    plan.commands?.[1]?.command,
+    'npm run test:code -- "src/demo-app/server/start-intent-studio-server.test.ts"'
+  );
+});
+
+test("buildQAVerificationExecutionPlan Given no active work items and orchestrator changes When QA planning runs Then it chooses targeted orchestrator regression", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: {
+      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "demo-catalog",
+    activeWorkItemIds: [],
+    generatedPlaywrightTests: [],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/orchestrator/run-intent.ts", rationale: "qa", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.equal(plan.error, undefined);
+  assert.deepEqual(
+    plan.commands?.map((command) => command.label),
+    ["typecheck", "test-code-targeted"]
+  );
+  assert.equal(
+    plan.commands?.[1]?.command,
+    'npm run test:code -- "src/orchestrator/run-intent.behavior.test.ts"'
+  );
+});
+
+test("buildQAVerificationExecutionPlan Given no active work items and config changes When QA planning runs Then it keeps the full workflow fallback", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: {
+      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "demo-catalog",
+    activeWorkItemIds: [],
+    generatedPlaywrightTests: [],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/config/schema.ts", rationale: "config", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.equal(plan.error, undefined);
+  assert.deepEqual(
+    plan.commands?.map((command) => command.label),
+    ["typecheck", "test-full"]
+  );
+  assert.equal(plan.commands?.[1]?.command, "npm test");
+});
+
 test("runIntent Given a dry run When the plan is valid Then it writes plan lifecycle metadata and skips source execution", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-dry-"));
   const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);

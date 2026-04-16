@@ -212,6 +212,12 @@ export interface QAVerificationExecutionPlan {
   error?: string;
 }
 
+interface QAFallbackPathGroup {
+  reason: string;
+  matches: (normalizedPath: string) => boolean;
+  testTargets: string[];
+}
+
 const MAX_SOURCE_ATTEMPTS = 3;
 const QA_COMMAND_TIMEOUT_MS = 600_000;
 type RunningAppHandle = Awaited<ReturnType<typeof startApp>>;
@@ -321,6 +327,140 @@ function captureErrorMessage(error: unknown): string {
 
 function quoteShellArg(value: string): string {
   return JSON.stringify(value);
+}
+
+const SOURCE_SCOPED_FULL_QA_GROUPS: Array<Pick<QAFallbackPathGroup, "reason" | "matches">> = [
+  {
+    reason: "Tracked screenshot artifacts and runnable source config changes still require the full workflow.",
+    matches: (normalizedPath) =>
+      normalizedPath.startsWith("artifacts/library/")
+      || normalizedPath === "intent-poc.yaml"
+      || normalizedPath === "intent-poc.local-no-linear.yaml"
+  },
+  {
+    reason: "Config, capture, comparison, and evidence changes still require the full workflow.",
+    matches: (normalizedPath) =>
+      normalizedPath.startsWith("src/config/")
+      || normalizedPath.startsWith("src/capture/")
+      || normalizedPath.startsWith("src/compare/")
+      || normalizedPath.startsWith("src/evidence/")
+      || normalizedPath === "src/cli.ts"
+      || normalizedPath === "package.json"
+  }
+];
+
+const SOURCE_SCOPED_TARGETED_QA_GROUPS: QAFallbackPathGroup[] = [
+  {
+    reason: "Demo app changes can stay on focused studio server coverage.",
+    matches: (normalizedPath) => normalizedPath.startsWith("src/demo-app/"),
+    testTargets: ["src/demo-app/server/start-intent-studio-server.test.ts"]
+  },
+  {
+    reason: "Implementation changes can stay on implementation guardrail coverage.",
+    matches: (normalizedPath) => normalizedPath.startsWith("src/implementation/"),
+    testTargets: [
+      "src/implementation/execute-implementation.test.ts",
+      "src/implementation/apply-changes.test.ts"
+    ]
+  },
+  {
+    reason: "Intent planning changes can stay on normalization coverage.",
+    matches: (normalizedPath) => normalizedPath.startsWith("src/intent/"),
+    testTargets: ["src/intent/normalize-intent.test.ts"]
+  },
+  {
+    reason: "Linear planning changes can stay on planner section coverage.",
+    matches: (normalizedPath) => normalizedPath.startsWith("src/linear/"),
+    testTargets: ["src/linear/planner-sections.test.ts"]
+  },
+  {
+    reason: "Playwright TDD writer changes can stay on tracked spec writer coverage.",
+    matches: (normalizedPath) => normalizedPath.startsWith("src/tdd/"),
+    testTargets: ["src/tdd/write-generated-playwright-tests.test.ts"]
+  },
+  {
+    reason: "Orchestrator changes can stay on focused runner behavior coverage during source-lane QA.",
+    matches: (normalizedPath) => normalizedPath.startsWith("src/orchestrator/"),
+    testTargets: ["src/orchestrator/run-intent.behavior.test.ts"]
+  },
+  {
+    reason: "Explicit test edits can rerun the touched test files directly.",
+    matches: (normalizedPath) => normalizedPath.endsWith(".test.ts"),
+    testTargets: []
+  }
+];
+
+function normalizeImplementationChangedPaths(paths: string[]): string[] {
+  return Array.from(
+    new Set(
+      paths
+        .map((filePath) => filePath.trim().replace(/\\/g, "/").replace(/^\.\//, ""))
+        .filter((filePath) => filePath.length > 0)
+    )
+  ).sort();
+}
+
+function buildTargetedCodeTestCommand(testTargets: string[]): string {
+  return `npm run test:code -- ${testTargets.map((filePath) => quoteShellArg(filePath)).join(" ")}`;
+}
+
+function resolveSourceScopedQAFallback(input: {
+  implementationChangedPaths: string[];
+}): QAVerificationCommandPlan {
+  const implementationChangedPaths = normalizeImplementationChangedPaths(input.implementationChangedPaths);
+
+  if (implementationChangedPaths.length === 0) {
+    return {
+      label: "test-code",
+      command: "npm run test:code"
+    };
+  }
+
+  const requiresFullWorkflow = implementationChangedPaths.some((filePath) =>
+    SOURCE_SCOPED_FULL_QA_GROUPS.some((group) => group.matches(filePath))
+  );
+
+  if (requiresFullWorkflow) {
+    return {
+      label: "test-full",
+      command: "npm test"
+    };
+  }
+
+  const targetedTestTargets = new Set<string>();
+  let allPathsAreTargetable = true;
+
+  for (const filePath of implementationChangedPaths) {
+    const matchingGroup = SOURCE_SCOPED_TARGETED_QA_GROUPS.find((group) => group.matches(filePath));
+
+    if (!matchingGroup) {
+      allPathsAreTargetable = false;
+      break;
+    }
+
+    if (matchingGroup.testTargets.length === 0) {
+      targetedTestTargets.add(filePath);
+      continue;
+    }
+
+    for (const testTarget of matchingGroup.testTargets) {
+      targetedTestTargets.add(testTarget);
+    }
+  }
+
+  if (allPathsAreTargetable && targetedTestTargets.size > 0) {
+    const testTargets = Array.from(targetedTestTargets).sort();
+    return {
+      label: "test-code-targeted",
+      command: buildTargetedCodeTestCommand(testTargets)
+    };
+  }
+
+  const impactDecision = classifyChangedPaths(implementationChangedPaths);
+  return {
+    label: impactDecision.scope === "full" ? "test-full" : "test-code",
+    command: impactDecision.command
+  };
 }
 
 function buildSkippedStageExecutionRecord(summary: string): SourceStageExecutionRecord {
@@ -436,13 +576,11 @@ export function buildQAVerificationExecutionPlan(input: {
     };
   }
 
-  const implementationChangedPaths = Array.from(
-    new Set(
-      input.implementationFileOperations.map((operation) => operation.filePath.trim()).filter((filePath) => filePath.length > 0)
-    )
+  const implementationChangedPaths = normalizeImplementationChangedPaths(
+    input.implementationFileOperations.map((operation) => operation.filePath)
   );
-  const impactDecision = classifyChangedPaths(implementationChangedPaths);
   const allActiveWorkIsPlaywright = activeWorkItems.length > 0 && activeWorkItems.every((workItem) => workItem.type === "playwright-spec");
+  const fallbackCommand = resolveSourceScopedQAFallback({ implementationChangedPaths });
 
   return {
     commands: [
@@ -460,10 +598,7 @@ export function buildQAVerificationExecutionPlan(input: {
             }
           ]
         : [
-            {
-              label: impactDecision.scope === "full" ? "test-full" : "test-code",
-              command: impactDecision.command
-            }
+            fallbackCommand
           ])
     ]
   };
