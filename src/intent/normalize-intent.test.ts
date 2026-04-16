@@ -475,6 +475,28 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
   assert.deepEqual(normalized.executionPlan.sources[0]?.warnings, []);
 });
 
+test("normalizeIntentWithAgent overrides a weak Gemini capture surface hint when the prompt clearly targets Intent Studio", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt:
+        "The space under the prompt run input box and instructions must be collapsable. We want to simplify the prompt run box so users can use it easier.",
+      defaultSourceId: "demo-catalog",
+      continueOnCaptureError: false,
+      availableSources: demoCatalogSources,
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["demo-catalog"],
+        codeSurfaceId: "capture-and-evidence"
+      })
+    }
+  );
+
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+  assert.equal(normalized.businessIntent.workItems[0]?.playwright.specs[0]?.checkpoints[0]?.path, "/");
+});
+
 test("normalizeIntentWithAgent preserves full demo-catalog capture scope when Gemini narrows a conceptual prompt", async () => {
   const normalized = await normalizeIntentWithAgent(
     {

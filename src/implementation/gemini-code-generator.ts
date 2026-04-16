@@ -645,6 +645,14 @@ export async function collectRelevantImplementationFiles(input: {
 }
 
 function buildPlanningPrompt(input: ImplementationPromptContext): string {
+  const requiredSelectors = Array.from(
+    new Set(
+      input.generatedSpecs.flatMap((spec) =>
+        Array.from(spec.content.matchAll(/(["'`])(#[A-Za-z][A-Za-z0-9_-]*)\1/g)).map((match) => match[2])
+      )
+    )
+  );
+
   return [
     "You are selecting the minimal bounded file operations needed to implement one source lane for an intent-driven development runner.",
     "Return only JSON that matches the provided schema.",
@@ -691,6 +699,12 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
       null,
       2
     ),
+    ...(requiredSelectors.length > 0
+      ? [
+          "Required selectors referenced by the generated Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
+          JSON.stringify(requiredSelectors, null, 2)
+        ]
+      : []),
     "Relevant existing source files:",
     JSON.stringify(input.relevantFiles, null, 2),
     "Workspace file manifest:",
@@ -705,6 +719,14 @@ function buildMaterializationPrompt(input: {
   operations: ImplementationChangeOperation[];
   existingFiles: ImplementationExistingFileContext[];
 }): string {
+  const requiredSelectors = Array.from(
+    new Set(
+      input.context.generatedSpecs.flatMap((spec) =>
+        Array.from(spec.content.matchAll(/(["'`])(#[A-Za-z][A-Za-z0-9_-]*)\1/g)).map((match) => match[2])
+      )
+    )
+  );
+
   return [
     "You are materializing full file contents for a bounded implementation change set.",
     "Return only JSON that matches the provided schema.",
@@ -721,6 +743,12 @@ function buildMaterializationPrompt(input: {
     JSON.stringify(input.context.relevantFiles, null, 2),
     "Generated Playwright specs:",
     JSON.stringify(input.context.generatedSpecs, null, 2),
+    ...(requiredSelectors.length > 0
+      ? [
+          "Required selectors referenced by the generated Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
+          JSON.stringify(requiredSelectors, null, 2)
+        ]
+      : []),
     "Active work items for this pass:",
     JSON.stringify(input.context.activeWorkItems, null, 2),
     "Remaining backlog work items:",

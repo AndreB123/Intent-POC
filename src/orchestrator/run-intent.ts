@@ -216,6 +216,38 @@ const MAX_SOURCE_ATTEMPTS = 3;
 const QA_COMMAND_TIMEOUT_MS = 600_000;
 type RunningAppHandle = Awaited<ReturnType<typeof startApp>>;
 
+function formatProcessExitSummary(exit: { exitCode: number | null; signal: NodeJS.Signals | null }): string {
+  if (typeof exit.exitCode === "number") {
+    return `exit code ${exit.exitCode}`;
+  }
+
+  if (exit.signal) {
+    return `signal ${exit.signal}`;
+  }
+
+  return "unknown exit status";
+}
+
+export async function waitForSourceAppReady(input: {
+  config: AppConfig;
+  workspace: ResolvedSourceWorkspace;
+  appHandle: Pick<RunningAppHandle, "logPath" | "waitForExit">;
+}): Promise<void> {
+  const readinessResult = await Promise.race<
+    | { kind: "ready" }
+    | { kind: "exited"; exit: { exitCode: number | null; signal: NodeJS.Signals | null } }
+  >([
+    waitForReady(input.config, input.workspace).then(() => ({ kind: "ready" as const })),
+    input.appHandle.waitForExit().then((exit) => ({ kind: "exited" as const, exit }))
+  ]);
+
+  if (readinessResult.kind === "exited") {
+    throw new Error(
+      `Source app exited before readiness check completed (${formatProcessExitSummary(readinessResult.exit)}). See ${input.appHandle.logPath} for details.`
+    );
+  }
+}
+
 function emitRunEvent(
   options: RunIntentOptions,
   phase: RunIntentEvent["phase"],
@@ -576,7 +608,11 @@ async function startReadySourceApp(input: {
     attemptNumber: input.attemptNumber
   });
 
-  await waitForReady(input.config, input.workspace);
+  await waitForSourceAppReady({
+    config: input.config,
+    workspace: input.workspace,
+    appHandle
+  });
   log.info("Source app is ready.", {
     sourceId: input.workspace.sourceId,
     baseUrl: input.workspace.baseUrl,

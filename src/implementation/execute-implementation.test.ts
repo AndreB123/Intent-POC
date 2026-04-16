@@ -763,6 +763,165 @@ test("executeImplementationStage Given a planned checked-in test target When val
   }
 });
 
+test("executeImplementationStage Given malformed generated TypeScript When materialization completes Then it fails before applying the change set", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+  let applyCalls = 0;
+
+  try {
+    const originalContent = await fs.readFile(path.join(rootDir, "src", "existing.ts"), "utf8");
+
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "replace",
+            filePath: "src/existing.ts",
+            rationale: "Update the existing dashboard implementation."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => ({
+        files: [
+          {
+            filePath: "src/existing.ts",
+            content: "export const broken = ();\n"
+          }
+        ],
+        warnings: []
+      }),
+      applyChangeSet: async () => {
+        applyCalls += 1;
+        return [];
+      }
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /generated invalid \.ts content/);
+    assert.equal(applyCalls, 0);
+
+    const currentContent = await fs.readFile(path.join(rootDir, "src", "existing.ts"), "utf8");
+    assert.equal(currentContent, originalContent);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given a trailing quote instead of a template terminator When materialization completes Then it repairs the file before apply", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+
+  try {
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "replace",
+            filePath: "src/existing.ts",
+            rationale: "Update the existing dashboard implementation."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => ({
+        files: [
+          {
+            filePath: "src/existing.ts",
+            content: "export function renderView(): string {\n  return `hello\nworld\";\n}\n"
+          }
+        ],
+        warnings: []
+      })
+    });
+
+    assert.equal(result.status, "completed");
+    const currentContent = await fs.readFile(path.join(rootDir, "src", "existing.ts"), "utf8");
+    assert.equal(currentContent, "export function renderView(): string {\n  return `hello\nworld`;\n}\n");
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("executeImplementationStage Given active generated selector ids When a replacement drops them Then it fails before apply", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+  let applyCalls = 0;
+
+  try {
+    input.normalizedIntent.businessIntent.workItems[0]!.playwright.specs[0]!.checkpoints = [
+      {
+        id: "checkpoint-1",
+        label: "Configuration Section Visible",
+        action: "assert-visible",
+        assertion: "The configuration section is visible before interaction.",
+        screenshotId: "shot-1",
+        target: "#agent-stages-grid",
+        waitForSelector: "#agent-stages-grid"
+      }
+    ];
+
+    await fs.writeFile(
+      path.join(rootDir, "src", "existing.ts"),
+      'export const markup = `<div id="agent-stages-grid" class="agent-stages-grid"></div>`;\n'
+    );
+
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "replace",
+            filePath: "src/existing.ts",
+            rationale: "Update the existing dashboard implementation."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => ({
+        files: [
+          {
+            filePath: "src/existing.ts",
+            content: 'export const markup = `<div class="agent-stages-grid"></div>`;\n'
+          }
+        ],
+        warnings: []
+      }),
+      applyChangeSet: async () => {
+        applyCalls += 1;
+        return [];
+      }
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /removed required selector ids/);
+    assert.match(result.error ?? "", /#agent-stages-grid/);
+    assert.equal(applyCalls, 0);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("executeImplementationStage Given a hallucinated replace target When the file does not exist Then it fails before materialization", async () => {
   const { rootDir, input } = await createImplementationInput();
   const previousApiKey = process.env.TEST_GEMINI_API_KEY;

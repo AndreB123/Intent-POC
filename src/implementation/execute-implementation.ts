@@ -1,7 +1,9 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
+import ts from "typescript";
 import type { ExecuteImplementationStageInput } from "../orchestrator/run-intent";
 import { resolveGeminiApiKey } from "../intent/gemini-client";
+import { TDDWorkItem } from "../intent/intent-types";
 import { pathExists, writeTextFile } from "../shared/fs";
 import {
   SourceStageCommandRecord,
@@ -187,6 +189,160 @@ function describeTestOperation(operation: "create" | "replace" | "delete"): stri
   return "modify";
 }
 
+function inferScriptKind(filePath: string): ts.ScriptKind | undefined {
+  const extension = path.extname(filePath).toLowerCase();
+
+  switch (extension) {
+    case ".ts":
+      return ts.ScriptKind.TS;
+    case ".tsx":
+      return ts.ScriptKind.TSX;
+    case ".js":
+      return ts.ScriptKind.JS;
+    case ".jsx":
+      return ts.ScriptKind.JSX;
+    case ".mjs":
+      return ts.ScriptKind.JS;
+    case ".cjs":
+      return ts.ScriptKind.JS;
+    default:
+      return undefined;
+  }
+}
+
+function collectSyntacticDiagnostics(filePath: string, content: string): readonly ts.Diagnostic[] {
+  const scriptKind = inferScriptKind(filePath);
+  if (!scriptKind) {
+    return [];
+  }
+
+  const extension = path.extname(filePath).toLowerCase();
+  const compilerOptions: ts.CompilerOptions = {
+    allowJs: true,
+    checkJs: false,
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.ESNext
+  };
+
+  if (extension === ".tsx" || extension === ".jsx") {
+    compilerOptions.jsx = ts.JsxEmit.Preserve;
+  }
+
+  return ts.transpileModule(content, {
+    fileName: filePath,
+    compilerOptions,
+    reportDiagnostics: true
+  }).diagnostics ?? [];
+}
+
+function tryRepairUnterminatedTemplateLiteral(filePath: string, content: string, diagnostics: readonly ts.Diagnostic[]): string {
+  if (!diagnostics.some((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n").includes("Unterminated template literal"))) {
+    return content;
+  }
+
+  if ((content.match(/`/g) ?? []).length % 2 === 0 || !content.includes("return `")) {
+    return content;
+  }
+
+  const trailingQuoteMatch = /(["'])\s*;\s*(\}\s*)?$/.exec(content);
+  if (!trailingQuoteMatch || trailingQuoteMatch.index === undefined) {
+    return content;
+  }
+
+  const repairedContent = `${content.slice(0, trailingQuoteMatch.index)}\`${content.slice(trailingQuoteMatch.index + 1)}`;
+  const repairedDiagnostics = collectSyntacticDiagnostics(filePath, repairedContent);
+
+  return repairedDiagnostics.length === 0 ? repairedContent : content;
+}
+
+function sanitizeMaterializedFiles(files: Array<{ filePath: string; content: string }>): Array<{ filePath: string; content: string }> {
+  return files.map((file) => {
+    const scriptKind = inferScriptKind(file.filePath);
+    if (!scriptKind) {
+      return file;
+    }
+
+    const diagnostics = collectSyntacticDiagnostics(file.filePath, file.content);
+    if (diagnostics.length === 0) {
+      return file;
+    }
+
+    const repairedContent = tryRepairUnterminatedTemplateLiteral(file.filePath, file.content, diagnostics);
+    return repairedContent === file.content ? file : { ...file, content: repairedContent };
+  });
+}
+
+function validateMaterializedFiles(files: Array<{ filePath: string; content: string }>): void {
+  for (const file of files) {
+    const diagnostics = collectSyntacticDiagnostics(file.filePath, file.content);
+    if (diagnostics.length === 0) {
+      continue;
+    }
+
+    const diagnostic = diagnostics[0];
+    const sourceFile = ts.createSourceFile(file.filePath, file.content, ts.ScriptTarget.Latest, false, inferScriptKind(file.filePath));
+    const position = diagnostic.start === undefined ? undefined : sourceFile.getLineAndCharacterOfPosition(diagnostic.start);
+    const line = position ? position.line + 1 : 1;
+    const character = position ? position.character + 1 : 1;
+    const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
+
+    throw new Error(`Implementation generated invalid ${path.extname(file.filePath) || "source"} content for ${file.filePath}:${line}:${character} - ${message}`);
+  }
+}
+
+function extractRequiredElementIds(workItems: TDDWorkItem[]): string[] {
+  const ids = new Set<string>();
+
+  for (const workItem of workItems) {
+    for (const spec of workItem.playwright.specs) {
+      for (const checkpoint of spec.checkpoints) {
+        for (const selector of [checkpoint.target, checkpoint.locator, checkpoint.waitForSelector]) {
+          if (selector && /^#[A-Za-z][A-Za-z0-9_-]*$/.test(selector)) {
+            ids.add(selector.slice(1));
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(ids).sort();
+}
+
+function validateRequiredSelectorsRetained(input: {
+  operations: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
+  existingFiles: ImplementationExistingFileContext[];
+  materializedFiles: Array<{ filePath: string; content: string }>;
+  requiredElementIds: string[];
+}): void {
+  if (input.requiredElementIds.length === 0) {
+    return;
+  }
+
+  const replacePaths = new Set(
+    input.operations.filter((operation) => operation.operation === "replace").map((operation) => operation.filePath)
+  );
+  const existingFileMap = new Map(input.existingFiles.map((file) => [file.filePath, file.content]));
+  const materializedFileMap = new Map(input.materializedFiles.map((file) => [file.filePath, file.content]));
+
+  for (const filePath of replacePaths) {
+    const existingContent = existingFileMap.get(filePath);
+    const nextContent = materializedFileMap.get(filePath);
+    if (!existingContent || !nextContent) {
+      continue;
+    }
+
+    const droppedIds = input.requiredElementIds.filter(
+      (id) => existingContent.includes(`id="${id}"`) && !nextContent.includes(`id="${id}"`)
+    );
+
+    if (droppedIds.length > 0) {
+      throw new Error(
+        `Implementation removed required selector ids from ${filePath}: ${droppedIds.map((id) => `#${id}`).join(", ")}`
+      );
+    }
+  }
+}
+
 async function validatePlannedOperations(input: {
   operations: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
   workspaceRoot: string;
@@ -275,6 +431,7 @@ export async function executeImplementationStage(
     const backlogWorkItems = sourceWorkItems.filter(
       (workItem) => input.remainingWorkItemIds.includes(workItem.id) && !input.activeWorkItemIds.includes(workItem.id)
     );
+    const requiredElementIds = extractRequiredElementIds(activeWorkItems);
     const relevantFiles = await activeDependencies.collectRelevantFiles({
       rootDir: input.workspace.rootDir,
       rawPrompt: input.normalizedIntent.rawPrompt,
@@ -393,6 +550,15 @@ export async function executeImplementationStage(
         logPath: materializationLogPath
       })
     );
+
+    materializedChangeSet.files = sanitizeMaterializedFiles(materializedChangeSet.files);
+    validateMaterializedFiles(materializedChangeSet.files);
+    validateRequiredSelectorsRetained({
+      operations: plannedChangeSet.operations,
+      existingFiles,
+      materializedFiles: materializedChangeSet.files,
+      requiredElementIds
+    });
 
     const applyStartedAt = new Date().toISOString();
     fileOperations = await activeDependencies.applyChangeSet({

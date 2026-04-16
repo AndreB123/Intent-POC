@@ -19,7 +19,8 @@ import {
   RunIntentEvent,
   buildQAVerificationExecutionPlan,
   createRunIntentRunner,
-  runSourceAttemptLoop
+  runSourceAttemptLoop,
+  waitForSourceAppReady
 } from "./run-intent";
 
 function buildLoopWorkItem(id: string, order: number, dependsOnWorkItemIds: string[] = []): TDDWorkItem {
@@ -205,6 +206,61 @@ test("runSourceAttemptLoop Given ordered work items When one batch passes QA The
   assert.deepEqual(result.attempts[0]?.remainingWorkItemIds, ["work-2"]);
   assert.deepEqual(result.attempts[1]?.completedWorkItemIds, ["work-1", "work-2"]);
   assert.equal(result.resource, "ready-app-2");
+});
+
+test("waitForSourceAppReady Given the launched app exits while another process already serves readiness When startup is checked Then it fails instead of accepting the stale server", async () => {
+  const server = await import("node:http").then(({ createServer }) =>
+    new Promise<import("node:http").Server>((resolve) => {
+      const instance = createServer((_req, res) => {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("ok");
+      });
+
+      instance.listen(0, "127.0.0.1", () => resolve(instance));
+    })
+  );
+
+  try {
+    const address = server.address();
+    assert(address && typeof address === "object");
+    const port = address.port;
+
+    await assert.rejects(
+      waitForSourceAppReady({
+        config: buildBehaviorTestLoadedConfig(os.tmpdir()).config,
+        workspace: {
+          sourceId: "demo-catalog",
+          source: {
+            app: {
+              readiness: {
+                type: "http",
+                url: `http://127.0.0.1:${port}`,
+                expectedStatus: 200,
+                intervalMs: 25,
+                timeoutMs: 1_000
+              }
+            }
+          },
+          baseUrl: `http://127.0.0.1:${port}`
+        } as never,
+        appHandle: {
+          logPath: "/tmp/demo-app.log",
+          waitForExit: async () => ({ exitCode: 1, signal: null })
+        }
+      }),
+      /Source app exited before readiness check completed \(exit code 1\)/
+    );
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
 });
 
 test("buildQAVerificationExecutionPlan Given active Playwright work without generated specs When QA planning runs Then it raises a missing targeted test error", () => {

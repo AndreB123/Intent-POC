@@ -7,6 +7,7 @@ export interface RunningApp {
   pid: number | undefined;
   logPath: string;
   stop: () => Promise<void>;
+  waitForExit: () => Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>;
 }
 
 export async function startApp(
@@ -24,6 +25,7 @@ export async function startApp(
   return {
     pid: appRunner.pid,
     logPath: logFilePath,
+    waitForExit: () => appRunner.waitForExit(),
     async stop(): Promise<void> {
       if (workspace.source.app.stopCommand) {
         try {

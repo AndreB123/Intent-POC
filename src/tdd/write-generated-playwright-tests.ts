@@ -58,7 +58,11 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
   }
 
   if (checkpoint.waitForSelector) {
-    lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
+    if (checkpoint.action === "assert-hidden") {
+      lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)}, { state: "hidden" });`);
+    } else {
+      lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
+    }
   }
 
   if (

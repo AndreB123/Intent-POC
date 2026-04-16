@@ -52,6 +52,9 @@ sources:
         - Use this source for prompt-planning and dry-run validation inside the Intent Driven Development POC.
     studio:
       displayName: Current app
+    testing:
+      playwright:
+        enabled: true
     source:
       type: local
       localPath: .
@@ -104,6 +107,9 @@ sources:
         - Keep this source scoped to the built-in demo surfaces for the POC.
     studio:
       displayName: Demo components
+    testing:
+      playwright:
+        enabled: false
     source:
       type: local
       localPath: .

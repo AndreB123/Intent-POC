@@ -214,18 +214,6 @@ export function inferCodeSurface(input: {
 }): CodeSurfaceSelection {
   const normalizedPrompt = input.prompt.toLowerCase();
 
-  if (input.hintedCodeSurfaceId) {
-    const alternativeIds = (input.hintedAlternativeIds ?? []).filter((id) => id !== input.hintedCodeSurfaceId);
-    return {
-      sourceId: input.primarySourceId,
-      id: input.hintedCodeSurfaceId,
-      label: getCodeSurfaceLabel(input.hintedCodeSurfaceId),
-      confidence: alternativeIds.length > 0 ? "medium" : "high",
-      rationale: `Prompt normalization identified ${getCodeSurfaceLabel(input.hintedCodeSurfaceId)} as the most likely code surface within ${input.primarySourceId}.`,
-      alternatives: alternativeIds.map((id) => buildAlternative(id, "Prompt normalization kept this as a fallback interpretation."))
-    };
-  }
-
   if (input.primarySourceId === "demo-catalog" && includesAnyPhrase(normalizedPrompt, INTENT_STUDIO_UI_KEYWORDS)) {
     return {
       sourceId: input.primarySourceId,
@@ -292,6 +280,18 @@ export function inferCodeSurface(input: {
       confidence: "high",
       rationale: `The prompt refers to configuration or settings inside ${input.primarySourceId}.`,
       alternatives: [buildAlternative("shared-source", "Configuration changes can cascade into broader source updates.")]
+    };
+  }
+
+  if (input.hintedCodeSurfaceId) {
+    const alternativeIds = (input.hintedAlternativeIds ?? []).filter((id) => id !== input.hintedCodeSurfaceId);
+    return {
+      sourceId: input.primarySourceId,
+      id: input.hintedCodeSurfaceId,
+      label: getCodeSurfaceLabel(input.hintedCodeSurfaceId),
+      confidence: alternativeIds.length > 0 ? "medium" : "high",
+      rationale: `Prompt normalization identified ${getCodeSurfaceLabel(input.hintedCodeSurfaceId)} as the most likely code surface within ${input.primarySourceId}.`,
+      alternatives: alternativeIds.map((id) => buildAlternative(id, "Prompt normalization kept this as a fallback interpretation."))
     };
   }
 

@@ -22,6 +22,7 @@ export interface CommandResultWithStatus extends CommandResult {
 export interface RunningCommand {
   pid: number | undefined;
   stop: () => Promise<void>;
+  waitForExit: () => Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>;
 }
 
 export async function runCommandAllowFailure(command: string, options: CommandOptions): Promise<CommandResultWithStatus> {
@@ -94,6 +95,11 @@ export async function startBackgroundCommand(
   options: CommandOptions & { logFilePath: string }
 ): Promise<RunningCommand> {
   const logStream = createWriteStream(options.logFilePath, { flags: "a" });
+  let exited = false;
+  let resolveExit: ((value: { exitCode: number | null; signal: NodeJS.Signals | null }) => void) | undefined;
+  const exitPromise = new Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>((resolve) => {
+    resolveExit = resolve;
+  });
   const child = spawn(command, {
     cwd: options.cwd,
     env: { ...process.env, ...options.env },
@@ -110,14 +116,17 @@ export async function startBackgroundCommand(
     logStream.write(chunk.toString());
   });
 
-  child.on("close", () => {
+  child.on("close", (code, signal) => {
+    exited = true;
+    resolveExit?.({ exitCode: code, signal });
     logStream.end();
   });
 
   return {
     pid: child.pid,
+    waitForExit: () => exitPromise,
     async stop(): Promise<void> {
-      if (!child.pid || child.killed) {
+      if (!child.pid || child.killed || exited) {
         return;
       }
 
@@ -144,6 +153,8 @@ export async function startBackgroundCommand(
           }
         }
       }
+
+      await exitPromise;
     }
   };
 }
