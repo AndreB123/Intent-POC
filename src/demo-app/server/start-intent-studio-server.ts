@@ -600,7 +600,7 @@ function toStudioCaptureSummaries(result: RunIntentResult): StudioCaptureSummary
         captureId: capture.captureId,
         status: capture.status,
         url: capture.url,
-        imagePath: capture.status === "captured" ? capture.relativeOutputPath : undefined,
+        imagePath: capture.status === "captured" ? toRelativePath(result.paths.controllerRoot, capture.outputPath) : undefined,
         diffImagePath: comparisonItem?.diffImagePath
           ? toRelativePath(result.paths.controllerRoot, comparisonItem.diffImagePath)
           : undefined,

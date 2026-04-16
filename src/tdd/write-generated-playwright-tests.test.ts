@@ -385,3 +385,218 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
     await fs.rm(rootDir, { recursive: true, force: true });
   }
 });
+
+test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When specs are generated Then the spec mocks Studio state and asserts file-backed attributes", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-studio-results-"));
+
+  try {
+    const source = {
+      ...buildDemoCatalogBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent: NormalizedIntent = {
+      intentId: "intent-studio-results-links",
+      receivedAt: new Date().toISOString(),
+      rawPrompt: "Verify that screenshots at the bottom of the results page link to the actual images.",
+      summary: "capture evidence for demo-catalog",
+      intentType: "capture-evidence",
+      businessIntent: {
+        statement: "Verify that screenshots at the bottom of the results page link to the actual images.",
+        desiredOutcome: "The results page capture previews link to the generated images.",
+        acceptanceCriteria: [],
+        scenarios: [],
+        workItems: [
+          {
+            id: "work-1-verify-results-links-demo-catalog",
+            type: "playwright-spec",
+            title: "Verify results links",
+            description: "Verify the Studio results page uses file-backed screenshot links.",
+            scenarioIds: [],
+            sourceIds: ["demo-catalog"],
+            userVisibleOutcome: "The results page capture previews link to the generated images.",
+            verification: "The results page capture previews link to the generated images.",
+            execution: {
+              order: 1,
+              dependsOnWorkItemIds: []
+            },
+            playwright: {
+              generatedBy: "rules",
+              specs: [
+                {
+                  framework: "playwright",
+                  sourceId: "demo-catalog",
+                  relativeSpecPath: "demo-catalog/work-1-verify-results-links-demo-catalog.spec.ts",
+                  suiteName: "Intent-driven flow for demo-catalog",
+                  testName: "Verify results links",
+                  scenarioIds: [],
+                  checkpoints: [
+                    {
+                      id: "checkpoint-mock-state",
+                      label: "Results Page Mocked Run State",
+                      action: "mock-studio-state",
+                      assertion: "The Intent Studio results page renders mocked capture output for review.",
+                      screenshotId: "results-page-state",
+                      path: "/",
+                      waitForSelector: "#captures .capture-card img",
+                      mockStudioState: {
+                        configPath: "intent-poc.yaml",
+                        linearEnabled: false,
+                        defaultSourceId: "demo-catalog",
+                        agentStages: [],
+                        sources: [
+                          {
+                            id: "demo-catalog",
+                            label: "Demo Catalog",
+                            aliases: ["demo-catalog"],
+                            captureCount: 1,
+                            sourceType: "local",
+                            sourceLocation: ".",
+                            startCommand: "echo start",
+                            readiness: "HTTP http://127.0.0.1:3000",
+                            baseUrl: "http://127.0.0.1:3000",
+                            defaultScope: true,
+                            status: "ready",
+                            issues: [],
+                            notes: []
+                          }
+                        ],
+                        currentRun: {
+                          sessionId: "session-1",
+                          prompt: "Verify that screenshots at the bottom of the results page link to the actual images.",
+                          requestedSourceIds: ["demo-catalog"],
+                          sourceId: "demo-catalog",
+                          dryRun: true,
+                          status: "completed",
+                          startedAt: "2026-04-16T00:00:00.000Z",
+                          finishedAt: "2026-04-16T00:00:05.000Z",
+                          runId: "run-1",
+                          events: [],
+                          captures: [
+                            {
+                              sourceId: "demo-catalog",
+                              captureId: "result",
+                              status: "captured",
+                              url: "/results",
+                              imagePath: "artifacts/runs/run-1/sources/demo-catalog/captures/result.png"
+                            }
+                          ],
+                          sourceRuns: [],
+                          artifacts: {}
+                        },
+                        recentRuns: [],
+                        serverTime: "2026-04-16T00:00:05.000Z"
+                      }
+                    },
+                    {
+                      id: "checkpoint-image-src",
+                      label: "Capture Preview Uses Run Artifact Path",
+                      action: "assert-attribute-contains",
+                      assertion: "The results page capture previews link to the generated images.",
+                      screenshotId: "results-page-image-src",
+                      target: "#captures .capture-card img",
+                      attributeName: "src",
+                      expectedSubstring: "/files/artifacts/runs/run-1/sources/demo-catalog/captures/result.png",
+                      waitForSelector: "#captures .capture-card img"
+                    },
+                    {
+                      id: "checkpoint-link-href",
+                      label: "Capture Link Uses Run Artifact Path",
+                      action: "assert-attribute-contains",
+                      assertion: "The results page capture previews link to the generated images.",
+                      screenshotId: "results-page-link-href",
+                      target: "#captures .capture-card .capture-links a",
+                      attributeName: "href",
+                      expectedSubstring: "/files/artifacts/runs/run-1/sources/demo-catalog/captures/result.png",
+                      waitForSelector: "#captures .capture-card .capture-links a"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      planning: {
+        repoCandidates: [],
+        plannerSections: [],
+        reviewNotes: [],
+        linearPlan: {
+          mode: "new"
+        }
+      },
+      executionPlan: {
+        primarySourceId: "demo-catalog",
+        sources: [
+          {
+            sourceId: "demo-catalog",
+            selectionReason: "Requested source.",
+            captureScope: {
+              mode: "all",
+              captureIds: []
+            },
+            warnings: []
+          }
+        ],
+        destinations: [],
+        tools: [],
+        orchestrationStrategy: "single-source",
+        reviewNotes: []
+      },
+      sourceId: "demo-catalog",
+      captureScope: {
+        mode: "all",
+        captureIds: []
+      },
+      artifacts: {
+        requireScreenshots: true,
+        requireManifest: true,
+        requireHashes: true
+      },
+      linear: {
+        createIssue: false,
+        issueTitle: ""
+      },
+      execution: {
+        continueOnCaptureError: false
+      },
+      normalizationMeta: {
+        source: "rules",
+        warnings: [],
+        stages: []
+      }
+    };
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "demo-catalog",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "demo-catalog"
+    });
+
+    const specPath = result?.files.find((filePath) => filePath.includes("results-links"));
+    assert.ok(specPath);
+
+    const generatedContent = await fs.readFile(specPath!, "utf8");
+    assert.equal(generatedContent.includes('await page.route("**/api/state", async (route) => {'), true);
+    assert.equal(generatedContent.includes('await page.route("**/api/events", async (route) => {'), true);
+    assert.equal(generatedContent.includes('const attributeValue = await target.getAttribute("src");'), true);
+    assert.equal(
+      generatedContent.includes('expect(attributeValue ?? "", "The results page capture previews link to the generated images.").toContain("/files/artifacts/runs/run-1/sources/demo-catalog/captures/result.png");'),
+      true
+    );
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});

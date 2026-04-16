@@ -51,6 +51,41 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
     `    await test.step(${quote(checkpoint.label)}, async () => {`
   ];
 
+  if (checkpoint.action === "mock-studio-state") {
+    lines.push(
+      `      await page.route("**/api/state", async (route) => {`,
+      `        await route.fulfill({`,
+      `          status: 200,`,
+      `          contentType: "application/json; charset=utf-8",`,
+      `          body: ${quote(JSON.stringify(checkpoint.mockStudioState ?? {}))}`, 
+      `        });`,
+      `      });`,
+      `      await page.route("**/api/events", async (route) => {`,
+      `        await route.fulfill({`,
+      `          status: 200,`,
+      `          contentType: "text/event-stream",`,
+      `          body: ""`,
+      `        });`,
+      `      });`
+    );
+
+    if (checkpoint.path) {
+      lines.push(
+        `      await page.goto(new URL(${quote(checkpoint.path)}, baseUrl).toString(), { waitUntil: ${quote(checkpoint.waitUntil ?? "domcontentloaded")} });`
+      );
+    }
+
+    if (checkpoint.waitForSelector) {
+      lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
+    }
+
+    lines.push(`      const screenshotPath = ${screenshotPathExpression};`);
+    lines.push("      await mkdir(path.dirname(screenshotPath), { recursive: true });");
+    lines.push("      await page.screenshot({ path: screenshotPath, fullPage: true });");
+    lines.push(`    });`);
+    return lines;
+  }
+
   if (checkpoint.action === "goto") {
     lines.push(
       `      await page.goto(new URL(${quote(checkpoint.path ?? "/")}, baseUrl).toString(), { waitUntil: ${quote(checkpoint.waitUntil ?? "networkidle")} });`
@@ -69,6 +104,19 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
     lines.push(
       `      await assertLocatorBelow(page, ${quote(checkpoint.target ?? "body")}, ${quote(checkpoint.referenceTarget ?? "body")}, ${quote(checkpoint.assertion)});`
     );
+    lines.push(`      const screenshotPath = ${screenshotPathExpression};`);
+    lines.push("      await mkdir(path.dirname(screenshotPath), { recursive: true });");
+    lines.push("      await page.screenshot({ path: screenshotPath, fullPage: true });");
+    lines.push(`    });`);
+    return lines;
+  }
+
+  if (checkpoint.action === "assert-attribute-contains") {
+    lines.push(`      const target = page.locator(${quote(checkpoint.target ?? checkpoint.locator ?? "body")}).first();`);
+    lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible();`);
+    lines.push(`      const attributeValue = await target.getAttribute(${quote(checkpoint.attributeName ?? "href")});`);
+    lines.push(`      expect(attributeValue, ${quote(checkpoint.assertion)}).toBeTruthy();`);
+    lines.push(`      expect(attributeValue ?? "", ${quote(checkpoint.assertion)}).toContain(${quote(checkpoint.expectedSubstring ?? "")});`);
     lines.push(`      const screenshotPath = ${screenshotPathExpression};`);
     lines.push("      await mkdir(path.dirname(screenshotPath), { recursive: true });");
     lines.push("      await page.screenshot({ path: screenshotPath, fullPage: true });");

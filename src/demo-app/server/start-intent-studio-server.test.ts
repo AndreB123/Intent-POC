@@ -510,3 +510,157 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
   assert.equal(completedState.currentRun?.sourceRuns[0]?.qaVerificationStageStatus, "completed");
   assert.match(completedState.currentRun?.sourceRuns[0]?.latestImplementationSummary ?? "", /dark mode toggle/);
 });
+
+test("startIntentStudioServer exposes controller-relative capture paths for Studio preview links", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-capture-path-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+  const loaded = await loadConfig(configPath);
+  const normalizedIntent = normalizeIntent({
+    rawPrompt: "Verify that screenshots at the bottom of the results page link to the actual images.",
+    defaultSourceId: loaded.config.run.sourceId,
+    continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    availableSources: loaded.config.sources,
+    linearEnabled: loaded.config.linear.enabled
+  });
+
+  const runId = "run-1";
+  const captureOutputPath = path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "captures", "result.png");
+  const expectedImagePath = path.join("artifacts", "runs", runId, "sources", "app", "captures", "result.png");
+
+  const mockedRunIntent = async (): Promise<RunIntentResult> => ({
+    status: "completed",
+    sourceId: "app",
+    dryRun: false,
+    normalizedIntent,
+    paths: {
+      runId,
+      controllerRoot: tmpDir,
+      runDir: path.join(tmpDir, "artifacts", "runs", runId),
+      sourcesDir: path.join(tmpDir, "artifacts", "runs", runId, "sources"),
+      logsDir: path.join(tmpDir, "artifacts", "runs", runId, "logs"),
+      normalizedIntentPath: path.join(tmpDir, "artifacts", "runs", runId, "normalized-intent.json"),
+      linearPath: path.join(tmpDir, "artifacts", "runs", runId, "linear.json"),
+      planLifecyclePath: path.join(tmpDir, "artifacts", "runs", runId, "plan-lifecycle.json"),
+      summaryPath: path.join(tmpDir, "artifacts", "runs", runId, "summary.md"),
+      manifestPath: path.join(tmpDir, "artifacts", "runs", runId, "manifest.json"),
+      hashesPath: path.join(tmpDir, "artifacts", "runs", runId, "hashes.json"),
+      comparisonPath: path.join(tmpDir, "artifacts", "runs", runId, "comparison.json"),
+      sourceRuns: {
+        app: {
+          runId,
+          sourceId: "app",
+          controllerRoot: tmpDir,
+          sourceDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app"),
+          attemptsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "attempts"),
+          capturesDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "captures"),
+          diffsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "diffs"),
+          logsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs"),
+          baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
+          appLogPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs", "app.log"),
+          manifestPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "manifest.json"),
+          hashesPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "hashes.json"),
+          comparisonPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "comparison.json"),
+          summaryPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "summary.md")
+        }
+      }
+    },
+    linearIssue: null,
+    linearPublication: null,
+    sourceRuns: [
+      {
+        sourceId: "app",
+        status: "completed",
+        paths: {
+          runId,
+          sourceId: "app",
+          controllerRoot: tmpDir,
+          sourceDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app"),
+          attemptsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "attempts"),
+          capturesDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "captures"),
+          diffsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "diffs"),
+          logsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs"),
+          baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
+          appLogPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs", "app.log"),
+          manifestPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "manifest.json"),
+          hashesPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "hashes.json"),
+          comparisonPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "comparison.json"),
+          summaryPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "summary.md")
+        },
+        captures: [
+          {
+            captureId: "result",
+            path: "/results",
+            url: "http://127.0.0.1:3000/results",
+            kind: "page",
+            outputPath: captureOutputPath,
+            relativeOutputPath: "result.png",
+            durationMs: 120,
+            viewport: { width: 1440, height: 900 },
+            status: "captured",
+            warnings: []
+          }
+        ],
+        error: undefined,
+        linearIssue: null,
+        generatedPlaywrightTests: [],
+        attempts: []
+      }
+    ],
+    captures: [
+      {
+        captureId: "result",
+        path: "/results",
+        url: "http://127.0.0.1:3000/results",
+        kind: "page",
+        outputPath: captureOutputPath,
+        relativeOutputPath: "result.png",
+        durationMs: 120,
+        viewport: { width: 1440, height: 900 },
+        status: "captured",
+        warnings: []
+      }
+    ],
+    hasDrift: false,
+    counts: {
+      "baseline-written": 0,
+      unchanged: 1,
+      changed: 0,
+      "missing-baseline": 0,
+      "capture-failed": 0,
+      "diff-error": 0
+    },
+    summaryMarkdown: "# run summary",
+    errors: []
+  });
+
+  const server = await startIntentStudioServer({ configPath, port: 0, runIntentFn: mockedRunIntent });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const runResponse = await fetch(`${server.baseUrl}/api/runs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Verify that screenshots at the bottom of the results page link to the actual images."
+    })
+  });
+  assert.equal(runResponse.status, 202);
+
+  const completedState = await waitForState<{
+    currentRun: {
+      status: string;
+      captures: Array<{
+        imagePath?: string;
+      }>;
+    } | null;
+  }>(server.baseUrl, (state) => state.currentRun?.status === "completed" && Boolean(state.currentRun?.captures?.[0]?.imagePath));
+
+  assert.equal(completedState.currentRun?.captures[0]?.imagePath, expectedImagePath);
+});

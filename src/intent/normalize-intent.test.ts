@@ -482,6 +482,30 @@ test("normalizeIntentWithAgent preserves Intent Studio layout and collapsible se
   assert.equal(collapsibleWorkItem?.playwright.specs[0]?.checkpoints[3]?.action, "assert-hidden");
   assert.equal(collapsibleWorkItem?.playwright.specs[0]?.checkpoints[8]?.action, "assert-hidden");
 });
+test("normalizeIntent routes results-page screenshot linking prompts through Intent Studio checkpoints", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Verify that screenshots at the bottom of the results page link to the actual images.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: intentPocAppSources
+  });
+
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+
+  const resultsSpec = normalized.businessIntent.workItems
+    .flatMap((workItem) => workItem.playwright.specs)
+    .find((spec) => spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state"));
+
+  assert.ok(resultsSpec);
+  assert.deepEqual(
+    resultsSpec?.checkpoints.map((checkpoint) => checkpoint.action),
+    ["mock-studio-state", "assert-attribute-contains", "assert-attribute-contains"]
+  );
+  assert.equal(resultsSpec?.checkpoints[1]?.attributeName, "src");
+  assert.equal(resultsSpec?.checkpoints[2]?.attributeName, "href");
+  assert.match(resultsSpec?.checkpoints[1]?.expectedSubstring ?? "", /\/files\/artifacts\/runs\//);
+  assert.equal(resultsSpec?.checkpoints[0]?.waitForSelector, "#captures .capture-card img");
+});
 
 test("normalizeIntent honors the requested source scope across multiple sources", () => {
   const normalized = normalizeIntent({

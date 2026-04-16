@@ -17,5 +17,5 @@ export function getDemoSurfaceScreenshotPath(surface: SurfaceDefinition): string
 }
 
 export function getDemoScreenshotRoot(workspaceRoot: string): string {
-  return path.join(workspaceRoot, "artifacts", "library");
+  return path.resolve(workspaceRoot, "artifacts", "library");
 }

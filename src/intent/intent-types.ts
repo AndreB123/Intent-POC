@@ -31,7 +31,9 @@ export type PlaywrightCheckpointAction =
   | "fill"
   | "assert-visible"
   | "assert-hidden"
-  | "assert-below";
+  | "assert-below"
+  | "mock-studio-state"
+  | "assert-attribute-contains";
 
 export interface PlaywrightCheckpoint {
   id: string;
@@ -45,8 +47,11 @@ export interface PlaywrightCheckpoint {
   captureId?: string;
   locator?: string;
   referenceTarget?: string;
+  attributeName?: string;
+  expectedSubstring?: string;
   waitForSelector?: string;
   waitUntil?: "load" | "domcontentloaded" | "networkidle";
+  mockStudioState?: Record<string, unknown>;
 }
 
 export interface WorkItemExecutionPlan {

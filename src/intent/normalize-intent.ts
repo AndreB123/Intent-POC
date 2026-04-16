@@ -406,6 +406,7 @@ function buildPlaywrightCheckpoints(input: {
   scenario?: BDDScenario;
   captureItems: CaptureItemConfig[];
   workItemTitle: string;
+  promptText: string;
   desiredOutcome: string;
   acceptanceCriteria: string[];
 }): PlaywrightCheckpoint[] {
@@ -413,6 +414,7 @@ function buildPlaywrightCheckpoints(input: {
     return buildIntentStudioPlaywrightCheckpoints({
       scenario: input.scenario,
       workItemTitle: input.workItemTitle,
+      promptText: input.promptText,
       desiredOutcome: input.desiredOutcome,
       acceptanceCriteria: input.acceptanceCriteria
     });
@@ -452,11 +454,14 @@ function buildPlaywrightCheckpoints(input: {
 function buildIntentStudioPlaywrightCheckpoints(input: {
   scenario?: BDDScenario;
   workItemTitle: string;
+  promptText: string;
   desiredOutcome: string;
   acceptanceCriteria: string[];
 }): PlaywrightCheckpoint[] {
+  const normalizedPromptText = input.promptText.toLowerCase();
   const scenarioText = [
     input.workItemTitle,
+    input.desiredOutcome,
     ...input.acceptanceCriteria,
     ...(input.scenario?.given ?? []),
     ...(input.scenario?.when ?? []),
@@ -464,6 +469,11 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
   ]
     .join(" ")
     .toLowerCase();
+  const resultsLinkPattern = /\b(results page|results screen|run results|bottom of the page|bottom of the results page|artifact links?|screenshot links?|capture previews?|thumbnail|thumbnails)\b/i;
+  const resultsTargetPattern = /\b(link|links|linked|preview|previews|thumbnail|thumbnails|image|images|screenshot|screenshots|artifact)\b/i;
+  const isResultsLinkFlow =
+    (resultsLinkPattern.test(scenarioText) && resultsTargetPattern.test(scenarioText)) ||
+    (resultsLinkPattern.test(normalizedPromptText) && resultsTargetPattern.test(normalizedPromptText));
   const isCollapseFlow = /\bcollapse|collapsed|collapsable|collapsible|hide\b/i.test(scenarioText);
   const isExpandFlow = /\bexpand|expanded|show|restore\b/i.test(scenarioText);
   const mentionsPromptInput = /\b(prompt|input|textarea|text area|input box|prompt box)\b/i.test(scenarioText);
@@ -475,6 +485,102 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
   const includesStepsSection = /\b(steps|stages|optional config|optional configuration|configuration section|orchestration stages)\b/i.test(
     scenarioText
   );
+
+  if (isResultsLinkFlow) {
+    const runId = "2026-04-16T00-00-00-000Z-intent-poc-app";
+    const imagePath = `artifacts/runs/${runId}/sources/intent-poc-app/captures/verify-screenshot-artifact-linking.png`;
+    const expectedFileUrl = `/files/${imagePath}`;
+    const mockStudioState: Record<string, unknown> = {
+      configPath: "intent-poc.yaml",
+      linearEnabled: false,
+      defaultSourceId: "intent-poc-app",
+      agentStages: [],
+      sources: [
+        {
+          id: "intent-poc-app",
+          label: "Intent POC App",
+          repoLabel: "Intent POC",
+          role: "controller-and-demo-source",
+          summary: "Intent Studio and demo catalog source.",
+          aliases: ["demo", "intent-poc-app"],
+          captureCount: 1,
+          sourceType: "local",
+          sourceLocation: ".",
+          startCommand: "echo start",
+          readiness: "HTTP http://127.0.0.1:6006",
+          baseUrl: "http://127.0.0.1:6006",
+          defaultScope: true,
+          status: "ready",
+          issues: [],
+          notes: []
+        }
+      ],
+      currentRun: {
+        sessionId: "session-1",
+        prompt: input.desiredOutcome,
+        requestedSourceIds: ["intent-poc-app"],
+        sourceId: "intent-poc-app",
+        dryRun: true,
+        status: "completed",
+        startedAt: "2026-04-16T00:00:00.000Z",
+        finishedAt: "2026-04-16T00:00:05.000Z",
+        runId,
+        events: [],
+        captures: [
+          {
+            sourceId: "intent-poc-app",
+            captureId: "verify-screenshot-artifact-linking",
+            status: "captured",
+            url: "/results",
+            imagePath
+          }
+        ],
+        sourceRuns: [],
+        artifacts: {
+          summaryPath: `artifacts/runs/${runId}/summary.md`
+        }
+      },
+      recentRuns: [],
+      serverTime: "2026-04-16T00:00:05.000Z"
+    };
+
+    return [
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-mock-results-page`, 0),
+        label: "Results Page Mocked Run State",
+        action: "mock-studio-state",
+        assertion: "The Intent Studio results page renders mocked capture output for review.",
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-mock-results-page`, 0),
+        path: "/",
+        waitForSelector: "#captures .capture-card img",
+        waitUntil: "domcontentloaded",
+        mockStudioState
+      },
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-capture-preview-src`, 1),
+        label: "Capture Preview Uses Run Artifact Path",
+        action: "assert-attribute-contains",
+        assertion: input.desiredOutcome,
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-capture-preview-src`, 1),
+        target: "#captures .capture-card img",
+        attributeName: "src",
+        expectedSubstring: expectedFileUrl,
+        waitForSelector: "#captures .capture-card img"
+      },
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-capture-link-href`, 2),
+        label: "Capture Link Uses Run Artifact Path",
+        action: "assert-attribute-contains",
+        assertion: input.desiredOutcome,
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-capture-link-href`, 2),
+        target: "#captures .capture-card .capture-links a",
+        attributeName: "href",
+        expectedSubstring: expectedFileUrl,
+        waitForSelector: "#captures .capture-card .capture-links a"
+      }
+    ];
+  }
+
   const checkpoints: PlaywrightCheckpoint[] = [
     {
       id: createPlanId("checkpoint", `${input.workItemTitle}-open-intent-studio`, 0),
@@ -623,6 +729,7 @@ function buildPlaywrightSpecs(input: {
   scenario?: BDDScenario;
   workItemId: string;
   title: string;
+  promptText: string;
   scenarioIds: string[];
   sourceIds: string[];
   desiredOutcome: string;
@@ -650,6 +757,7 @@ function buildPlaywrightSpecs(input: {
         scenario: input.scenario,
         captureItems,
         workItemTitle: input.title,
+        promptText: input.promptText,
         desiredOutcome: input.desiredOutcome,
         acceptanceCriteria: input.acceptanceCriteria
       })
@@ -826,6 +934,7 @@ function buildWorkItemVerification(scenario: BDDScenario): string {
 
 function buildWorkItems(input: {
   codeSurface: CodeSurfaceSelection;
+  rawPrompt: string;
   scenarios: NormalizedIntent["businessIntent"]["scenarios"];
   acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
   sourcePlans: NormalizedIntent["executionPlan"]["sources"];
@@ -868,6 +977,7 @@ function buildWorkItems(input: {
             scenario,
             workItemId: id,
             title: scenario.title,
+            promptText: input.rawPrompt,
             scenarioIds: [scenario.id],
             sourceIds: [sourceId],
             desiredOutcome: userVisibleOutcome,
@@ -915,6 +1025,7 @@ function buildWorkItems(input: {
             codeSurface: input.codeSurface,
             workItemId: id,
             title: `Capture reviewable evidence for ${sourceId}`,
+            promptText: input.rawPrompt,
             scenarioIds,
             sourceIds: [sourceId],
             desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
@@ -1726,6 +1837,7 @@ function buildIntentDraft(
       ? []
       : buildWorkItems({
           codeSurface,
+          rawPrompt: trimmedPrompt,
           scenarios,
           acceptanceCriteria,
           sourcePlans,

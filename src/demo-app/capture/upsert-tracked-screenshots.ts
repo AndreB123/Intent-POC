@@ -25,7 +25,7 @@ export async function upsertTrackedScreenshots(input: {
       throw new Error(`Tracked screenshot destination is not configured for capture '${capture.captureId}'.`);
     }
 
-    const destinationPath = path.join(input.trackedRoot, getCaptureItemOutputRelativePath(captureItem));
+    const destinationPath = path.resolve(input.trackedRoot, getCaptureItemOutputRelativePath(captureItem));
     await copyFile(capture.outputPath, destinationPath);
     updatedFiles.push(destinationPath);
   }
