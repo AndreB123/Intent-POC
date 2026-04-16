@@ -356,12 +356,12 @@ async function validatePlannedOperations(input: {
 
   for (const operation of input.operations) {
     if (generatedSpecPaths.has(operation.filePath)) {
-      throw new Error(`Implementation cannot modify generated Playwright specs: ${operation.filePath}`);
+      throw new Error(`Implementation cannot modify tracked Playwright verification specs during the source lane: ${operation.filePath}`);
     }
 
     if (generatedSpecOutputRoot && isWithinRelativeRoot(operation.filePath, generatedSpecOutputRoot)) {
       throw new Error(
-        `Implementation cannot target the controller-owned generated Playwright output root: ${operation.filePath}. Update application/source files instead.`
+        `Implementation cannot target the tracked Playwright verification root during implementation: ${operation.filePath}. Update application/source files instead.`
       );
     }
 

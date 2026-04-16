@@ -70,7 +70,7 @@ function buildNormalizedIntent(sourceId: string, codeSurface?: CodeSurfaceSelect
               {
                 framework: "playwright",
                 sourceId,
-                relativeSpecPath: "tests/intent/generated/dashboard-affordance.spec.ts",
+                relativeSpecPath: "tests/intent/dashboard-affordance.spec.ts",
                 suiteName: "Dashboard affordance",
                 testName: "shows the affordance",
                 scenarioIds: ["scenario-1"],
@@ -197,7 +197,7 @@ async function createImplementationInput(): Promise<{
   await fs.mkdir(sourcePaths.attemptsDir, { recursive: true });
   await fs.mkdir(path.join(rootDir, "src"), { recursive: true });
   await fs.mkdir(path.join(rootDir, "src", "demo-app", "theme"), { recursive: true });
-  await fs.mkdir(path.join(rootDir, "tests", "intent", "generated"), { recursive: true });
+  await fs.mkdir(path.join(rootDir, "tests", "intent"), { recursive: true });
   await fs.writeFile(
     path.join(rootDir, "package.json"),
     JSON.stringify({ name: "fixture", scripts: { typecheck: "tsc --noEmit" } }, null, 2)
@@ -213,7 +213,7 @@ async function createImplementationInput(): Promise<{
     "test('theme toggle', () => {});\n"
   );
   await fs.writeFile(
-    path.join(rootDir, "tests", "intent", "generated", "dashboard-affordance.spec.ts"),
+    path.join(rootDir, "tests", "intent", "dashboard-affordance.spec.ts"),
     "test('dashboard affordance', async () => {});\n"
   );
 
@@ -235,7 +235,7 @@ async function createImplementationInput(): Promise<{
       sourcePaths,
       workspace: buildWorkspace(config, rootDir, sourceId),
       generatedPlaywrightTests: [
-        path.join(rootDir, "tests", "intent", "generated", "dashboard-affordance.spec.ts")
+        path.join(rootDir, "tests", "intent", "dashboard-affordance.spec.ts")
       ],
       attemptNumber: 1,
       activeWorkItemIds: ["work-item-1"],
@@ -344,7 +344,7 @@ test("planImplementationChanges Given generated specs When planning is requested
       }
     );
 
-    assert.match(capturedPrompt, /Generated Playwright specs \(read-only verification inputs\):/);
+    assert.match(capturedPrompt, /Tracked Playwright specs \(read-only verification inputs\):/);
     assert.match(capturedPrompt, /Active work items to implement in this pass:/);
     assert.match(capturedPrompt, /dashboard-affordance\.spec\.ts/);
     assert.match(capturedPrompt, /Prefer existing source files under src\/ and src\/demo-app\//);
@@ -680,7 +680,7 @@ test("executeImplementationStage Given an existing rogue spec file When validati
   }
 });
 
-test("executeImplementationStage Given a planned write to generated Playwright output When validation runs Then it fails before materialization", async () => {
+test("executeImplementationStage Given a planned write to tracked Playwright output When validation runs Then it fails before materialization", async () => {
   const { rootDir, input } = await createImplementationInput();
   const previousApiKey = process.env.TEST_GEMINI_API_KEY;
   process.env.TEST_GEMINI_API_KEY = "test-key";
@@ -692,8 +692,8 @@ test("executeImplementationStage Given a planned write to generated Playwright o
         operations: [
           {
             operation: "create",
-            filePath: "tests/intent/generated/new-dashboard-affordance.spec.ts",
-            rationale: "Add a generated Playwright verification spec."
+            filePath: "tests/intent/new-dashboard-affordance.spec.ts",
+            rationale: "Add a tracked Playwright verification spec."
           }
         ],
         warnings: []
@@ -708,7 +708,7 @@ test("executeImplementationStage Given a planned write to generated Playwright o
     });
 
     assert.equal(result.status, "failed");
-    assert.match(result.error ?? "", /controller-owned generated Playwright output root/);
+    assert.match(result.error ?? "", /tracked Playwright verification root/);
     assert.equal(materializeCalls, 0);
   } finally {
     if (previousApiKey === undefined) {

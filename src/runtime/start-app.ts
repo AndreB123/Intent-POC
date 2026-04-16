@@ -6,8 +6,19 @@ import { ResolvedSourceWorkspace } from "../target/resolve-target";
 export interface RunningApp {
   pid: number | undefined;
   logPath: string;
+  ownership: "managed" | "external";
   stop: () => Promise<void>;
   waitForExit: () => Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>;
+}
+
+export function attachToRunningApp(logFilePath: string): RunningApp {
+  return {
+    pid: undefined,
+    logPath: logFilePath,
+    ownership: "external",
+    stop: async () => {},
+    waitForExit: async () => new Promise(() => {})
+  };
 }
 
 export async function startApp(
@@ -25,6 +36,7 @@ export async function startApp(
   return {
     pid: appRunner.pid,
     logPath: logFilePath,
+    ownership: "managed",
     waitForExit: () => appRunner.waitForExit(),
     async stop(): Promise<void> {
       if (workspace.source.app.stopCommand) {

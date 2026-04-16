@@ -79,7 +79,7 @@ const captureSchema = z
 
 const playwrightTestOutputSchema = z.object({
   enabled: z.boolean().default(false),
-  outputDir: z.string().min(1).default("tests/intent/generated")
+  outputDir: z.string().min(1).default("tests/intent")
 });
 
 const testingSchema = z.object({
@@ -115,6 +115,7 @@ const sourceSchema = z.object({
     workdir: z.string().default("."),
     startCommand: z.string().min(1),
     baseUrl: z.string().min(1),
+    reuseExistingServer: z.boolean().default(false),
     startTimeoutMs: z.number().int().positive().default(120_000),
     stopCommand: z.string().optional(),
     env: z.record(z.string()).default({}),

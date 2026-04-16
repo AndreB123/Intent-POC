@@ -103,6 +103,8 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.sources.s1.planning.repoId, "intent-poc");
   assert.deepEqual(loaded.config.sources.s1.planning.notes, ["Current workspace bootstrap repo"]);
   assert.equal(loaded.config.sources.s1.studio.displayName, "Current app");
+  assert.equal(loaded.config.sources.s1.app.reuseExistingServer, false);
+  assert.equal(loaded.config.sources.s1.testing.playwright.outputDir, "tests/intent");
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
@@ -162,6 +164,7 @@ test("loadConfig expands the built-in demo surface catalog and resolves tracked 
   assert.equal(loaded.config.sources["demo-components"].capture.catalog, "demo-surface-catalog");
   assert.equal(loaded.config.sources["demo-components"].capture.items.length, 46);
   assert.equal(loaded.config.sources["demo-components"].capture.items[0]?.relativeOutputPath?.startsWith("components/"), true);
+  assert.equal(loaded.config.sources["demo-components"].app.reuseExistingServer, false);
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });

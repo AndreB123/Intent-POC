@@ -55,6 +55,7 @@ sources:
     testing:
       playwright:
         enabled: true
+        outputDir: tests/intent
     source:
       type: local
       localPath: .
@@ -66,6 +67,7 @@ sources:
       workdir: .
       startCommand: npm run demo:serve -- --port 6006
       baseUrl: http://127.0.0.1:6006
+      reuseExistingServer: true
       startTimeoutMs: 120000
       env: {}
       readiness:
@@ -121,6 +123,7 @@ sources:
       workdir: .
       startCommand: npm run demo:serve -- --port 6006
       baseUrl: http://127.0.0.1:6006
+      reuseExistingServer: true
       startTimeoutMs: 120000
       env: {}
       readiness:

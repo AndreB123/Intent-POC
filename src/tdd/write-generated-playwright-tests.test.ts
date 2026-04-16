@@ -8,7 +8,7 @@ import { NormalizedIntent } from "../intent/intent-types";
 import { buildBehaviorSource, buildDemoCatalogBehaviorSource } from "../orchestrator/run-intent.test-support";
 import { writeGeneratedPlaywrightTests } from "./write-generated-playwright-tests";
 
-test("writeGeneratedPlaywrightTests overwrites the generated source subtree", async () => {
+test("writeGeneratedPlaywrightTests preserves unrelated tracked specs while refreshing targeted files", async () => {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-tests-"));
   const source = {
     ...buildBehaviorSource({
@@ -37,7 +37,7 @@ test("writeGeneratedPlaywrightTests overwrites the generated source subtree", as
     testing: {
       playwright: {
         enabled: true,
-        outputDir: "tests/intent/generated"
+        outputDir: "tests/intent"
       }
     }
   };
@@ -56,9 +56,9 @@ test("writeGeneratedPlaywrightTests overwrites the generated source subtree", as
     }
   });
 
-  const staleDir = path.join(rootDir, "tests", "intent", "generated", "demo-source");
+  const staleDir = path.join(rootDir, "tests", "intent", "demo-source");
   await fs.mkdir(staleDir, { recursive: true });
-  await fs.writeFile(path.join(staleDir, "obsolete.spec.ts"), "obsolete", "utf8");
+  await fs.writeFile(path.join(staleDir, "obsolete.spec.ts"), "test('obsolete but kept', () => {});\n", "utf8");
 
   const result = await writeGeneratedPlaywrightTests({
     workspace: {
@@ -78,7 +78,9 @@ test("writeGeneratedPlaywrightTests overwrites the generated source subtree", as
   assert.ok((result?.files.length ?? 0) > 0);
 
   const generatedEntries = await fs.readdir(staleDir);
-  assert.equal(generatedEntries.includes("obsolete.spec.ts"), false);
+  assert.equal(generatedEntries.includes("obsolete.spec.ts"), true);
+  const obsoleteContent = await fs.readFile(path.join(staleDir, "obsolete.spec.ts"), "utf8");
+  assert.equal(obsoleteContent, "test('obsolete but kept', () => {});\n");
 
   const firstGeneratedFile = result!.files[0]!;
   const generatedContent = await fs.readFile(firstGeneratedFile, "utf8");
@@ -102,7 +104,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
       testing: {
         playwright: {
           enabled: true,
-          outputDir: "tests/intent/generated"
+          outputDir: "tests/intent"
         }
       }
     };

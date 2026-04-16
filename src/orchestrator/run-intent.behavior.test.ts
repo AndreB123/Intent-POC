@@ -18,6 +18,7 @@ import {
 import {
   RunIntentEvent,
   buildQAVerificationExecutionPlan,
+  canReuseRunningSourceApp,
   createRunIntentRunner,
   runSourceAttemptLoop,
   waitForSourceAppReady
@@ -263,6 +264,63 @@ test("waitForSourceAppReady Given the launched app exits while another process a
   }
 });
 
+test("canReuseRunningSourceApp Given a ready existing local dev server When reuse is enabled Then it returns true", async () => {
+  const server = await import("node:http").then(({ createServer }) =>
+    new Promise<import("node:http").Server>((resolve) => {
+      const instance = createServer((_req, res) => {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("ok");
+      });
+
+      instance.listen(0, "127.0.0.1", () => resolve(instance));
+    })
+  );
+
+  try {
+    const address = server.address();
+    assert(address && typeof address === "object");
+    const port = address.port;
+
+    const reusable = await canReuseRunningSourceApp({
+      config: buildBehaviorTestLoadedConfig(os.tmpdir()).config,
+      workspace: {
+        sourceId: "demo-catalog",
+        sourceType: "local",
+        source: {
+          workspace: {
+            checkoutMode: "existing"
+          },
+          app: {
+            reuseExistingServer: true,
+            readiness: {
+              type: "http",
+              url: `http://127.0.0.1:${port}`,
+              expectedStatus: 200,
+              intervalMs: 50,
+              timeoutMs: 1_000
+            }
+          }
+        },
+        rootDir: os.tmpdir(),
+        appDir: os.tmpdir(),
+        baseUrl: `http://127.0.0.1:${port}`
+      } as never
+    });
+
+    assert.equal(reusable, true);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+});
+
 test("buildQAVerificationExecutionPlan Given active Playwright work without generated specs When QA planning runs Then it raises a missing targeted test error", () => {
   const normalizedIntent = normalizeIntent({
     rawPrompt:
@@ -283,7 +341,7 @@ test("buildQAVerificationExecutionPlan Given active Playwright work without gene
     workspaceRootDir: "/tmp/intent-poc"
   });
 
-  assert.match(plan.error ?? "", /Missing targeted generated Playwright specs/);
+  assert.match(plan.error ?? "", /Missing targeted tracked Playwright specs/);
   assert.equal(plan.commands, undefined);
 });
 
@@ -302,7 +360,7 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
     normalizedIntent,
     sourceId: "demo-catalog",
     activeWorkItemIds: [normalizedIntent.businessIntent.workItems[0]!.id],
-    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/generated/demo-catalog/work-1.spec.ts"],
+    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/demo-catalog/work-1.spec.ts"],
     implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
     workspaceRootDir: "/tmp/intent-poc"
   });

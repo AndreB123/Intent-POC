@@ -346,7 +346,7 @@ function buildScenarioContext(scenarios: BDDScenario[]): ImplementationScenarioC
 function buildVerificationNotes(workItem: TDDWorkItem): string[] {
   return workItem.playwright.specs.map(
     (spec) =>
-      `${spec.framework} coverage \"${spec.suiteName}\" / \"${spec.testName}\" is controller-owned and read-only during implementation.`
+      `${spec.framework} coverage \"${spec.suiteName}\" / \"${spec.testName}\" is a tracked read-only verification asset during implementation.`
   );
 }
 
@@ -660,8 +660,8 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
     "All file paths must be relative to the workspace root.",
     "Modify application or source files to satisfy the requested behavior.",
     "Prefer existing source files under src/ and src/demo-app/ when they are relevant.",
-    "Do not target .git, node_modules, artifacts, evidence, or generated Playwright output files.",
-    "Generated Playwright specs are controller-owned read-only verification inputs. Do not modify them or use them as edit targets.",
+    "Do not target .git, node_modules, artifacts, evidence, or tracked Playwright verification files.",
+    "Tracked Playwright specs are read-only verification inputs during implementation. Do not modify them or use them as edit targets.",
     "Do not create ad hoc .spec or .test files to satisfy implementation work. Source changes are the default expected outcome.",
     "Prefer the smallest change set that should satisfy the planned work and QA bundle.",
     "If no source changes are needed, return an empty operations array.",
@@ -690,18 +690,18 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
     JSON.stringify(input.backlogWorkItems, null, 2),
     "Package scripts:",
     JSON.stringify(input.packageContext, null, 2),
-    "Generated Playwright specs (read-only verification inputs):",
+    "Tracked Playwright specs (read-only verification inputs):",
     JSON.stringify(
       input.generatedSpecs.map((spec) => ({
         relativePath: spec.relativePath,
-        usage: "Controller-owned verification input. Do not modify or copy as a target file."
+        usage: "Tracked verification input. Do not modify or copy as a target file."
       })),
       null,
       2
     ),
     ...(requiredSelectors.length > 0
       ? [
-          "Required selectors referenced by the generated Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
+          "Required selectors referenced by the tracked Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
           JSON.stringify(requiredSelectors, null, 2)
         ]
       : []),
@@ -732,7 +732,7 @@ function buildMaterializationPrompt(input: {
     "Return only JSON that matches the provided schema.",
     "Generate full file contents for every create or replace operation.",
     "Do not emit patch hunks. Return the complete file text for each file.",
-    "Keep changes minimal and aligned with the planned work and generated Playwright specs.",
+    "Keep changes minimal and aligned with the planned work and tracked Playwright specs.",
     `Source id: ${input.context.sourceId}`,
     `Intent summary: ${input.context.summary}`,
     "Selected file operations:",
@@ -741,11 +741,11 @@ function buildMaterializationPrompt(input: {
     JSON.stringify(input.existingFiles, null, 2),
     "Relevant existing source files:",
     JSON.stringify(input.context.relevantFiles, null, 2),
-    "Generated Playwright specs:",
+    "Tracked Playwright specs:",
     JSON.stringify(input.context.generatedSpecs, null, 2),
     ...(requiredSelectors.length > 0
       ? [
-          "Required selectors referenced by the generated Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
+          "Required selectors referenced by the tracked Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
           JSON.stringify(requiredSelectors, null, 2)
         ]
       : []),

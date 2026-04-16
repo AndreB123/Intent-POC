@@ -35,8 +35,8 @@ import {
   sourceLaneSectionId,
   upsertPlannerSection
 } from "../linear/planner-sections";
-import { startApp } from "../runtime/start-app";
-import { waitForReady } from "../runtime/wait-for-ready";
+import { attachToRunningApp, startApp } from "../runtime/start-app";
+import { checkReady, waitForReady } from "../runtime/wait-for-ready";
 import { runCommandAllowFailure } from "../shared/process";
 import { sanitizeFileSegment, writeJsonFile, writeTextFile } from "../shared/fs";
 import { log } from "../shared/log";
@@ -248,6 +248,30 @@ export async function waitForSourceAppReady(input: {
   }
 }
 
+function supportsExistingServerReuse(workspace: ResolvedSourceWorkspace): boolean {
+  return workspace.sourceType === "local"
+    && workspace.source.workspace.checkoutMode === "existing"
+    && workspace.source.app.reuseExistingServer;
+}
+
+export async function canReuseRunningSourceApp(input: {
+  config: AppConfig;
+  workspace: ResolvedSourceWorkspace;
+}): Promise<boolean> {
+  if (!supportsExistingServerReuse(input.workspace)) {
+    return false;
+  }
+
+  const readiness = input.workspace.source.app.readiness;
+  const quickTimeoutMs = Math.min(
+    readiness.intervalMs,
+    readiness.timeoutMs,
+    1_000
+  );
+
+  return await checkReady(input.config, input.workspace, quickTimeoutMs);
+}
+
 function emitRunEvent(
   options: RunIntentOptions,
   phase: RunIntentEvent["phase"],
@@ -408,7 +432,7 @@ export function buildQAVerificationExecutionPlan(input: {
 
   if (expectsGeneratedPlaywright && input.generatedPlaywrightTests.length === 0) {
     return {
-      error: `Missing targeted generated Playwright specs for active work items: ${activeWorkItemIds.join(", ")}.`
+      error: `Missing targeted tracked Playwright specs for active work items: ${activeWorkItemIds.join(", ")}.`
     };
   }
 
@@ -575,6 +599,28 @@ async function startReadySourceApp(input: {
   reason: "qa-verification" | "evidence-capture";
   attemptNumber?: number;
 }): Promise<RunningAppHandle> {
+  if (await canReuseRunningSourceApp({ config: input.config, workspace: input.workspace })) {
+    const appHandle = attachToRunningApp(input.sourcePaths.appLogPath);
+
+    log.info("Reusing existing source app.", {
+      sourceId: input.workspace.sourceId,
+      baseUrl: input.workspace.baseUrl,
+      reason: input.reason,
+      attemptNumber: input.attemptNumber
+    });
+
+    emitRunEvent(input.options, "app", "Reusing existing source app.", {
+      sourceId: input.workspace.sourceId,
+      baseUrl: input.workspace.baseUrl,
+      readiness: input.workspace.source.app.readiness,
+      externallyManaged: true,
+      reason: input.reason,
+      attemptNumber: input.attemptNumber
+    });
+
+    return appHandle;
+  }
+
   emitRunEvent(input.options, "app", "Starting source app.", {
     sourceId: input.workspace.sourceId,
     baseUrl: input.workspace.baseUrl,
@@ -596,6 +642,7 @@ async function startReadySourceApp(input: {
   emitRunEvent(input.options, "app", "Source app started.", {
     sourceId: input.workspace.sourceId,
     pid: appHandle.pid,
+    externallyManaged: false,
     appLogPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.appLogPath),
     reason: input.reason,
     attemptNumber: input.attemptNumber
@@ -623,6 +670,7 @@ async function startReadySourceApp(input: {
   emitRunEvent(input.options, "app", "Source app is ready.", {
     sourceId: input.workspace.sourceId,
     baseUrl: input.workspace.baseUrl,
+    externallyManaged: false,
     reason: input.reason,
     attemptNumber: input.attemptNumber
   });
@@ -1330,7 +1378,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
     if (generatedSpecBundle) {
       generatedPlaywrightTests = generatedSpecBundle.files;
-      emitRunEvent(input.options, "artifacts", "Generated Playwright specs written to source workspace.", {
+      emitRunEvent(input.options, "artifacts", "Tracked Playwright specs refreshed in source workspace.", {
         sourceId: input.sourcePlan.sourceId,
         outputDir: toRelativePath(input.runPaths.controllerRoot, generatedSpecBundle.outputDir),
         files: generatedSpecBundle.files.map((filePath) => toRelativePath(input.runPaths.controllerRoot, filePath))

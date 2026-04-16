@@ -47,7 +47,7 @@ export function buildBehaviorSource(input: BehaviorSourceInput): SourceConfig {
     testing: {
       playwright: {
         enabled: false,
-        outputDir: "tests/intent/generated"
+        outputDir: "tests/intent"
       }
     },
     source: input.source ?? {
@@ -64,6 +64,7 @@ export function buildBehaviorSource(input: BehaviorSourceInput): SourceConfig {
       workdir: ".",
       startCommand: input.startCommand,
       baseUrl: input.baseUrl,
+      reuseExistingServer: false,
       startTimeoutMs: 120_000,
       env: {},
       readiness: {

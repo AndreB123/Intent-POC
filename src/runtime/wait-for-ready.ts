@@ -18,6 +18,64 @@ function getBrowserType(browser: AppConfig["playwright"]["browser"]) {
   }
 }
 
+async function checkHttpReadiness(url: string, expectedStatus: number, timeoutMs?: number): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
+    });
+    return response.status === expectedStatus;
+  } catch {
+    return false;
+  }
+}
+
+async function checkSelectorReadiness(input: {
+  config: AppConfig;
+  workspace: ResolvedSourceWorkspace;
+  path: string;
+  selector: string;
+  timeoutMs: number;
+}): Promise<boolean> {
+  const browser = await getBrowserType(input.config.playwright.browser).launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    try {
+      await page.goto(new URL(input.path, input.workspace.baseUrl).toString(), {
+        waitUntil: "domcontentloaded",
+        timeout: input.timeoutMs
+      });
+      await page.waitForSelector(input.selector, { timeout: input.timeoutMs });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function checkReady(
+  config: AppConfig,
+  workspace: ResolvedSourceWorkspace,
+  timeoutMs?: number
+): Promise<boolean> {
+  const readiness = workspace.source.app.readiness;
+
+  if (readiness.type === "http") {
+    return await checkHttpReadiness(readiness.url ?? workspace.baseUrl, readiness.expectedStatus, timeoutMs);
+  }
+
+  return await checkSelectorReadiness({
+    config,
+    workspace,
+    path: readiness.path,
+    selector: readiness.selector,
+    timeoutMs: timeoutMs ?? readiness.intervalMs
+  });
+}
+
 export async function waitForReady(
   config: AppConfig,
   workspace: ResolvedSourceWorkspace
@@ -28,13 +86,8 @@ export async function waitForReady(
   if (readiness.type === "http") {
     const url = readiness.url ?? workspace.baseUrl;
     while (Date.now() - startedAt < readiness.timeoutMs) {
-      try {
-        const response = await fetch(url);
-        if (response.status === readiness.expectedStatus) {
-          return;
-        }
-      } catch {
-        // Keep polling until timeout.
+      if (await checkHttpReadiness(url, readiness.expectedStatus, readiness.intervalMs)) {
+        return;
       }
 
       await sleep(readiness.intervalMs);
