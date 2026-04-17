@@ -116,6 +116,8 @@ function buildRuntimeAttemptsMarkdown(controllerRoot: string, attempts: SourceRu
         `- Status: ${attempt.status}`,
         `- Failure stage: ${attempt.failureStage ?? "none"}`,
         `- Targeted work items: ${attempt.targetedWorkItemIds.length > 0 ? attempt.targetedWorkItemIds.join(", ") : "none"}`,
+        `- Completed in attempt: ${attempt.completedInAttemptWorkItemIds.length > 0 ? attempt.completedInAttemptWorkItemIds.join(", ") : "none"}`,
+        `- Pending targeted work items: ${attempt.pendingTargetedWorkItemIds.length > 0 ? attempt.pendingTargetedWorkItemIds.join(", ") : "none"}`,
         `- Completed work items: ${attempt.completedWorkItemIds.length > 0 ? attempt.completedWorkItemIds.join(", ") : "none"}`,
         `- Remaining work items: ${attempt.remainingWorkItemIds.length > 0 ? attempt.remainingWorkItemIds.join(", ") : "none"}`,
         ...buildStageExecutionMarkdown("Implementation", attempt.implementation, controllerRoot),

@@ -49,6 +49,8 @@ export interface SourceRunAttemptRecord {
   status: "completed" | "failed";
   failureStage?: "implementation" | "qaVerification";
   targetedWorkItemIds: string[];
+  completedInAttemptWorkItemIds: string[];
+  pendingTargetedWorkItemIds: string[];
   completedWorkItemIds: string[];
   remainingWorkItemIds: string[];
   implementation: SourceStageExecutionRecord;
@@ -95,6 +97,8 @@ export interface PlanLifecycleRecord {
       status: SourceRunAttemptRecord["status"];
       failureStage?: SourceRunAttemptRecord["failureStage"];
       targetedWorkItemIds: string[];
+      completedInAttemptWorkItemIds: string[];
+      pendingTargetedWorkItemIds: string[];
       completedWorkItemIds: string[];
       remainingWorkItemIds: string[];
       implementation: SourceStageExecutionRecord["status"];
@@ -128,6 +132,8 @@ function serializeSourceRunAttempts(controllerRoot: string, attempts: SourceRunA
     status: attempt.status,
     failureStage: attempt.failureStage,
     targetedWorkItemIds: attempt.targetedWorkItemIds,
+    completedInAttemptWorkItemIds: attempt.completedInAttemptWorkItemIds,
+    pendingTargetedWorkItemIds: attempt.pendingTargetedWorkItemIds,
     completedWorkItemIds: attempt.completedWorkItemIds,
     remainingWorkItemIds: attempt.remainingWorkItemIds,
     implementation: serializeSourceStageExecution(controllerRoot, attempt.implementation),
@@ -405,6 +411,8 @@ export async function writePlanLifecycleFile(input: {
           status: attempt.status,
           failureStage: attempt.failureStage,
           targetedWorkItemIds: attempt.targetedWorkItemIds,
+          completedInAttemptWorkItemIds: attempt.completedInAttemptWorkItemIds,
+          pendingTargetedWorkItemIds: attempt.pendingTargetedWorkItemIds,
           completedWorkItemIds: attempt.completedWorkItemIds,
           remainingWorkItemIds: attempt.remainingWorkItemIds,
           implementation: attempt.implementation.status,

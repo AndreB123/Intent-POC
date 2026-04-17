@@ -56,6 +56,12 @@
     "warnings": [
       "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
     ],
+    "requestedPlanningDepth": "full",
+    "effectivePlanningDepth": "full",
+    "ambiguity": {
+      "isAmbiguous": false,
+      "reasons": []
+    },
     "stages": [
       {
         "stageId": "promptNormalization",

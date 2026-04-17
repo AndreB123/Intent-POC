@@ -1928,6 +1928,27 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           return item;
         }
 
+        function appendLatestChunkMeta(meta, sourceRun) {
+          if (!sourceRun) {
+            return;
+          }
+
+          if (sourceRun.latestCompletedInAttemptWorkItemIds && sourceRun.latestCompletedInAttemptWorkItemIds.length > 0) {
+            meta.push("Completed in latest attempt: " + sourceRun.latestCompletedInAttemptWorkItemIds.join(", "));
+          }
+
+          if (sourceRun.latestPendingTargetedWorkItemIds && sourceRun.latestPendingTargetedWorkItemIds.length > 0) {
+            meta.push("Pending batch: " + sourceRun.latestPendingTargetedWorkItemIds.join(", "));
+          }
+
+          if (sourceRun.attemptSummaries && sourceRun.attemptSummaries.length > 0) {
+            const latestAttempt = sourceRun.attemptSummaries[sourceRun.attemptSummaries.length - 1];
+            meta.push(
+              "Latest attempt #" + latestAttempt.attemptNumber + ": " + latestAttempt.status + (latestAttempt.failureStage ? " (" + latestAttempt.failureStage + ")" : "")
+            );
+          }
+        }
+
         function renderPlan(state) {
           const run = state && state.currentRun;
           const activePlan = run && run.intentPlan ? run.intentPlan : previewPlan;
@@ -2047,6 +2068,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               if (sr.targetedWorkItemIds && sr.targetedWorkItemIds.length > 0) {
                 meta.push("Active batch: " + sr.targetedWorkItemIds.join(", "));
               }
+              appendLatestChunkMeta(meta, sr);
               if (sr.captureScopeSummary) {
                 meta.push(sr.captureScopeSummary);
               }
@@ -2070,6 +2092,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 if (typeof sr.executedCaptureCount === "number") {
                   meta.push(sr.executedCaptureCount + " captures executed");
                 }
+                appendLatestChunkMeta(meta, sr);
                 if (sr.comparisonIssueSummary) {
                   meta.push(sr.comparisonIssueSummary);
                 }
@@ -2334,6 +2357,27 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             card.appendChild(create("div", "recent-title", run.prompt));
             card.appendChild(create("div", "recent-meta", "Scope: " + scopeText + " • Primary source: " + (run.sourceId ? formatSourceReference(state, run.sourceId) : "—") + " • " + run.status));
             card.appendChild(create("div", "recent-meta", "Finished: " + formatTime(run.finishedAt)));
+
+            if (run.sourceRuns && run.sourceRuns.length > 0) {
+              run.sourceRuns.forEach(function (sourceRun) {
+                const latestAttempt = sourceRun.attemptSummaries && sourceRun.attemptSummaries.length > 0
+                  ? sourceRun.attemptSummaries[sourceRun.attemptSummaries.length - 1]
+                  : null;
+                const parts = [
+                  formatSourceReference(state, sourceRun.sourceId),
+                  (sourceRun.attemptCount || 0) + " attempts"
+                ];
+
+                if (latestAttempt) {
+                  parts.push("batch: " + (latestAttempt.targetedWorkItemIds.length > 0 ? latestAttempt.targetedWorkItemIds.join(", ") : "none"));
+                  if (latestAttempt.pendingTargetedWorkItemIds.length > 0) {
+                    parts.push("pending: " + latestAttempt.pendingTargetedWorkItemIds.join(", "));
+                  }
+                }
+
+                card.appendChild(create("div", "recent-meta", parts.join(" • ")));
+              });
+            }
 
             if (run.artifacts && run.artifacts.summaryPath) {
               const link = create("a", "ghost-link", "Open summary");

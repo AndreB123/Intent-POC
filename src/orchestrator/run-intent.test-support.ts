@@ -330,6 +330,8 @@ export function buildSourceRunAttemptRecord(
     status: attemptOverrides.status ?? "completed",
     failureStage: attemptOverrides.failureStage,
     targetedWorkItemIds: attemptOverrides.targetedWorkItemIds ?? [],
+    completedInAttemptWorkItemIds: attemptOverrides.completedInAttemptWorkItemIds ?? [],
+    pendingTargetedWorkItemIds: attemptOverrides.pendingTargetedWorkItemIds ?? [],
     completedWorkItemIds: attemptOverrides.completedWorkItemIds ?? [],
     remainingWorkItemIds: attemptOverrides.remainingWorkItemIds ?? [],
     implementation: buildSourceStageExecutionRecord(implementation),

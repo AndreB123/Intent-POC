@@ -52,6 +52,7 @@ test("runSourceAttemptLoop Given a retryable QA failure When a later attempt pas
   const result = await runSourceAttemptLoop<string>({
     sourceId: "demo-catalog",
     workItems: [buildLoopWorkItem("work-1", 1)],
+    workItemBatchSize: 1,
     maxAttempts: 3,
     retryEnabled: true,
     executeAttempt: async ({ attemptNumber, activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds }) => {
@@ -126,6 +127,7 @@ test("runSourceAttemptLoop Given repeated QA failures When retries are exhausted
   const result = await runSourceAttemptLoop({
     sourceId: "demo-catalog",
     workItems: [buildLoopWorkItem("work-1", 1)],
+    workItemBatchSize: 1,
     maxAttempts: 3,
     retryEnabled: true,
     executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds }) => ({
@@ -170,6 +172,7 @@ test("runSourceAttemptLoop Given ordered work items When one batch passes QA The
   const result = await runSourceAttemptLoop<string>({
     sourceId: "demo-catalog",
     workItems: [buildLoopWorkItem("work-1", 1), buildLoopWorkItem("work-2", 2, ["work-1"])],
+    workItemBatchSize: 2,
     maxAttempts: 3,
     retryEnabled: true,
     executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds, attemptNumber }) => {
@@ -208,6 +211,188 @@ test("runSourceAttemptLoop Given ordered work items When one batch passes QA The
   assert.deepEqual(result.attempts[0]?.remainingWorkItemIds, ["work-2"]);
   assert.deepEqual(result.attempts[1]?.completedWorkItemIds, ["work-1", "work-2"]);
   assert.equal(result.resource, "ready-app-2");
+});
+
+test("runSourceAttemptLoop Given multiple dependency-ready work items When batch size is greater than one Then it executes a bounded chunk in one attempt", async () => {
+  const executedBatches: string[][] = [];
+
+  const result = await runSourceAttemptLoop<string>({
+    sourceId: "demo-catalog",
+    workItems: [
+      buildLoopWorkItem("work-1", 1),
+      buildLoopWorkItem("work-2", 2),
+      buildLoopWorkItem("work-3", 3)
+    ],
+    workItemBatchSize: 2,
+    maxAttempts: 3,
+    retryEnabled: true,
+    executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds, attemptNumber }) => {
+      executedBatches.push(activeWorkItemIds);
+
+      const nextCompletedWorkItemIds = [...completedWorkItemIds, ...activeWorkItemIds];
+      const nextRemainingWorkItemIds = remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId));
+
+      return {
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds: nextCompletedWorkItemIds,
+        remainingWorkItemIds: nextRemainingWorkItemIds,
+        implementation: {
+          status: "completed",
+          summary: `Implementation pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: nextCompletedWorkItemIds,
+          remainingWorkItemIds: nextRemainingWorkItemIds,
+          commands: [],
+          fileOperations: []
+        },
+        qaVerification: {
+          status: "completed",
+          summary: `QA verification pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: nextCompletedWorkItemIds,
+          remainingWorkItemIds: nextRemainingWorkItemIds,
+          commands: [],
+          fileOperations: []
+        },
+        resource: `ready-app-${attemptNumber}`
+      };
+    }
+  });
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(executedBatches, [["work-1", "work-2"], ["work-3"]]);
+  assert.equal(result.attempts.length, 2);
+  assert.deepEqual(result.attempts[0]?.targetedWorkItemIds, ["work-1", "work-2"]);
+  assert.deepEqual(result.attempts[0]?.remainingWorkItemIds, ["work-3"]);
+  assert.deepEqual(result.attempts[1]?.completedWorkItemIds, ["work-1", "work-2", "work-3"]);
+});
+
+test("runSourceAttemptLoop Given a failed batch with partial completion When it retries Then it narrows the retry to unresolved targeted work items", async () => {
+  const executedBatches: string[][] = [];
+
+  const result = await runSourceAttemptLoop<string>({
+    sourceId: "demo-catalog",
+    workItems: [
+      buildLoopWorkItem("work-1", 1),
+      buildLoopWorkItem("work-2", 2),
+      buildLoopWorkItem("work-3", 3)
+    ],
+    workItemBatchSize: 2,
+    maxAttempts: 3,
+    retryEnabled: true,
+    executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds, attemptNumber }) => {
+      executedBatches.push(activeWorkItemIds);
+
+      if (attemptNumber === 1) {
+        return {
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: [...completedWorkItemIds, "work-1"],
+          remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => workItemId !== "work-1"),
+          implementation: {
+            status: "completed",
+            summary: "Implementation partially completed the first batch.",
+            targetedWorkItemIds: activeWorkItemIds,
+            completedWorkItemIds: [...completedWorkItemIds, "work-1"],
+            remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => workItemId !== "work-1"),
+            commands: [],
+            fileOperations: []
+          },
+          qaVerification: {
+            status: "failed",
+            summary: "QA verification failed for work-2.",
+            error: "Command failed (1).",
+            targetedWorkItemIds: activeWorkItemIds,
+            completedWorkItemIds: [...completedWorkItemIds, "work-1"],
+            remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => workItemId !== "work-1"),
+            commands: [],
+            fileOperations: []
+          }
+        };
+      }
+
+      const nextCompletedWorkItemIds = [...completedWorkItemIds, ...activeWorkItemIds];
+      const nextRemainingWorkItemIds = remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId));
+
+      return {
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds: nextCompletedWorkItemIds,
+        remainingWorkItemIds: nextRemainingWorkItemIds,
+        implementation: {
+          status: "completed",
+          summary: `Implementation pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: nextCompletedWorkItemIds,
+          remainingWorkItemIds: nextRemainingWorkItemIds,
+          commands: [],
+          fileOperations: []
+        },
+        qaVerification: {
+          status: "completed",
+          summary: `QA verification pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: nextCompletedWorkItemIds,
+          remainingWorkItemIds: nextRemainingWorkItemIds,
+          commands: [],
+          fileOperations: []
+        },
+        resource: `ready-app-${attemptNumber}`
+      };
+    }
+  });
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(executedBatches, [["work-1", "work-2"], ["work-2"], ["work-3"]]);
+  assert.deepEqual(result.attempts[0]?.completedInAttemptWorkItemIds, ["work-1"]);
+  assert.deepEqual(result.attempts[0]?.pendingTargetedWorkItemIds, ["work-2"]);
+  assert.deepEqual(result.attempts[1]?.targetedWorkItemIds, ["work-2"]);
+  assert.deepEqual(result.attempts[2]?.targetedWorkItemIds, ["work-3"]);
+});
+
+test("runSourceAttemptLoop Given QA fails after the targeted batch fully completes When no targeted work remains Then it stops without retrying the completed batch", async () => {
+  const retries: number[] = [];
+
+  const result = await runSourceAttemptLoop({
+    sourceId: "demo-catalog",
+    workItems: [buildLoopWorkItem("work-1", 1)],
+    workItemBatchSize: 1,
+    maxAttempts: 3,
+    retryEnabled: true,
+    executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds }) => ({
+      targetedWorkItemIds: activeWorkItemIds,
+      completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds, ...activeWorkItemIds],
+      remainingWorkItemIds: [],
+      implementation: {
+        status: "completed",
+        summary: "Implementation completed the only targeted work item.",
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds, ...activeWorkItemIds],
+        remainingWorkItemIds: [],
+        commands: [],
+        fileOperations: []
+      },
+      qaVerification: {
+        status: "failed",
+        summary: "QA verification failed after implementation completed.",
+        error: "Command failed (2).",
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds, ...activeWorkItemIds],
+        remainingWorkItemIds: [],
+        commands: [],
+        fileOperations: []
+      }
+    }),
+    onRetry: ({ nextAttemptNumber }) => {
+      retries.push(nextAttemptNumber);
+    }
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.attempts.length, 1);
+  assert.deepEqual(retries, []);
+  assert.deepEqual(result.attempts[0]?.completedInAttemptWorkItemIds, ["work-1"]);
+  assert.deepEqual(result.attempts[0]?.pendingTargetedWorkItemIds, []);
+  assert.deepEqual(result.attempts[0]?.completedWorkItemIds, ["work-1"]);
+  assert.match(result.error ?? "", /QA verification failed for source 'demo-catalog' on attempt 1/);
 });
 
 test("waitForSourceAppReady Given the launched app exits while another process already serves readiness When startup is checked Then it fails instead of accepting the stale server", async () => {
@@ -605,6 +790,10 @@ test("runIntent Given a successful source lane When compare execution finishes T
           captures: [buildCapturedOutcome(tmpRoot, "roach-statements")],
           attempts: [
             buildSourceRunAttemptRecord({
+              targetedWorkItemIds: ["work-1-compare-drift"],
+              completedInAttemptWorkItemIds: ["work-1-compare-drift"],
+              pendingTargetedWorkItemIds: [],
+              completedWorkItemIds: ["work-1-compare-drift"],
               implementation: {
                 status: "completed",
                 summary: "Implementation completed.",
@@ -652,7 +841,11 @@ test("runIntent Given a successful source lane When compare execution finishes T
       sources: Array<{ sourceId: string; status: string; attemptCount?: number }>;
     }>(result.paths.manifestPath);
     const planLifecycle = await readJsonFile<{
-      sources: Array<{ sourceId: string; attemptCount?: number }>;
+      sources: Array<{
+        sourceId: string;
+        attemptCount?: number;
+        attempts?: Array<{ completedInAttemptWorkItemIds: string[]; pendingTargetedWorkItemIds: string[] }>;
+      }>;
     }>(result.paths.planLifecyclePath);
 
     assert.deepEqual(executedSources, ["client-systems-roach-admin"]);
@@ -667,6 +860,8 @@ test("runIntent Given a successful source lane When compare execution finishes T
     assert.equal(manifest?.sources[0]?.status, "completed");
     assert.equal(manifest?.sources[0]?.attemptCount, 1);
     assert.equal(planLifecycle?.sources[0]?.attemptCount, 1);
+    assert.deepEqual(planLifecycle?.sources[0]?.attempts?.[0]?.completedInAttemptWorkItemIds, ["work-1-compare-drift"]);
+    assert.deepEqual(planLifecycle?.sources[0]?.attempts?.[0]?.pendingTargetedWorkItemIds, []);
     assert.equal(result.summaryMarkdown?.includes("Intent POC Business Run Summary"), true);
     assert.deepEqual(
       events.map((event) => event.phase),

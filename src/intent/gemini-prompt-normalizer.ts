@@ -25,15 +25,79 @@ export interface PromptNormalizationHints {
   warnings?: string[];
 }
 
-const promptNormalizationHintsSchema: z.ZodType<PromptNormalizationHints> = z.object({
-  intentType: z.enum(["capture-evidence", "refresh-library", "change-behavior"]).optional(),
-  desiredOutcome: z.string().min(1).optional(),
-  sourceIds: z.array(z.string().min(1)).optional(),
-  codeSurfaceId: z.enum(CODE_SURFACE_IDS).optional(),
-  codeSurfaceAlternatives: z.array(z.enum(CODE_SURFACE_IDS)).optional(),
-  captureIdsBySource: z.record(z.array(z.string().min(1))).optional(),
-  warnings: z.array(z.string().min(1)).optional()
-});
+const promptNormalizationFieldSchemas = {
+  intentType: z.enum(["capture-evidence", "refresh-library", "change-behavior"]),
+  desiredOutcome: z.string().min(1),
+  sourceIds: z.array(z.string().min(1)),
+  codeSurfaceId: z.enum(CODE_SURFACE_IDS),
+  codeSurfaceAlternatives: z.array(z.enum(CODE_SURFACE_IDS)),
+  captureIdsBySource: z.record(z.array(z.string().min(1))),
+  warnings: z.array(z.string().min(1))
+} satisfies Record<keyof PromptNormalizationHints, z.ZodTypeAny>;
+
+function dedupeValues(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function buildInvalidHintWarning(fieldName: keyof PromptNormalizationHints): string {
+  switch (fieldName) {
+    case "intentType":
+      return "Gemini prompt normalization returned an invalid intentType hint, so it was ignored.";
+    case "desiredOutcome":
+      return "Gemini prompt normalization returned an invalid desiredOutcome hint, so it was ignored.";
+    case "sourceIds":
+      return "Gemini prompt normalization returned an invalid sourceIds hint, so it was ignored.";
+    case "codeSurfaceId":
+      return "Gemini prompt normalization returned an invalid codeSurfaceId hint, so it was ignored.";
+    case "codeSurfaceAlternatives":
+      return "Gemini prompt normalization returned invalid codeSurfaceAlternatives hints, so they were ignored.";
+    case "captureIdsBySource":
+      return "Gemini prompt normalization returned an invalid captureIdsBySource hint, so it was ignored.";
+    case "warnings":
+      return "Gemini prompt normalization returned invalid warning entries, so they were ignored.";
+  }
+}
+
+export function parsePromptNormalizationHintsResponse(text: string): PromptNormalizationHints {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `Gemini prompt normalization returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Gemini prompt normalization returned invalid JSON: expected an object response.");
+  }
+
+  const rawHints = parsed as Partial<Record<keyof PromptNormalizationHints, unknown>>;
+  const parsedHints: Partial<PromptNormalizationHints> = {};
+  const parserWarnings: string[] = [];
+
+  for (const fieldName of Object.keys(promptNormalizationFieldSchemas) as Array<keyof PromptNormalizationHints>) {
+    const rawValue = rawHints[fieldName];
+    if (rawValue === undefined) {
+      continue;
+    }
+
+    const parseResult = promptNormalizationFieldSchemas[fieldName].safeParse(rawValue);
+    if (!parseResult.success) {
+      parserWarnings.push(buildInvalidHintWarning(fieldName));
+      continue;
+    }
+
+    (parsedHints as Record<keyof PromptNormalizationHints, unknown>)[fieldName] = parseResult.data;
+  }
+
+  const combinedWarnings = dedupeValues([...(parsedHints.warnings ?? []), ...parserWarnings]);
+  if (combinedWarnings.length > 0) {
+    parsedHints.warnings = combinedWarnings;
+  }
+
+  return parsedHints;
+}
 
 const promptNormalizationResponseJsonSchema = {
   type: "object",
@@ -147,14 +211,5 @@ export async function normalizePromptWithGemini(
     throw new Error("Gemini prompt normalization returned an empty response.");
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch (error) {
-    throw new Error(
-      `Gemini prompt normalization returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-
-  return promptNormalizationHintsSchema.parse(parsed);
+  return parsePromptNormalizationHintsResponse(text);
 }

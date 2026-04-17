@@ -147,6 +147,12 @@ function buildNormalizedIntent(intentType: NormalizedIntent["intentType"]): Norm
     normalizationMeta: {
       source: "rules",
       warnings: [],
+      requestedPlanningDepth: "full",
+      effectivePlanningDepth: "full",
+      ambiguity: {
+        isAmbiguous: false,
+        reasons: []
+      },
       stages: []
     }
   };

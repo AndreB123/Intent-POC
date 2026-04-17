@@ -116,6 +116,14 @@ export function toRelativePath(controllerRoot: string, targetPath?: string): str
   return path.relative(controllerRoot, targetPath);
 }
 
+export function toFileUrlPath(relativePath?: string): string | undefined {
+  if (!relativePath) {
+    return undefined;
+  }
+
+  return `/files/${encodeURIComponent(relativePath)}`;
+}
+
 export async function retainRecentRuns(runRoot: string, keepCount: number): Promise<void> {
   await ensureDirectory(runRoot);
   const entries = await fs.readdir(runRoot, { withFileTypes: true });

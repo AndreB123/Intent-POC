@@ -152,6 +152,7 @@ const runSchema = z.object({
   sourceId: z.string().min(1),
   intent: z.string().optional(),
   resumeIssue: z.string().min(1).optional(),
+  workItemBatchSize: z.number().int().positive().default(1),
   captureIds: z.array(z.string()).default([]),
   continueOnCaptureError: z.boolean().default(false),
   metadata: z.record(z.string()).default({}),

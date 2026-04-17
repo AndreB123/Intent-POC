@@ -2,6 +2,7 @@ import type { AgentStageId } from "./agent-stage-config";
 import type { CodeSurfaceSelection } from "./code-surface";
 
 export type IntentType = "capture-evidence" | "refresh-library" | "change-behavior";
+export type IntentPlanningDepth = "scoping" | "full";
 export type NormalizationSource = "llm" | "rules" | "fallback";
 export type AgentStageSource = NormalizationSource | "skipped";
 export type ExecutionStrategy = "single-source" | "multi-source";
@@ -202,6 +203,20 @@ export interface AgentStageMeta {
   warnings: string[];
 }
 
+export interface NormalizationAmbiguityMeta {
+  isAmbiguous: boolean;
+  reasons: string[];
+}
+
+export interface NormalizationMeta {
+  source: NormalizationSource;
+  warnings: string[];
+  stages: AgentStageMeta[];
+  requestedPlanningDepth: IntentPlanningDepth;
+  effectivePlanningDepth: IntentPlanningDepth;
+  ambiguity: NormalizationAmbiguityMeta;
+}
+
 export interface NormalizedIntent {
   intentId: string;
   receivedAt: string;
@@ -229,9 +244,5 @@ export interface NormalizedIntent {
   execution: {
     continueOnCaptureError: boolean;
   };
-  normalizationMeta: {
-    source: NormalizationSource;
-    warnings: string[];
-    stages: AgentStageMeta[];
-  };
+  normalizationMeta: NormalizationMeta;
 }

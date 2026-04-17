@@ -169,6 +169,7 @@ export interface SourceAttemptExecutionResult<Resource = void> {
 export interface RunSourceAttemptLoopInput<Resource = void> {
   sourceId: string;
   workItems: TDDWorkItem[];
+  workItemBatchSize: number;
   maxAttempts: number;
   retryEnabled: boolean;
   executeAttempt: (input: {
@@ -487,18 +488,21 @@ function sortWorkItemsForExecution(workItems: TDDWorkItem[]): TDDWorkItem[] {
   });
 }
 
-function resolveNextExecutableWorkItem(
+function resolveNextExecutableWorkItemChunk(
   workItems: TDDWorkItem[],
   completedWorkItemIds: Set<string>,
-  pendingWorkItemIds: Set<string>
-): TDDWorkItem | undefined {
-  return sortWorkItemsForExecution(workItems).find((workItem) => {
-    if (!pendingWorkItemIds.has(workItem.id)) {
-      return false;
-    }
+  pendingWorkItemIds: Set<string>,
+  workItemBatchSize: number
+): TDDWorkItem[] {
+  return sortWorkItemsForExecution(workItems)
+    .filter((workItem) => {
+      if (!pendingWorkItemIds.has(workItem.id)) {
+        return false;
+      }
 
-    return workItem.execution.dependsOnWorkItemIds.every((dependencyId) => completedWorkItemIds.has(dependencyId));
-  });
+      return workItem.execution.dependsOnWorkItemIds.every((dependencyId) => completedWorkItemIds.has(dependencyId));
+    })
+    .slice(0, workItemBatchSize);
 }
 
 function buildRemainingWorkItemIds(workItems: TDDWorkItem[], completedWorkItemIds: Set<string>): string[] {
@@ -524,11 +528,34 @@ function buildProgressAwareStageRecord(
 }
 
 function buildAttemptFailureMessage(sourceId: string, attempt: SourceRunAttemptRecord): string {
+  const progressSuffix =
+    attempt.completedInAttemptWorkItemIds.length > 0 || attempt.pendingTargetedWorkItemIds.length > 0
+      ? ` Progress: completed ${attempt.completedInAttemptWorkItemIds.length}/${attempt.targetedWorkItemIds.length} targeted work items${
+          attempt.pendingTargetedWorkItemIds.length > 0
+            ? `; pending ${attempt.pendingTargetedWorkItemIds.join(", ")}`
+            : ""
+        }.`
+      : "";
+
   if (attempt.failureStage === "implementation") {
-    return `Implementation failed for source '${sourceId}' on attempt ${attempt.attemptNumber}: ${attempt.implementation.error ?? attempt.implementation.summary}`;
+    return `Implementation failed for source '${sourceId}' on attempt ${attempt.attemptNumber}: ${attempt.implementation.error ?? attempt.implementation.summary}${progressSuffix}`;
   }
 
-  return `QA verification failed for source '${sourceId}' on attempt ${attempt.attemptNumber}: ${attempt.qaVerification.error ?? attempt.qaVerification.summary}`;
+  return `QA verification failed for source '${sourceId}' on attempt ${attempt.attemptNumber}: ${attempt.qaVerification.error ?? attempt.qaVerification.summary}${progressSuffix}`;
+}
+
+function buildCompletedInAttemptWorkItemIds(
+  targetedWorkItemIds: string[],
+  completedBeforeAttempt: Set<string>,
+  completedAfterAttempt: Set<string>
+): string[] {
+  return targetedWorkItemIds.filter(
+    (workItemId) => !completedBeforeAttempt.has(workItemId) && completedAfterAttempt.has(workItemId)
+  );
+}
+
+function buildPendingTargetedWorkItemIds(targetedWorkItemIds: string[], completedAfterAttempt: Set<string>): string[] {
+  return targetedWorkItemIds.filter((workItemId) => !completedAfterAttempt.has(workItemId));
 }
 
 function buildCommandLogContent(command: SourceStageCommandRecord, stdout: string, stderr: string): string {
@@ -830,9 +857,14 @@ export async function runSourceAttemptLoop<Resource>(
   let latestResource: Resource | undefined;
 
   while (remainingWorkItemIds.length > 0) {
-    const nextWorkItem = resolveNextExecutableWorkItem(input.workItems, completedWorkItemIds, new Set(remainingWorkItemIds));
+    const activeWorkItems = resolveNextExecutableWorkItemChunk(
+      input.workItems,
+      completedWorkItemIds,
+      new Set(remainingWorkItemIds),
+      input.workItemBatchSize
+    );
 
-    if (!nextWorkItem) {
+    if (activeWorkItems.length === 0) {
       return {
         attempts,
         status: "failed",
@@ -840,10 +872,11 @@ export async function runSourceAttemptLoop<Resource>(
       };
     }
 
-    const activeWorkItemIds = [nextWorkItem.id];
+    let activeWorkItemIds = activeWorkItems.map((workItem) => workItem.id);
 
     for (let retryNumber = 1; retryNumber <= input.maxAttempts; retryNumber += 1) {
       const startedAt = new Date().toISOString();
+      const completedBeforeAttempt = new Set(completedWorkItemIds);
       const result = await input.executeAttempt({
         attemptNumber,
         activeWorkItemIds,
@@ -851,6 +884,16 @@ export async function runSourceAttemptLoop<Resource>(
         remainingWorkItemIds
       });
       const finishedAt = new Date().toISOString();
+      const completedAfterAttempt = new Set(completedWorkItemIds);
+      result.completedWorkItemIds.forEach((workItemId) => completedAfterAttempt.add(workItemId));
+      const completedInAttemptWorkItemIds = buildCompletedInAttemptWorkItemIds(
+        activeWorkItemIds,
+        completedBeforeAttempt,
+        completedAfterAttempt
+      );
+      const pendingTargetedWorkItemIds = buildPendingTargetedWorkItemIds(activeWorkItemIds, completedAfterAttempt);
+      const canonicalCompletedWorkItemIds = Array.from(completedAfterAttempt);
+      const canonicalRemainingWorkItemIds = buildRemainingWorkItemIds(input.workItems, completedAfterAttempt);
       const failureStage =
         result.implementation.status === "failed"
           ? "implementation"
@@ -864,8 +907,10 @@ export async function runSourceAttemptLoop<Resource>(
         status: failureStage ? "failed" : "completed",
         failureStage,
         targetedWorkItemIds: result.targetedWorkItemIds,
-        completedWorkItemIds: result.completedWorkItemIds,
-        remainingWorkItemIds: result.remainingWorkItemIds,
+        completedInAttemptWorkItemIds,
+        pendingTargetedWorkItemIds,
+        completedWorkItemIds: canonicalCompletedWorkItemIds,
+        remainingWorkItemIds: canonicalRemainingWorkItemIds,
         implementation: result.implementation,
         qaVerification: result.qaVerification
       };
@@ -873,18 +918,30 @@ export async function runSourceAttemptLoop<Resource>(
       attempts.push(attempt);
 
       if (!failureStage) {
-        activeWorkItemIds.forEach((workItemId) => completedWorkItemIds.add(workItemId));
-        remainingWorkItemIds = buildRemainingWorkItemIds(input.workItems, completedWorkItemIds);
+        completedAfterAttempt.forEach((workItemId) => completedWorkItemIds.add(workItemId));
+        remainingWorkItemIds = canonicalRemainingWorkItemIds;
         latestResource = result.resource;
         attemptNumber += 1;
         break;
+      }
+
+      if (completedInAttemptWorkItemIds.length > 0) {
+        completedAfterAttempt.forEach((workItemId) => completedWorkItemIds.add(workItemId));
+        remainingWorkItemIds = canonicalRemainingWorkItemIds;
+        if (pendingTargetedWorkItemIds.length > 0) {
+          activeWorkItemIds = pendingTargetedWorkItemIds;
+        }
       }
 
       if (result.resource && input.releaseResource) {
         await input.releaseResource(result.resource);
       }
 
-      const canRetry = input.retryEnabled && retryNumber < input.maxAttempts && result.implementation.status !== "skipped";
+      const canRetry =
+        input.retryEnabled
+        && retryNumber < input.maxAttempts
+        && result.implementation.status !== "skipped"
+        && pendingTargetedWorkItemIds.length > 0;
       if (!canRetry) {
         return {
           attempts,
@@ -1553,6 +1610,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       const attemptLoop = await runSourceAttemptLoop<RunningAppHandle>({
         sourceId: input.sourcePlan.sourceId,
         workItems: sourceWorkItems,
+        workItemBatchSize: input.config.run.workItemBatchSize,
         maxAttempts: implementationStage.enabled ? MAX_SOURCE_ATTEMPTS : 1,
         retryEnabled: implementationStage.enabled,
         executeAttempt: async ({ attemptNumber, activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds }) => {
@@ -1628,15 +1686,15 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
           if (implementationResult.status === "failed") {
             return {
               targetedWorkItemIds: activeWorkItemIds,
-              completedWorkItemIds,
-              remainingWorkItemIds,
+              completedWorkItemIds: implementationResult.completedWorkItemIds,
+              remainingWorkItemIds: implementationResult.remainingWorkItemIds,
               implementation: implementationResult,
               qaVerification: buildProgressAwareStageRecord(
                 buildSkippedStageExecutionRecord("QA verification was skipped because implementation did not complete successfully."),
                 {
-                  targetedWorkItemIds: activeWorkItemIds,
-                  completedWorkItemIds,
-                  remainingWorkItemIds
+                  targetedWorkItemIds: implementationResult.targetedWorkItemIds,
+                  completedWorkItemIds: implementationResult.completedWorkItemIds,
+                  remainingWorkItemIds: implementationResult.remainingWorkItemIds
                 }
               )
             };
@@ -1658,15 +1716,15 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
             if (!qaVerificationStage.enabled) {
               return {
                 targetedWorkItemIds: activeWorkItemIds,
-                completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
-                remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
+                completedWorkItemIds: implementationResult.completedWorkItemIds,
+                remainingWorkItemIds: implementationResult.remainingWorkItemIds,
                 implementation: implementationResult,
                 qaVerification: buildProgressAwareStageRecord(
                   buildSkippedStageExecutionRecord("QA verification stage is disabled for this run."),
                   {
                     targetedWorkItemIds: activeWorkItemIds,
-                    completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
-                    remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId))
+                    completedWorkItemIds: implementationResult.completedWorkItemIds,
+                    remainingWorkItemIds: implementationResult.remainingWorkItemIds
                   }
                 ),
                 resource: attemptAppHandle
@@ -1694,8 +1752,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 implementationFileOperations: implementationResult.fileOperations,
                 attemptNumber,
                 activeWorkItemIds,
-                completedWorkItemIds,
-                remainingWorkItemIds,
+                completedWorkItemIds: implementationResult.completedWorkItemIds,
+                remainingWorkItemIds: implementationResult.remainingWorkItemIds,
                 options: input.options
               });
             } catch (error) {
@@ -1704,8 +1762,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 summary: "QA verification threw before the source lane could continue.",
                 error: captureErrorMessage(error),
                 targetedWorkItemIds: activeWorkItemIds,
-                completedWorkItemIds,
-                remainingWorkItemIds,
+                completedWorkItemIds: implementationResult.completedWorkItemIds,
+                remainingWorkItemIds: implementationResult.remainingWorkItemIds,
                 commands: [],
                 fileOperations: []
               };
@@ -1744,8 +1802,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
             if (qaVerificationResult.status === "completed") {
               return {
                 targetedWorkItemIds: activeWorkItemIds,
-                completedWorkItemIds: [...completedWorkItemIds, ...activeWorkItemIds],
-                remainingWorkItemIds: remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId)),
+                completedWorkItemIds: qaVerificationResult.completedWorkItemIds,
+                remainingWorkItemIds: qaVerificationResult.remainingWorkItemIds,
                 implementation: implementationResult,
                 qaVerification: qaVerificationResult,
                 resource: attemptAppHandle
@@ -1756,8 +1814,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
             return {
               targetedWorkItemIds: activeWorkItemIds,
-              completedWorkItemIds,
-              remainingWorkItemIds,
+              completedWorkItemIds: qaVerificationResult.completedWorkItemIds,
+              remainingWorkItemIds: qaVerificationResult.remainingWorkItemIds,
               implementation: implementationResult,
               qaVerification: qaVerificationResult
             };
@@ -1768,8 +1826,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
 
             return {
               targetedWorkItemIds: activeWorkItemIds,
-              completedWorkItemIds,
-              remainingWorkItemIds,
+              completedWorkItemIds: implementationResult.completedWorkItemIds,
+              remainingWorkItemIds: implementationResult.remainingWorkItemIds,
               implementation: implementationResult,
               qaVerification: buildProgressAwareStageRecord({
                 status: "failed",
@@ -1782,8 +1840,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
                 fileOperations: []
               }, {
                 targetedWorkItemIds: activeWorkItemIds,
-                completedWorkItemIds,
-                remainingWorkItemIds
+                completedWorkItemIds: implementationResult.completedWorkItemIds,
+                remainingWorkItemIds: implementationResult.remainingWorkItemIds
               })
             };
           }
@@ -1801,6 +1859,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
               nextAttemptNumber,
               failedAttempt: attempt.attemptNumber,
               failureStage: attempt.failureStage,
+              completedInAttemptWorkItemIds: attempt.completedInAttemptWorkItemIds,
+              pendingTargetedWorkItemIds: attempt.pendingTargetedWorkItemIds,
               error:
                 attempt.failureStage === "implementation"
                   ? attempt.implementation.error ?? attempt.implementation.summary
@@ -2053,6 +2113,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
         counts: comparison?.counts,
         attemptCount: attempts.length,
         latestFailureStage: latestAttempt?.failureStage,
+        completedInAttemptWorkItemIds: latestAttempt?.completedInAttemptWorkItemIds,
+        pendingTargetedWorkItemIds: latestAttempt?.pendingTargetedWorkItemIds,
         captureScope: input.sourcePlan.captureScope,
         sourceWarnings: input.sourcePlan.warnings,
         error
@@ -2152,6 +2214,8 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       error: errorMessage,
       attemptCount: attempts.length,
       latestFailureStage: latestAttempt?.failureStage,
+      completedInAttemptWorkItemIds: latestAttempt?.completedInAttemptWorkItemIds,
+      pendingTargetedWorkItemIds: latestAttempt?.pendingTargetedWorkItemIds,
       captureScope: input.sourcePlan.captureScope,
       sourceWarnings: input.sourcePlan.warnings,
       summaryPath: toRelativePath(input.runPaths.controllerRoot, input.sourcePaths.summaryPath)

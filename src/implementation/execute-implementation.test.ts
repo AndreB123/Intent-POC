@@ -128,6 +128,12 @@ function buildNormalizedIntent(sourceId: string, codeSurface?: CodeSurfaceSelect
     normalizationMeta: {
       source: "rules",
       warnings: [],
+      requestedPlanningDepth: "full",
+      effectivePlanningDepth: "full",
+      ambiguity: {
+        isAmbiguous: false,
+        reasons: []
+      },
       stages: []
     }
   };

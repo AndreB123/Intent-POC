@@ -75,6 +75,7 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "  sourceId: s1",
       "  intent:",
       "  resumeIssue:",
+      "  workItemBatchSize: 2",
       "  captureIds: []",
       "  continueOnCaptureError: false",
       "  metadata: {}",
@@ -87,6 +88,7 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.linear.projectId, undefined);
   assert.equal(loaded.config.run.intent, undefined);
   assert.equal(loaded.config.run.resumeIssue, undefined);
+  assert.equal(loaded.config.run.workItemBatchSize, 2);
   assert.equal(loaded.config.run.sourceId, "s1");
   assert.ok(loaded.config.sources.s1);
   assert.equal(loaded.config.agent.provider, "gemini");

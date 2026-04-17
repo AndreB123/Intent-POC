@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { loadConfig } from "../../config/load-config";
+import { toFileUrlPath } from "../../evidence/paths";
 import { normalizeIntent } from "../../intent/normalize-intent";
 import { RunIntentOptions, RunIntentResult } from "../../orchestrator/run-intent";
 import { startIntentStudioServer } from "./start-intent-studio-server";
@@ -144,7 +145,7 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   const expectedRelativeConfigPath = path.relative(process.cwd(), configPath) || path.basename(configPath);
 
   assert.equal(state.configPath, expectedRelativeConfigPath);
-  assert.equal(state.configFileUrl, `/files/${encodeURIComponent(expectedRelativeConfigPath)}`);
+  assert.equal(state.configFileUrl, toFileUrlPath(expectedRelativeConfigPath));
   assert.match(state.configEditorUrl ?? "", /^vscode:\/\/file\//);
   assert.equal(state.sources.length, 2);
   assert.equal(state.sources[0].id, "app");
@@ -413,6 +414,8 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
               finishedAt: "2026-04-15T00:00:01.000Z",
               status: "completed",
               targetedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+              completedInAttemptWorkItemIds: ["work-1-enable-dark-mode-toggle"],
+              pendingTargetedWorkItemIds: [],
               completedWorkItemIds: ["work-1-enable-dark-mode-toggle"],
               remainingWorkItemIds: ["work-2-wire-dark-mode-state"],
               implementation: {
@@ -502,6 +505,12 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
         implementationStageStatus?: string;
         qaVerificationStageStatus?: string;
         latestImplementationSummary?: string;
+        latestCompletedInAttemptWorkItemIds?: string[];
+        latestPendingTargetedWorkItemIds?: string[];
+        attemptSummaries?: Array<{
+          completedInAttemptWorkItemIds: string[];
+          pendingTargetedWorkItemIds: string[];
+        }>;
       }>;
     } | null;
   }>(server.baseUrl, (state) => state.currentRun?.status === "completed");
@@ -509,6 +518,12 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
   assert.equal(completedState.currentRun?.sourceRuns[0]?.implementationStageStatus, "completed");
   assert.equal(completedState.currentRun?.sourceRuns[0]?.qaVerificationStageStatus, "completed");
   assert.match(completedState.currentRun?.sourceRuns[0]?.latestImplementationSummary ?? "", /dark mode toggle/);
+  assert.deepEqual(completedState.currentRun?.sourceRuns[0]?.latestCompletedInAttemptWorkItemIds, ["work-1-enable-dark-mode-toggle"]);
+  assert.deepEqual(completedState.currentRun?.sourceRuns[0]?.latestPendingTargetedWorkItemIds, []);
+  assert.deepEqual(
+    completedState.currentRun?.sourceRuns[0]?.attemptSummaries?.[0]?.completedInAttemptWorkItemIds,
+    ["work-1-enable-dark-mode-toggle"]
+  );
 });
 
 test("startIntentStudioServer exposes controller-relative capture paths for Studio preview links", async (t) => {

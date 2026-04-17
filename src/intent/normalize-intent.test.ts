@@ -1,5 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
+import { toFileUrlPath } from "../evidence/paths";
+import { parsePromptNormalizationHintsResponse } from "./gemini-prompt-normalizer";
 import { normalizeIntent, normalizeIntentWithAgent } from "./normalize-intent";
 import { SourceConfig } from "../config/schema";
 
@@ -217,6 +219,46 @@ const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "captur
   }
 };
 
+const reportingFixtureSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
+  "reporting-fixture": {
+    aliases: ["reporting-demo", "demo"],
+    planning: {
+      repoId: "intent-poc",
+      repoLabel: "Intent POC",
+      role: "reporting-fixture",
+      notes: []
+    },
+    source: {
+      type: "local",
+      localPath: "/tmp/reporting-fixture"
+    },
+    capture: {
+      basePathPrefix: "",
+      publishToLibrary: false,
+      waitAfterLoadMs: 500,
+      injectCss: [],
+      defaultFullPage: true,
+      items: [
+        { id: "library-index", name: "Library Index", path: "/library", maskSelectors: [], delayMs: 0 },
+        {
+          id: "view-dashboard-summary",
+          name: "Dashboard Summary View",
+          path: "/library/view-dashboard-summary",
+          maskSelectors: [],
+          delayMs: 0
+        },
+        {
+          id: "page-analytics-overview",
+          name: "Analytics Overview Page",
+          path: "/library/page-analytics-overview",
+          maskSelectors: [],
+          delayMs: 0
+        }
+      ]
+    }
+  }
+};
+
 test("normalizeIntent infers baseline mode from free-text prompt", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Create baseline screenshots for client-systems roach pages",
@@ -245,6 +287,9 @@ test("normalizeIntent infers baseline mode from free-text prompt", () => {
   );
   assert.equal(normalized.businessIntent.workItems[0]?.type, "playwright-spec");
   assert.ok((normalized.businessIntent.workItems[0]?.playwright.specs.length ?? 0) > 0);
+  assert.equal(normalized.normalizationMeta.requestedPlanningDepth, "full");
+  assert.equal(normalized.normalizationMeta.effectivePlanningDepth, "full");
+  assert.equal(normalized.normalizationMeta.ambiguity.isAmbiguous, false);
 });
 
 test("normalizeIntent defers BDD and TDD details during the Linear scoping pass", () => {
@@ -271,6 +316,8 @@ test("normalizeIntent defers BDD and TDD details during the Linear scoping pass"
     normalized.normalizationMeta.stages.find((stage) => stage.stageId === "tddPlanning")?.warnings[0],
     "Playwright-first TDD planning is deferred until Linear scoping completes."
   );
+  assert.equal(normalized.normalizationMeta.requestedPlanningDepth, "scoping");
+  assert.equal(normalized.normalizationMeta.effectivePlanningDepth, "scoping");
 });
 
 test("normalizeIntent maps explicit capture names to subset mode", () => {
@@ -394,6 +441,10 @@ test("normalizeIntent keeps ambiguous source-local UI requests broad when the co
     normalized.codeSurface?.alternatives.map((alternative) => alternative.id),
     ["intent-studio", "surface-catalog"]
   );
+  assert.equal(normalized.normalizationMeta.ambiguity.isAmbiguous, true);
+  assert.ok(
+    normalized.normalizationMeta.ambiguity.reasons.includes(normalized.codeSurface?.rationale ?? "")
+  );
 });
 
 test("normalizeIntentWithAgent preserves Intent Studio layout and collapsible section semantics in Playwright checkpoints", async () => {
@@ -503,8 +554,125 @@ test("normalizeIntent routes results-page screenshot linking prompts through Int
   );
   assert.equal(resultsSpec?.checkpoints[1]?.attributeName, "src");
   assert.equal(resultsSpec?.checkpoints[2]?.attributeName, "href");
-  assert.match(resultsSpec?.checkpoints[1]?.expectedSubstring ?? "", /\/files\/artifacts\/runs\//);
+  assert.equal(
+    resultsSpec?.checkpoints[1]?.expectedSubstring,
+    toFileUrlPath("artifacts/runs/2026-04-16T00-00-00-000Z-intent-poc-app/sources/intent-poc-app/captures/verify-screenshot-artifact-linking.png")
+  );
   assert.equal(resultsSpec?.checkpoints[0]?.waitForSelector, "#captures .capture-card img");
+});
+
+test("normalizeIntentWithAgent keeps Intent Studio special routing scoped to the matching scenario", async () => {
+  const planningAgent = {
+    ...geminiAgent,
+    allowPromptNormalization: false,
+    allowBDDPlanning: true
+  };
+
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt:
+        "Verify that screenshots at the bottom of the results page link to the actual images, and the work scope card and guide copy update immediately.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: planningAgent
+    },
+    {
+      refineIntentPlanWithGemini: async () => ({
+        acceptanceCriteria: [
+          { description: "Screenshots at the bottom of the results page link to the actual images." },
+          { description: "The work scope card and guide copy update immediately." }
+        ],
+        scenarios: [
+          {
+            title: "Verify Screenshot Artifact Linking",
+            goal: "Confirm result thumbnails and links target the captured artifact files.",
+            given: ["A completed Intent Studio run is visible on the results page."],
+            when: ["QA reviews the screenshot links and previews at the bottom of the results page."],
+            then: ["Screenshots at the bottom of the results page link to the actual images."],
+            applicableSourceIds: ["intent-poc-app"]
+          },
+          {
+            title: "Verify Reactive Metadata Updates",
+            goal: "Confirm work scope metadata changes show up in the visible Studio copy.",
+            given: ["The Intent Studio work scope source metadata has been updated."],
+            when: ["The Studio renders the work scope section again."],
+            then: ["The work scope card and guide copy update immediately."],
+            applicableSourceIds: ["intent-poc-app"]
+          }
+        ]
+      })
+    }
+  );
+
+  const linkingWorkItem = normalized.businessIntent.workItems.find(
+    (workItem) => workItem.title === "Verify Screenshot Artifact Linking"
+  );
+  const metadataWorkItem = normalized.businessIntent.workItems.find(
+    (workItem) => workItem.title === "Verify Reactive Metadata Updates"
+  );
+
+  assert.ok(linkingWorkItem);
+  assert.ok(metadataWorkItem);
+  assert.deepEqual(
+    linkingWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.action),
+    ["mock-studio-state", "assert-attribute-contains", "assert-attribute-contains"]
+  );
+  assert.deepEqual(
+    metadataWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.action),
+    ["goto", "assert-visible"]
+  );
+  assert.equal(metadataWorkItem?.playwright.specs[0]?.checkpoints[1]?.target, "#work-scope-panel");
+});
+
+test("normalizeIntentWithAgent warns when a scenario has no strong acceptance-criteria match but keeps verification bounded", async () => {
+  const planningAgent = {
+    ...geminiAgent,
+    allowPromptNormalization: false,
+    allowBDDPlanning: true
+  };
+
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "In Intent Studio, verify that the work scope card and guide copy update immediately.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: planningAgent
+    },
+    {
+      refineIntentPlanWithGemini: async () => ({
+        acceptanceCriteria: [{ description: "Screenshots at the bottom of the results page link to the actual images." }],
+        scenarios: [
+          {
+            title: "Verify Reactive Metadata Updates",
+            goal: "Confirm work scope metadata changes show up in the visible Studio copy.",
+            given: ["The Intent Studio work scope source metadata has been updated."],
+            when: ["The Studio renders the work scope section again."],
+            then: ["The work scope card and guide copy update immediately."],
+            applicableSourceIds: ["intent-poc-app"]
+          }
+        ]
+      })
+    }
+  );
+
+  const metadataWorkItem = normalized.businessIntent.workItems.find(
+    (workItem) => workItem.title === "Verify Reactive Metadata Updates"
+  );
+
+  assert.ok(metadataWorkItem);
+  assert.deepEqual(
+    metadataWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.action),
+    ["goto", "assert-visible"]
+  );
+  assert.ok(
+    normalized.normalizationMeta.warnings.some(
+      (warning) =>
+        warning.includes('Scenario "Verify Reactive Metadata Updates"')
+        && warning.includes("did not strongly match any acceptance criteria")
+    )
+  );
 });
 
 test("normalizeIntent maps orchestrator lifecycle rerun prompts to mocked-state Playwright verification without bogus catalog checkpoints", () => {
@@ -647,6 +815,46 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     normalized.normalizationMeta.warnings.some((warning) => warning.includes("Gemini selected the documentation source"))
   );
   assert.deepEqual(normalized.executionPlan.sources[0]?.warnings, []);
+});
+
+test("normalizeIntentWithAgent keeps valid Gemini hints when sibling hint fields are malformed", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Refresh the documentation screenshots so the docs site is reviewable.",
+      defaultSourceId: "client-systems-roach-admin",
+      continueOnCaptureError: false,
+      availableSources,
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () =>
+        parsePromptNormalizationHintsResponse(
+          JSON.stringify({
+            desiredOutcome: "The documentation screenshots are reviewable by stakeholders.",
+            sourceIds: ["docs-portal"],
+            codeSurfaceAlternatives: ["not-a-real-surface"],
+            captureIdsBySource: ["docs-home"]
+          })
+        )
+    }
+  );
+
+  assert.equal(normalized.sourceId, "docs-portal");
+  assert.equal(
+    normalized.businessIntent.desiredOutcome,
+    "The documentation screenshots are reviewable by stakeholders."
+  );
+  assert.equal(normalized.normalizationMeta.source, "llm");
+  assert.ok(
+    normalized.normalizationMeta.warnings.some((warning) =>
+      warning.includes("invalid codeSurfaceAlternatives hints")
+    )
+  );
+  assert.ok(
+    normalized.normalizationMeta.warnings.some((warning) =>
+      warning.includes("invalid captureIdsBySource hint")
+    )
+  );
 });
 
 test("normalizeIntentWithAgent overrides a weak Gemini capture surface hint when the prompt clearly targets Intent Studio", async () => {
@@ -798,6 +1006,174 @@ test("normalizeIntentWithAgent narrows generic evidence specs to the scenario-ma
   assert.deepEqual(
     analyticsOverviewWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.captureId).filter(Boolean),
     ["page-analytics-overview"]
+  );
+});
+
+test("normalizeIntentWithAgent warns when scenario capture matching falls back to the current capture scope", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Prepare reviewable evidence for the built-in demo surfaces.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: true
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "capture-and-evidence"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        statement: "Prepare reviewable evidence for the built-in demo surfaces.",
+        desiredOutcome: "A reviewable demo evidence package is available.",
+        acceptanceCriteria: [
+          { description: "A reviewable demo evidence package is available." }
+        ],
+        scenarios: [
+          {
+            title: "Capture reviewable demo evidence package",
+            goal: "Capture a generic reviewable evidence package for the built-in demo surfaces.",
+            given: ["The built-in demo surfaces are available."],
+            when: ["The screenshot flow runs for the demo evidence package."],
+            then: ["A reviewable demo evidence package is available."],
+            applicableSourceIds: ["intent-poc-app"]
+          }
+        ]
+      })
+    }
+  );
+
+  const captureWorkItem = normalized.businessIntent.workItems.find(
+    (workItem) => workItem.title === "Capture reviewable demo evidence package"
+  );
+
+  assert.ok(captureWorkItem);
+  assert.deepEqual(
+    captureWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.captureId).filter(Boolean),
+    ["library-index", "component-button-primary", "page-analytics-overview"]
+  );
+  assert.ok(
+    normalized.normalizationMeta.warnings.some(
+      (warning) =>
+        warning.includes('Scenario "Capture reviewable demo evidence package"')
+        && warning.includes("did not strongly match a specific capture item")
+    )
+  );
+});
+
+test("normalizeIntentWithAgent keeps reporting-style evidence review prompts at the current capture scope", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt:
+        "Improve the demo evidence workflow so generated Playwright coverage is easier to review source-by-source.",
+      defaultSourceId: "reporting-fixture",
+      continueOnCaptureError: false,
+      availableSources: reportingFixtureSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: true
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["reporting-fixture"],
+        codeSurfaceId: "capture-and-evidence"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        statement:
+          "Improve the demo evidence workflow so generated Playwright coverage is easier to review source-by-source.",
+        desiredOutcome:
+          "Runtime summaries, source summaries, comparison issues, and generated spec paths are easier to review source-by-source.",
+        acceptanceCriteria: [
+          {
+            description:
+              "Runtime summaries, source summaries, comparison issues, and generated spec paths are easier to review source-by-source."
+          }
+        ],
+        scenarios: [
+          {
+            title: "Review runtime summaries, source summaries, comparison issues, and generated spec paths source-by-source",
+            goal:
+              "Capture Playwright evidence so reviewers can inspect runtime summaries, source summaries, comparison issues, and generated spec paths per source.",
+            given: ["The reporting fixture source has multiple reviewable surfaces."],
+            when: [
+              "The screenshot flow runs and emits runtime summaries, source summaries, comparison issues, and generated spec paths for the source."
+            ],
+            then: ["Generated Playwright coverage is easier to review source-by-source."],
+            applicableSourceIds: ["reporting-fixture"]
+          }
+        ]
+      })
+    }
+  );
+
+  const reportingWorkItem = normalized.businessIntent.workItems.find(
+    (workItem) =>
+      workItem.title === "Review runtime summaries, source summaries, comparison issues, and generated spec paths source-by-source"
+  );
+
+  assert.ok(reportingWorkItem);
+  assert.deepEqual(
+    reportingWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.captureId).filter(Boolean),
+    ["library-index", "view-dashboard-summary", "page-analytics-overview"]
+  );
+  assert.ok(
+    normalized.normalizationMeta.warnings.some(
+      (warning) =>
+        warning.includes(
+          'Scenario "Review runtime summaries, source summaries, comparison issues, and generated spec paths source-by-source"'
+        )
+        && warning.includes("did not strongly match a specific capture item")
+    )
+  );
+});
+
+test("normalizeIntentWithAgent still narrows explicit dashboard summary prompts to view-dashboard-summary", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Capture dashboard summary evidence so reviewers can inspect that surface.",
+      defaultSourceId: "reporting-fixture",
+      continueOnCaptureError: false,
+      availableSources: reportingFixtureSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: true
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["reporting-fixture"],
+        codeSurfaceId: "capture-and-evidence"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        statement: "Capture dashboard summary evidence so reviewers can inspect that surface.",
+        desiredOutcome: "The dashboard summary view has reviewable evidence.",
+        acceptanceCriteria: [{ description: "The dashboard summary view has reviewable evidence." }],
+        scenarios: [
+          {
+            title: "Capture dashboard summary view evidence",
+            goal: "Capture the dashboard summary view for review.",
+            given: ["The reporting fixture source has multiple reviewable surfaces."],
+            when: ["The screenshot flow runs for the dashboard summary view."],
+            then: ["The dashboard summary view is captured for review."],
+            applicableSourceIds: ["reporting-fixture"]
+          }
+        ]
+      })
+    }
+  );
+
+  const dashboardWorkItem = normalized.businessIntent.workItems.find(
+    (workItem) => workItem.title === "Capture dashboard summary view evidence"
+  );
+
+  assert.ok(dashboardWorkItem);
+  assert.deepEqual(
+    dashboardWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.captureId).filter(Boolean),
+    ["view-dashboard-summary"]
   );
 });
 

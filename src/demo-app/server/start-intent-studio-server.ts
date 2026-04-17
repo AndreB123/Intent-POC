@@ -5,7 +5,7 @@ import path from "node:path";
 import YAML from "yaml";
 import { loadConfig } from "../../config/load-config";
 import { AgentConfig } from "../../config/schema";
-import { toRelativePath } from "../../evidence/paths";
+import { toFileUrlPath, toRelativePath } from "../../evidence/paths";
 import {
   AGENT_STAGE_SEQUENCE,
   RunAgentConfigOverride,
@@ -81,10 +81,26 @@ interface StudioSourceRunSummary {
   implementationStageStatus?: "pending" | "running" | "completed" | "failed" | "skipped";
   qaVerificationStageStatus?: "pending" | "running" | "completed" | "failed" | "skipped";
   targetedWorkItemIds?: string[];
+  latestCompletedInAttemptWorkItemIds?: string[];
+  latestPendingTargetedWorkItemIds?: string[];
   completedWorkItemIds?: string[];
   remainingWorkItemIds?: string[];
+  verificationMode?: "full" | "incremental";
   completedWorkItemCount?: number;
   remainingWorkItemCount?: number;
+  attemptSummaries?: Array<{
+    attemptNumber: number;
+    status: "completed" | "failed";
+    failureStage?: "implementation" | "qaVerification";
+    targetedWorkItemIds: string[];
+    completedInAttemptWorkItemIds: string[];
+    pendingTargetedWorkItemIds: string[];
+    completedWorkItemIds: string[];
+    remainingWorkItemIds: string[];
+    verificationMode?: "full" | "incremental";
+    implementation: "skipped" | "completed" | "failed";
+    qaVerification: "skipped" | "completed" | "failed";
+  }>;
   latestImplementationSummary?: string;
   latestImplementationFileOperations?: Array<{
     operation: "create" | "replace" | "delete";
@@ -212,7 +228,7 @@ function summarizeSource(sourceId: string, sourceType: string, startCommand: str
 }
 
 function buildConfigFileUrl(relativePath: string): string {
-  return `/files/${encodeURIComponent(relativePath)}`;
+  return toFileUrlPath(relativePath) ?? "#";
 }
 
 function buildEditorUrl(filePath: string): string {
@@ -644,6 +660,34 @@ function summarizeComparisonIssue(sourceRun: RunIntentResult["sourceRuns"][numbe
   return undefined;
 }
 
+function buildCompletedInAttemptWorkItemIds(input: {
+  targetedWorkItemIds?: string[];
+  completedBeforeWorkItemIds?: string[];
+  completedAfterWorkItemIds?: string[];
+}): string[] | undefined {
+  if (!input.targetedWorkItemIds || !input.completedAfterWorkItemIds) {
+    return undefined;
+  }
+
+  const completedBefore = new Set(input.completedBeforeWorkItemIds ?? []);
+  const completedAfter = new Set(input.completedAfterWorkItemIds);
+  return input.targetedWorkItemIds.filter(
+    (workItemId) => !completedBefore.has(workItemId) && completedAfter.has(workItemId)
+  );
+}
+
+function buildPendingTargetedWorkItemIds(input: {
+  targetedWorkItemIds?: string[];
+  completedAfterWorkItemIds?: string[];
+}): string[] | undefined {
+  if (!input.targetedWorkItemIds || !input.completedAfterWorkItemIds) {
+    return undefined;
+  }
+
+  const completedAfter = new Set(input.completedAfterWorkItemIds);
+  return input.targetedWorkItemIds.filter((workItemId) => !completedAfter.has(workItemId));
+}
+
 function ensureStudioSourceRunSummary(run: StudioRunRecord, sourceId: string): StudioSourceRunSummary {
   let sourceRun = run.sourceRuns.find((entry) => entry.sourceId === sourceId);
 
@@ -653,7 +697,8 @@ function ensureStudioSourceRunSummary(run: StudioRunRecord, sourceId: string): S
       status: "planned",
       lifecycleStatus: "planned",
       implementationStageStatus: "pending",
-      qaVerificationStageStatus: "pending"
+      qaVerificationStageStatus: "pending",
+      attemptSummaries: []
     };
     run.sourceRuns.push(sourceRun);
   }
@@ -703,10 +748,24 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
       implementationStageStatus: latestAttempt?.implementation.status ?? "pending",
       qaVerificationStageStatus: latestAttempt?.qaVerification.status ?? "pending",
       targetedWorkItemIds: latestAttempt?.targetedWorkItemIds,
+      latestCompletedInAttemptWorkItemIds: latestAttempt?.completedInAttemptWorkItemIds,
+      latestPendingTargetedWorkItemIds: latestAttempt?.pendingTargetedWorkItemIds,
       completedWorkItemIds: latestAttempt?.completedWorkItemIds,
       remainingWorkItemIds: latestAttempt?.remainingWorkItemIds,
       completedWorkItemCount: latestAttempt?.completedWorkItemIds.length,
       remainingWorkItemCount: latestAttempt?.remainingWorkItemIds.length,
+      attemptSummaries: sourceRun.attempts.map((attempt) => ({
+        attemptNumber: attempt.attemptNumber,
+        status: attempt.status,
+        failureStage: attempt.failureStage,
+        targetedWorkItemIds: attempt.targetedWorkItemIds,
+        completedInAttemptWorkItemIds: attempt.completedInAttemptWorkItemIds,
+        pendingTargetedWorkItemIds: attempt.pendingTargetedWorkItemIds,
+        completedWorkItemIds: attempt.completedWorkItemIds,
+        remainingWorkItemIds: attempt.remainingWorkItemIds,
+        implementation: attempt.implementation.status,
+        qaVerification: attempt.qaVerification.status
+      })),
       latestImplementationSummary: latestAttempt?.implementation.summary,
       latestImplementationFileOperations: latestAttempt?.implementation.fileOperations.map((fileOperation) => ({
         operation: fileOperation.operation,
@@ -855,19 +914,27 @@ export async function startIntentStudioServer(
     if ((event.phase === "implementation" || event.phase === "qa-verification") && event.details && typeof event.details === "object") {
       const details = event.details as {
         sourceId?: string;
+        attemptNumber?: number;
         status?: "skipped" | "completed" | "failed";
         summary?: string;
         error?: string;
         targetedWorkItemIds?: string[];
         completedWorkItemIds?: string[];
         remainingWorkItemIds?: string[];
+        verificationMode?: "full" | "incremental";
         fileOperations?: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
       };
 
       if (details.sourceId) {
         const sourceRun = ensureStudioSourceRunSummary(run, details.sourceId);
+        const previousCompletedWorkItemIds = sourceRun.completedWorkItemIds;
         sourceRun.status = "running";
         sourceRun.lifecycleStatus = "executing";
+        sourceRun.latestAttemptStatus = details.status === "completed" || details.status === "failed" ? details.status : sourceRun.latestAttemptStatus;
+
+        if (typeof details.attemptNumber === "number") {
+          sourceRun.attemptCount = Math.max(sourceRun.attemptCount ?? 0, details.attemptNumber);
+        }
 
         if (event.phase === "implementation") {
           sourceRun.implementationStageStatus = details.status ?? "running";
@@ -880,6 +947,18 @@ export async function startIntentStudioServer(
         sourceRun.targetedWorkItemIds = details.targetedWorkItemIds ?? sourceRun.targetedWorkItemIds;
         sourceRun.completedWorkItemIds = details.completedWorkItemIds ?? sourceRun.completedWorkItemIds;
         sourceRun.remainingWorkItemIds = details.remainingWorkItemIds ?? sourceRun.remainingWorkItemIds;
+        sourceRun.verificationMode = details.verificationMode ?? sourceRun.verificationMode;
+        if (details.targetedWorkItemIds && details.completedWorkItemIds) {
+          sourceRun.latestCompletedInAttemptWorkItemIds = buildCompletedInAttemptWorkItemIds({
+            targetedWorkItemIds: details.targetedWorkItemIds,
+            completedBeforeWorkItemIds: previousCompletedWorkItemIds,
+            completedAfterWorkItemIds: details.completedWorkItemIds
+          });
+          sourceRun.latestPendingTargetedWorkItemIds = buildPendingTargetedWorkItemIds({
+            targetedWorkItemIds: details.targetedWorkItemIds,
+            completedAfterWorkItemIds: details.completedWorkItemIds
+          });
+        }
         sourceRun.completedWorkItemCount = sourceRun.completedWorkItemIds?.length;
         sourceRun.remainingWorkItemCount = sourceRun.remainingWorkItemIds?.length;
 
@@ -909,6 +988,9 @@ export async function startIntentStudioServer(
         latestFailureStage?: StudioSourceRunSummary["latestFailureStage"];
         completedWorkItemIds?: string[];
         remainingWorkItemIds?: string[];
+        completedInAttemptWorkItemIds?: string[];
+        pendingTargetedWorkItemIds?: string[];
+        verificationMode?: "full" | "incremental";
         sourceWarnings?: string[];
         error?: string;
       };
@@ -919,8 +1001,11 @@ export async function startIntentStudioServer(
         sourceRun.lifecycleStatus = sourceRun.status === "completed" ? "verified" : sourceRun.status === "failed" ? "reverted" : "executing";
         sourceRun.attemptCount = details.attemptCount ?? sourceRun.attemptCount;
         sourceRun.latestFailureStage = details.latestFailureStage ?? sourceRun.latestFailureStage;
+        sourceRun.latestCompletedInAttemptWorkItemIds = details.completedInAttemptWorkItemIds ?? sourceRun.latestCompletedInAttemptWorkItemIds;
+        sourceRun.latestPendingTargetedWorkItemIds = details.pendingTargetedWorkItemIds ?? sourceRun.latestPendingTargetedWorkItemIds;
         sourceRun.completedWorkItemIds = details.completedWorkItemIds ?? sourceRun.completedWorkItemIds;
         sourceRun.remainingWorkItemIds = details.remainingWorkItemIds ?? sourceRun.remainingWorkItemIds;
+        sourceRun.verificationMode = details.verificationMode ?? sourceRun.verificationMode;
         sourceRun.completedWorkItemCount = sourceRun.completedWorkItemIds?.length;
         sourceRun.remainingWorkItemCount = sourceRun.remainingWorkItemIds?.length;
         sourceRun.sourceWarnings = details.sourceWarnings ?? sourceRun.sourceWarnings;

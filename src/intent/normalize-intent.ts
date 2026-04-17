@@ -1,4 +1,5 @@
 import { AgentConfig, CaptureItemConfig, SourceConfig } from "../config/schema";
+import { toFileUrlPath } from "../evidence/paths";
 import { sanitizeFileSegment } from "../shared/fs";
 import {
   AGENT_STAGE_SEQUENCE,
@@ -16,7 +17,9 @@ import {
   AcceptanceCriterion,
   AgentStageMeta,
   BDDScenario,
+  IntentPlanningDepth,
   NormalizedIntent,
+  NormalizationMeta,
   NormalizationSource,
   PlaywrightCheckpoint,
   PlaywrightSpecArtifact,
@@ -25,7 +28,7 @@ import {
 
 export type AvailableSourceDescriptor = PromptNormalizerSourceDescriptor;
 
-export type PlanningDepth = "scoping" | "full";
+export type PlanningDepth = IntentPlanningDepth;
 
 export interface NormalizeIntentOptions {
   rawPrompt: string;
@@ -94,6 +97,26 @@ interface CaptureScopeSelection {
   warnings: string[];
 }
 
+interface AcceptanceCriteriaSelection {
+  descriptions: string[];
+  warnings: string[];
+}
+
+interface CaptureItemSelection {
+  captureItems: CaptureItemConfig[];
+  warnings: string[];
+}
+
+interface PlaywrightSpecBuildResult {
+  specs: PlaywrightSpecArtifact[];
+  warnings: string[];
+}
+
+interface WorkItemBuildResult {
+  workItems: NormalizedIntent["businessIntent"]["workItems"];
+  warnings: string[];
+}
+
 interface BuildNormalizedIntentInput {
   planningRefinement?: IntentPlanningRefinement;
   stageMetas?: AgentStageMeta[];
@@ -135,6 +158,23 @@ function inferIntentType(prompt: string): NormalizedIntent["intentType"] {
 
 function dedupeValues(values: string[]): string[] {
   return Array.from(new Set(values));
+}
+
+function buildNormalizationAmbiguityMeta(
+  codeSurface: CodeSurfaceSelection,
+  warnings: string[]
+): NormalizationMeta["ambiguity"] {
+  const reasons = dedupeValues([
+    ...(codeSurface.confidence !== "high" ? [codeSurface.rationale] : []),
+    ...warnings.filter((warning) =>
+      /did not strongly match|did not have a confidently executable visual scenario/i.test(warning)
+    )
+  ]);
+
+  return {
+    isAmbiguous: reasons.length > 0,
+    reasons
+  };
 }
 
 function tokenizePrompt(prompt: string): Set<string> {
@@ -551,7 +591,9 @@ function shouldBuildIntentStudioLifecycleCheckpoints(input: {
   acceptanceCriteria: string[];
   scenario?: BDDScenario;
 }): boolean {
-  const combinedText = [input.promptText, input.desiredOutcome].join(" ");
+  const combinedText = input.scenario
+    ? [input.scenario.title, input.scenario.goal, ...input.scenario.given, ...input.scenario.when, ...input.scenario.then].join(" ")
+    : [input.promptText, input.desiredOutcome, ...input.acceptanceCriteria].join(" ");
 
   return input.codeSurface.id === "orchestrator-and-planning"
     && supportsIntentStudioLifecycleVerification(input.sourceId)
@@ -867,27 +909,27 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
   ]
     .join(" ")
     .toLowerCase();
+  const usesGenericScenarioFallback = input.scenario ? isGenericScenarioTitle(input.scenario.title) : true;
+  const routingText = usesGenericScenarioFallback ? `${scenarioText} ${normalizedPromptText}`.trim() : scenarioText;
   const resultsLinkPattern = /\b(results page|results screen|run results|bottom of the page|bottom of the results page|artifact links?|screenshot links?|capture previews?|thumbnail|thumbnails)\b/i;
   const resultsTargetPattern = /\b(link|links|linked|preview|previews|thumbnail|thumbnails|image|images|screenshot|screenshots|artifact)\b/i;
-  const isResultsLinkFlow =
-    (resultsLinkPattern.test(scenarioText) && resultsTargetPattern.test(scenarioText)) ||
-    (resultsLinkPattern.test(normalizedPromptText) && resultsTargetPattern.test(normalizedPromptText));
-  const isCollapseFlow = /\bcollapse|collapsed|collapsable|collapsible|hide\b/i.test(scenarioText);
-  const isExpandFlow = /\bexpand|expanded|show|restore\b/i.test(scenarioText);
-  const mentionsPromptInput = /\b(prompt|input|textarea|text area|input box|prompt box)\b/i.test(scenarioText);
-  const mentionsRunButton = /\b(run intent|submit|button)\b/i.test(scenarioText);
-  const mentionsBelowRelationship = /\b(under|below|beneath)\b/i.test(scenarioText);
-  const isLayoutFlow = /\blayout|placement|position\b/i.test(scenarioText) || (mentionsPromptInput && mentionsRunButton);
+  const isResultsLinkFlow = resultsLinkPattern.test(routingText) && resultsTargetPattern.test(routingText);
+  const isCollapseFlow = /\bcollapse|collapsed|collapsable|collapsible|hide\b/i.test(routingText);
+  const isExpandFlow = /\bexpand|expanded|show|restore\b/i.test(routingText);
+  const mentionsPromptInput = /\b(prompt|input|textarea|text area|input box|prompt box)\b/i.test(routingText);
+  const mentionsRunButton = /\b(run intent|submit|button)\b/i.test(routingText);
+  const mentionsBelowRelationship = /\b(under|below|beneath)\b/i.test(routingText);
+  const isLayoutFlow = /\blayout|placement|position\b/i.test(routingText) || (mentionsPromptInput && mentionsRunButton);
   const shouldAssertPromptButtonPlacement = isLayoutFlow && mentionsPromptInput && mentionsRunButton && mentionsBelowRelationship;
-  const includesWorkScopeSection = /\b(work scope|source scope)\b/i.test(scenarioText);
+  const includesWorkScopeSection = /\b(work scope|source scope)\b/i.test(routingText);
   const includesStepsSection = /\b(steps|stages|optional config|optional configuration|configuration section|orchestration stages)\b/i.test(
-    scenarioText
+    routingText
   );
 
   if (isResultsLinkFlow) {
     const runId = "2026-04-16T00-00-00-000Z-intent-poc-app";
     const imagePath = `artifacts/runs/${runId}/sources/intent-poc-app/captures/verify-screenshot-artifact-linking.png`;
-    const expectedFileUrl = `/files/${imagePath}`;
+    const expectedFileUrl = toFileUrlPath(imagePath) ?? "#";
     const mockStudioState: Record<string, unknown> = {
       configPath: "intent-poc.yaml",
       linearEnabled: false,
@@ -1134,14 +1176,17 @@ function buildPlaywrightSpecs(input: {
   acceptanceCriteria: string[];
   captureScope: NormalizedIntent["captureScope"];
   availableSources: Record<string, AvailableSourceDescriptor>;
-}): PlaywrightSpecArtifact[] {
-  return input.sourceIds.map((sourceId) => {
+}): PlaywrightSpecBuildResult {
+  const warnings: string[] = [];
+  const specs: PlaywrightSpecArtifact[] = input.sourceIds.map((sourceId) => {
     const source = input.availableSources[sourceId];
-    const captureItems = selectRelevantCaptureItemsForScenario({
+    const captureSelection = selectRelevantCaptureItemsForScenario({
       scenario: input.scenario,
       captureItems: source?.capture.items ?? [],
       captureScope: input.captureScope
     });
+
+    warnings.push(...captureSelection.warnings.map((warning) => `${warning} Source: ${sourceId}.`));
 
     return {
       framework: "playwright",
@@ -1154,7 +1199,7 @@ function buildPlaywrightSpecs(input: {
         sourceId,
         codeSurface: input.codeSurface,
         scenario: input.scenario,
-        captureItems,
+        captureItems: captureSelection.captureItems,
         workItemTitle: input.title,
         promptText: input.promptText,
         desiredOutcome: input.desiredOutcome,
@@ -1162,26 +1207,56 @@ function buildPlaywrightSpecs(input: {
       })
     };
   });
+
+  return {
+    specs,
+    warnings: dedupeValues(warnings)
+  };
 }
 
 function buildScenarioNarrativeText(scenario: BDDScenario): string {
   return [scenario.title, scenario.goal, ...scenario.when, ...scenario.then].join(" ").toLowerCase();
 }
 
+function isGenericScenarioTitle(title: string): boolean {
+  return [
+    "intent is translated into acceptance-ready work",
+    "qa-runnable visual evidence is defined for applicable sources",
+    "results are distributed consistently"
+  ].includes(title.toLowerCase());
+}
+
 function tokenizeCaptureMatchText(text: string): string[] {
   const stopWords = new Set([
     "again",
+    "attempt",
+    "attempts",
+    "batch",
+    "batches",
     "catalog",
+    "comparison",
     "component",
     "components",
+    "completed",
+    "coverage",
     "demo",
     "evidence",
+    "generated",
+    "grouped",
+    "grouping",
     "image",
     "images",
+    "lane",
+    "lanes",
     "library",
     "page",
     "pages",
+    "pending",
+    "report",
+    "reported",
+    "reporting",
     "review",
+    "runtime",
     "screen",
     "screens",
     "shot",
@@ -1190,12 +1265,16 @@ function tokenizeCaptureMatchText(text: string): string[] {
     "sources",
     "surface",
     "surfaces",
+    "verification",
     "view",
     "views",
-    "visual"
+    "visual",
+    "workflow"
   ]);
 
-  return (text.match(/[a-z0-9]+/g) ?? []).filter((token) => token.length > 2 && !stopWords.has(token));
+  return Array.from(
+    new Set((text.match(/[a-z0-9]+/g) ?? []).filter((token) => token.length > 2 && !stopWords.has(token)))
+  );
 }
 
 function filterCaptureItemsByScope(
@@ -1220,11 +1299,14 @@ function selectRelevantCaptureItemsForScenario(input: {
   scenario?: BDDScenario;
   captureItems: CaptureItemConfig[];
   captureScope: NormalizedIntent["captureScope"];
-}): CaptureItemConfig[] {
+}): CaptureItemSelection {
   const scopedCaptureItems = filterCaptureItemsByScope(input.captureItems, input.captureScope);
 
   if (!input.scenario || scopedCaptureItems.length <= 1) {
-    return scopedCaptureItems;
+    return {
+      captureItems: scopedCaptureItems,
+      warnings: []
+    };
   }
 
   const scenarioText = buildScenarioNarrativeText(input.scenario);
@@ -1236,14 +1318,17 @@ function selectRelevantCaptureItemsForScenario(input: {
   });
 
   if (exactMatches.length > 0) {
-    return exactMatches;
+    return {
+      captureItems: exactMatches,
+      warnings: []
+    };
   }
 
   const scenarioTokens = new Set(tokenizeCaptureMatchText(scenarioText));
   const scoredCaptureItems = scopedCaptureItems
     .map((item) => {
-      const itemTokens = tokenizeCaptureMatchText(buildCaptureItemSearchText(item));
-      const overlapCount = itemTokens.filter((token) => scenarioTokens.has(token)).length;
+      const itemTokens = new Set(tokenizeCaptureMatchText(buildCaptureItemSearchText(item)));
+      const overlapCount = Array.from(itemTokens).filter((token) => scenarioTokens.has(token)).length;
       const pathBonus = scenarioText.includes(item.path.toLowerCase()) ? 2 : 0;
 
       return {
@@ -1254,15 +1339,32 @@ function selectRelevantCaptureItemsForScenario(input: {
     .filter((entry) => entry.score > 0);
 
   if (scoredCaptureItems.length === 0) {
-    return scopedCaptureItems;
+    return {
+      captureItems: scopedCaptureItems,
+      warnings: isGenericScenarioTitle(input.scenario.title)
+        ? []
+        : [
+            `Scenario "${input.scenario.title}" did not strongly match a specific capture item, so the planner kept the current capture scope.`
+          ]
+    };
   }
 
   const bestScore = Math.max(...scoredCaptureItems.map((entry) => entry.score));
   if (bestScore < 2) {
-    return scopedCaptureItems;
+    return {
+      captureItems: scopedCaptureItems,
+      warnings: isGenericScenarioTitle(input.scenario.title)
+        ? []
+        : [
+            `Scenario "${input.scenario.title}" did not strongly match a specific capture item, so the planner kept the current capture scope.`
+          ]
+    };
   }
 
-  return scoredCaptureItems.filter((entry) => entry.score === bestScore).map((entry) => entry.item);
+  return {
+    captureItems: scoredCaptureItems.filter((entry) => entry.score === bestScore).map((entry) => entry.item),
+    warnings: []
+  };
 }
 
 function tokenizeScenarioText(text: string): string[] {
@@ -1291,15 +1393,41 @@ function tokenizeScenarioText(text: string): string[] {
 function selectRelevantAcceptanceCriteria(
   scenario: BDDScenario,
   acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"]
-): string[] {
-  const scenarioTokens = new Set(
-    tokenizeScenarioText([scenario.title, scenario.goal, ...scenario.when, ...scenario.then].join(" ").toLowerCase())
-  );
-  const matchingCriteria = acceptanceCriteria.filter((criterion) =>
-    tokenizeScenarioText(criterion.description.toLowerCase()).filter((token) => scenarioTokens.has(token)).length >= 2
-  );
+): AcceptanceCriteriaSelection {
+  const scenarioContext = [scenario.title, scenario.goal, ...scenario.given, ...scenario.when].join(" ").toLowerCase();
+  const scenarioTokens = new Set(tokenizeScenarioText(scenarioContext));
+  const scoredCriteria = acceptanceCriteria
+    .map((criterion) => {
+      const normalizedDescription = criterion.description.toLowerCase();
+      const overlapCount = tokenizeScenarioText(normalizedDescription).filter((token) => scenarioTokens.has(token)).length;
+      const exactMatch = scenarioContext.includes(normalizedDescription);
 
-  return (matchingCriteria.length > 0 ? matchingCriteria : acceptanceCriteria).map((criterion) => criterion.description);
+      return {
+        criterion,
+        score: exactMatch ? Number.MAX_SAFE_INTEGER : overlapCount
+      };
+    })
+    .filter((entry) => entry.score >= 2);
+
+  if (scoredCriteria.length === 0) {
+    return {
+      descriptions: [],
+      warnings: isGenericScenarioTitle(scenario.title)
+        ? []
+        : [
+            `Scenario "${scenario.title}" did not strongly match any acceptance criteria, so the planner kept verification bounded to scenario-local checkpoints.`
+          ]
+    };
+  }
+
+  const bestScore = Math.max(...scoredCriteria.map((entry) => entry.score));
+  return {
+    descriptions: scoredCriteria
+      .filter((entry) => entry.score === bestScore)
+      .slice(0, 2)
+      .map((entry) => entry.criterion.description),
+    warnings: []
+  };
 }
 
 function isExecutableVisualScenario(scenario: BDDScenario): boolean {
@@ -1341,7 +1469,8 @@ function buildWorkItems(input: {
   desiredOutcome: string;
   availableSources: Record<string, AvailableSourceDescriptor>;
   intentType: NormalizedIntent["intentType"];
-}): NormalizedIntent["businessIntent"]["workItems"] {
+}): WorkItemBuildResult {
+  const warnings: string[] = [];
   const orchestratorVerificationMode = input.intentType === "change-behavior"
     ? resolveOrchestratorBehaviorVerificationMode({
         codeSurface: input.codeSurface,
@@ -1353,76 +1482,83 @@ function buildWorkItems(input: {
     : null;
 
   if (orchestratorVerificationMode === "mocked-state-playwright") {
-    return input.sourceIds.map((sourceId, index) => {
-      const scenarioIds = input.scenarios
-        .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
-        .map((scenario) => scenario.id);
-      const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
-        mode: "all",
-        captureIds: []
-      };
-      const id = createPlanId("work", `verify-lifecycle-behavior-${sourceId}`, index);
-      const specs = buildPlaywrightSpecs({
-        codeSurface: input.codeSurface,
-        workItemId: id,
-        title: `Verify lifecycle behavior for ${sourceId}`,
-        promptText: input.rawPrompt,
-        scenarioIds,
-        sourceIds: [sourceId],
-        desiredOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
-        acceptanceCriteria: input.acceptanceCriteria.map((criterion) => criterion.description),
-        captureScope,
-        availableSources: input.availableSources
-      });
+    return {
+      workItems: input.sourceIds.map((sourceId, index) => {
+        const scenarioIds = input.scenarios
+          .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
+          .map((scenario) => scenario.id);
+        const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
+          mode: "all",
+          captureIds: []
+        };
+        const id = createPlanId("work", `verify-lifecycle-behavior-${sourceId}`, index);
+        const playwrightSpecs = buildPlaywrightSpecs({
+          codeSurface: input.codeSurface,
+          workItemId: id,
+          title: `Verify lifecycle behavior for ${sourceId}`,
+          promptText: input.rawPrompt,
+          scenarioIds,
+          sourceIds: [sourceId],
+          desiredOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
+          acceptanceCriteria: input.acceptanceCriteria.map((criterion) => criterion.description),
+          captureScope,
+          availableSources: input.availableSources
+        });
+        warnings.push(...playwrightSpecs.warnings);
 
-      return {
-        id,
-        type: "playwright-spec",
-        verificationMode: derivePlaywrightVerificationMode(specs),
-        title: `Verify lifecycle behavior for ${sourceId}`,
-        description: `Generate tracked lifecycle verification for ${sourceId}.`,
-        scenarioIds,
-        sourceIds: [sourceId],
-        userVisibleOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
-        verification: `A generated Playwright spec with mocked Studio app state validates lifecycle state handling through the Studio UI for ${sourceId}.`,
-        execution: {
-          order: index + 1,
-          dependsOnWorkItemIds: []
-        },
-        playwright: {
-          generatedBy: "rules",
-          specs
-        }
-      };
-    });
+        return {
+          id,
+          type: "playwright-spec",
+          verificationMode: derivePlaywrightVerificationMode(playwrightSpecs.specs),
+          title: `Verify lifecycle behavior for ${sourceId}`,
+          description: `Generate tracked lifecycle verification for ${sourceId}.`,
+          scenarioIds,
+          sourceIds: [sourceId],
+          userVisibleOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
+          verification: `A generated Playwright spec with mocked Studio app state validates lifecycle state handling through the Studio UI for ${sourceId}.`,
+          execution: {
+            order: index + 1,
+            dependsOnWorkItemIds: []
+          },
+          playwright: {
+            generatedBy: "rules",
+            specs: playwrightSpecs.specs
+          }
+        };
+      }),
+      warnings: dedupeValues(warnings)
+    };
   }
 
   if (orchestratorVerificationMode === "targeted-code-validation") {
-    return input.sourceIds.map((sourceId, index) => {
-      const scenarioIds = input.scenarios
-        .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
-        .map((scenario) => scenario.id);
+    return {
+      workItems: input.sourceIds.map((sourceId, index) => {
+        const scenarioIds = input.scenarios
+          .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
+          .map((scenario) => scenario.id);
 
-      return {
-        id: createPlanId("work", `validate-behavior-change-${sourceId}`, index),
-        type: "code-validation",
-        verificationMode: "targeted-code-validation",
-        title: `Validate behavior change for ${sourceId}`,
-        description: `Apply and validate the requested behavior change for ${sourceId} through targeted code verification.`,
-        scenarioIds,
-        sourceIds: [sourceId],
-        userVisibleOutcome: `The requested behavior change is validated in ${sourceId}.`,
-        verification: `Typecheck and targeted source-scoped code tests validate the requested behavior change for ${sourceId}; no tracked Playwright spec is planned for this verification mode.`,
-        execution: {
-          order: index + 1,
-          dependsOnWorkItemIds: []
-        },
-        playwright: {
-          generatedBy: "rules",
-          specs: []
-        }
-      };
-    });
+        return {
+          id: createPlanId("work", `validate-behavior-change-${sourceId}`, index),
+          type: "code-validation",
+          verificationMode: "targeted-code-validation",
+          title: `Validate behavior change for ${sourceId}`,
+          description: `Apply and validate the requested behavior change for ${sourceId} through targeted code verification.`,
+          scenarioIds,
+          sourceIds: [sourceId],
+          userVisibleOutcome: `The requested behavior change is validated in ${sourceId}.`,
+          verification: `Typecheck and targeted source-scoped code tests validate the requested behavior change for ${sourceId}; no tracked Playwright spec is planned for this verification mode.`,
+          execution: {
+            order: index + 1,
+            dependsOnWorkItemIds: []
+          },
+          playwright: {
+            generatedBy: "rules",
+            specs: []
+          }
+        };
+      }),
+      warnings: []
+    };
   }
 
   const executableScenarios = input.scenarios.filter(isExecutableVisualScenario);
@@ -1435,29 +1571,30 @@ function buildWorkItems(input: {
       const userVisibleOutcome = scenario.then[0] ?? input.desiredOutcome;
       const verification = buildWorkItemVerification(scenario);
       const relevantAcceptanceCriteria = selectRelevantAcceptanceCriteria(scenario, input.acceptanceCriteria);
+      warnings.push(...relevantAcceptanceCriteria.warnings);
       const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
         mode: "all",
         captureIds: []
       };
+      const playwrightSpecs = buildPlaywrightSpecs({
+        codeSurface: input.codeSurface,
+        scenario,
+        workItemId: id,
+        title: scenario.title,
+        promptText: input.rawPrompt,
+        scenarioIds: [scenario.id],
+        sourceIds: [sourceId],
+        desiredOutcome: userVisibleOutcome,
+        acceptanceCriteria: relevantAcceptanceCriteria.descriptions,
+        captureScope,
+        availableSources: input.availableSources
+      });
+      warnings.push(...playwrightSpecs.warnings);
 
       scenarioItems.push({
         id,
         type: "playwright-spec",
-        verificationMode: derivePlaywrightVerificationMode(
-          buildPlaywrightSpecs({
-            codeSurface: input.codeSurface,
-            scenario,
-            workItemId: id,
-            title: scenario.title,
-            promptText: input.rawPrompt,
-            scenarioIds: [scenario.id],
-            sourceIds: [sourceId],
-            desiredOutcome: userVisibleOutcome,
-            acceptanceCriteria: relevantAcceptanceCriteria,
-            captureScope,
-            availableSources: input.availableSources
-          })
-        ),
+        verificationMode: derivePlaywrightVerificationMode(playwrightSpecs.specs),
         title: scenario.title,
         description: scenario.goal,
         scenarioIds: [scenario.id],
@@ -1470,19 +1607,7 @@ function buildWorkItems(input: {
         },
         playwright: {
           generatedBy: "rules",
-          specs: buildPlaywrightSpecs({
-            codeSurface: input.codeSurface,
-            scenario,
-            workItemId: id,
-            title: scenario.title,
-            promptText: input.rawPrompt,
-            scenarioIds: [scenario.id],
-            sourceIds: [sourceId],
-            desiredOutcome: userVisibleOutcome,
-            acceptanceCriteria: relevantAcceptanceCriteria,
-            captureScope,
-            availableSources: input.availableSources
-          })
+          specs: playwrightSpecs.specs
         }
       });
     }
@@ -1498,29 +1623,34 @@ function buildWorkItems(input: {
     const scenarioIds = input.scenarios
       .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
       .map((scenario) => scenario.id);
+    if (scenarioIds.length > 0) {
+      warnings.push(
+        `Source "${sourceId}" did not have a confidently executable visual scenario, so the planner emitted a bounded generic evidence capture flow.`
+      );
+    }
     const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
       mode: "all",
       captureIds: []
     };
+    const playwrightSpecs = buildPlaywrightSpecs({
+      codeSurface: input.codeSurface,
+      workItemId: id,
+      title: `Capture reviewable evidence for ${sourceId}`,
+      promptText: input.rawPrompt,
+      scenarioIds,
+      sourceIds: [sourceId],
+      desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
+      acceptanceCriteria: [],
+      captureScope,
+      availableSources: input.availableSources
+    });
+    warnings.push(...playwrightSpecs.warnings);
 
     return [
       {
         id,
         type: "playwright-spec",
-        verificationMode: derivePlaywrightVerificationMode(
-          buildPlaywrightSpecs({
-            codeSurface: input.codeSurface,
-            workItemId: id,
-            title: `Capture reviewable evidence for ${sourceId}`,
-            promptText: input.rawPrompt,
-            scenarioIds,
-            sourceIds: [sourceId],
-            desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
-            acceptanceCriteria: [],
-            captureScope,
-            availableSources: input.availableSources
-          })
-        ),
+        verificationMode: derivePlaywrightVerificationMode(playwrightSpecs.specs),
         title: `Capture reviewable evidence for ${sourceId}`,
         description: `Generate a QA-runnable Playwright screenshot flow for ${sourceId}.`,
         scenarioIds,
@@ -1533,24 +1663,16 @@ function buildWorkItems(input: {
         },
         playwright: {
           generatedBy: "rules",
-          specs: buildPlaywrightSpecs({
-            codeSurface: input.codeSurface,
-            workItemId: id,
-            title: `Capture reviewable evidence for ${sourceId}`,
-            promptText: input.rawPrompt,
-            scenarioIds,
-            sourceIds: [sourceId],
-            desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
-            acceptanceCriteria: [],
-            captureScope,
-            availableSources: input.availableSources
-          })
+          specs: playwrightSpecs.specs
         }
       }
     ];
   });
 
-  return [...scenarioItems, ...fallbackSourceItems];
+  return {
+    workItems: [...scenarioItems, ...fallbackSourceItems],
+    warnings: dedupeValues(warnings)
+  };
 }
 
 function assertMinimumE2ECoverage(input: {
@@ -2354,9 +2476,9 @@ function buildIntentDraft(
           acceptanceCriteria,
           intentType: resolution.intentType
         });
-  const workItems =
+  const workItemPlan =
     planningDepth === "scoping"
-      ? []
+      ? { workItems: [], warnings: [] }
       : buildWorkItems({
           codeSurface,
           rawPrompt: trimmedPrompt,
@@ -2368,6 +2490,7 @@ function buildIntentDraft(
           availableSources: options.availableSources,
           intentType: resolution.intentType
         });
+  const workItems = workItemPlan.workItems;
 
   if (planningDepth === "full") {
     assertMinimumE2ECoverage({
@@ -2401,7 +2524,7 @@ function buildIntentDraft(
     sourceIds: resolution.sourceIds,
     resumeIssue: options.resumeIssue
   });
-  const reviewNotes: string[] = [];
+  const reviewNotes: string[] = [...workItemPlan.warnings];
 
   if (resolution.sourceIds.length > 1) {
     reviewNotes.push("This intent will execute as one business run with a separate evidence lane for each applicable source.");
@@ -2452,6 +2575,13 @@ function buildNormalizedIntent(
   });
   const draft = buildIntentDraft(trimmedPrompt, options, resolution, codeSurface, input.planningRefinement);
   const intentId = `${new Date().toISOString().replace(/[.:]/g, "-")}-${sanitizeFileSegment(draft.summary)}`;
+  const requestedPlanningDepth = options.planningDepth ?? "full";
+  const normalizationWarnings = dedupeValues([
+    ...draft.reviewNotes,
+    ...draft.planningReviewNotes,
+    ...resolution.normalizationWarnings,
+    ...(input.planningRefinement?.warnings ?? [])
+  ]);
 
   return {
     intentId,
@@ -2504,12 +2634,10 @@ function buildNormalizedIntent(
     },
     normalizationMeta: {
       source: deriveNormalizationSource(resolution.normalizationSource, stageMetas),
-      warnings: dedupeValues([
-        ...draft.reviewNotes,
-        ...draft.planningReviewNotes,
-        ...resolution.normalizationWarnings,
-        ...(input.planningRefinement?.warnings ?? [])
-      ]),
+      warnings: normalizationWarnings,
+      requestedPlanningDepth,
+      effectivePlanningDepth: requestedPlanningDepth,
+      ambiguity: buildNormalizationAmbiguityMeta(codeSurface, normalizationWarnings),
       stages: stageMetas
     }
   };

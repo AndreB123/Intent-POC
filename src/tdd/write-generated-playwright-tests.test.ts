@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { toFileUrlPath } from "../evidence/paths";
 import { normalizeIntent } from "../intent/normalize-intent";
 import { NormalizedIntent } from "../intent/intent-types";
 import { buildBehaviorSource, buildDemoCatalogBehaviorSource } from "../orchestrator/run-intent.test-support";
@@ -208,6 +209,12 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
       normalizationMeta: {
         source: "rules",
         warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
         stages: []
       }
     };
@@ -356,6 +363,12 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
       normalizationMeta: {
         source: "rules",
         warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
         stages: []
       }
     };
@@ -504,7 +517,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                       screenshotId: "results-page-image-src",
                       target: "#captures .capture-card img",
                       attributeName: "src",
-                      expectedSubstring: "/files/artifacts/runs/run-1/sources/demo-catalog/captures/result.png",
+                      expectedSubstring: toFileUrlPath("artifacts/runs/run-1/sources/demo-catalog/captures/result.png") ?? "",
                       waitForSelector: "#captures .capture-card img"
                     },
                     {
@@ -515,7 +528,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                       screenshotId: "results-page-link-href",
                       target: "#captures .capture-card .capture-links a",
                       attributeName: "href",
-                      expectedSubstring: "/files/artifacts/runs/run-1/sources/demo-catalog/captures/result.png",
+                      expectedSubstring: toFileUrlPath("artifacts/runs/run-1/sources/demo-catalog/captures/result.png") ?? "",
                       waitForSelector: "#captures .capture-card .capture-links a"
                     }
                   ]
@@ -571,6 +584,12 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
       normalizationMeta: {
         source: "rules",
         warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
         stages: []
       }
     };
@@ -596,7 +615,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
     assert.equal(generatedContent.includes('await page.route("**/api/events", async (route) => {'), true);
     assert.equal(generatedContent.includes('const attributeValue = await target.getAttribute("src");'), true);
     assert.equal(
-      generatedContent.includes('expect(attributeValue ?? "", "The results page capture previews link to the generated images.").toContain("/files/artifacts/runs/run-1/sources/demo-catalog/captures/result.png");'),
+      generatedContent.includes('expect(attributeValue ?? "", "The results page capture previews link to the generated images.").toContain("/files/artifacts%2Fruns%2Frun-1%2Fsources%2Fdemo-catalog%2Fcaptures%2Fresult.png");'),
       true
     );
   } finally {
