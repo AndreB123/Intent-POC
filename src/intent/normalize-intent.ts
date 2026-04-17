@@ -122,6 +122,14 @@ function inferIntentType(prompt: string): NormalizedIntent["intentType"] {
     return "refresh-library";
   }
 
+  if (
+    /\b(orchestrator|planning|planner|run-intent|rerun|state.?reversion|execution plan|step mapping|rollback|revert|lifecycle|qa verification|implementation loop)\b/i.test(
+      prompt
+    )
+  ) {
+    return "change-behavior";
+  }
+
   return "capture-evidence";
 }
 
@@ -264,6 +272,8 @@ function summarizeIntent(intentType: NormalizedIntent["intentType"], sourceIds: 
   switch (intentType) {
     case "refresh-library":
       return `refresh evidence library for ${scope}`;
+    case "change-behavior":
+      return `change behavior for ${scope}`;
     default:
       return `capture evidence for ${scope}`;
   }
@@ -314,6 +324,8 @@ function buildAcceptanceCriteria(
       : `Intent is translated into executable work across ${sourceIds.length} applicable sources.`,
     intentType === "refresh-library"
       ? "Tracked screenshot library artifacts are refreshed and ready for Git review."
+      : intentType === "change-behavior"
+        ? "Behavior changes are implemented and verified through targeted code validation."
       : "Evidence is captured and packaged for review.",
     `Results are packaged so they can be distributed consistently, with the desired outcome of: ${desiredOutcome}.`
   ]
@@ -332,6 +344,7 @@ function buildScenarios(input: {
   desiredOutcome: string;
   sourceIds: string[];
   acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
+  intentType: NormalizedIntent["intentType"];
 }): NormalizedIntent["businessIntent"]["scenarios"] {
   const criteriaDescriptions = input.acceptanceCriteria.map((criterion) => criterion.description);
 
@@ -350,26 +363,47 @@ function buildScenarios(input: {
       then: criteriaDescriptions.slice(0, Math.min(criteriaDescriptions.length, 2)),
       applicableSourceIds: input.sourceIds
     },
-    {
-      title: "QA-runnable visual evidence is defined for applicable sources",
-      goal: "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
-      given: [
-        input.sourceIds.length === 1
-          ? `Source ${input.sourceIds[0]} is available for execution.`
-          : `${input.sourceIds.length} sources are applicable to the intent.`
-      ],
-      when: [
-        "TDD planning prepares Playwright screenshot verification for the applicable sources.",
-        "The runner maps the configured capture surfaces into QA-runnable checkpoints."
-      ],
-      then: [
-        input.sourceIds.length === 1
-          ? `QA can run a Playwright screenshot flow for ${input.sourceIds[0]}.`
-          : `QA can run Playwright screenshot flows for ${input.sourceIds.join(", ")}.`,
-        "Each applicable source has executable visual evidence coverage that captures reviewable screenshots."
-      ],
-      applicableSourceIds: input.sourceIds
-    },
+    input.intentType === "change-behavior"
+      ? {
+          title: "Behavior changes are verified for applicable sources",
+          goal: "Define targeted verification that validates the requested behavior changes.",
+          given: [
+            input.sourceIds.length === 1
+              ? `Source ${input.sourceIds[0]} is available for execution.`
+              : `${input.sourceIds.length} sources are applicable to the intent.`
+          ],
+          when: [
+            "Implementation planning prepares targeted code verification for the applicable sources.",
+            "The runner maps behavior changes into source-scoped validation."
+          ],
+          then: [
+            input.sourceIds.length === 1
+              ? `Code validation confirms the requested behavior for ${input.sourceIds[0]}.`
+              : `Code validation confirms the requested behavior for ${input.sourceIds.join(", ")}.`,
+            "Each applicable source has executable verification for the behavior change."
+          ],
+          applicableSourceIds: input.sourceIds
+        }
+      : {
+          title: "QA-runnable visual evidence is defined for applicable sources",
+          goal: "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
+          given: [
+            input.sourceIds.length === 1
+              ? `Source ${input.sourceIds[0]} is available for execution.`
+              : `${input.sourceIds.length} sources are applicable to the intent.`
+          ],
+          when: [
+            "TDD planning prepares Playwright screenshot verification for the applicable sources.",
+            "The runner maps the configured capture surfaces into QA-runnable checkpoints."
+          ],
+          then: [
+            input.sourceIds.length === 1
+              ? `QA can run a Playwright screenshot flow for ${input.sourceIds[0]}.`
+              : `QA can run Playwright screenshot flows for ${input.sourceIds.join(", ")}.`,
+            "Each applicable source has executable visual evidence coverage that captures reviewable screenshots."
+          ],
+          applicableSourceIds: input.sourceIds
+        },
     {
       title: "Results are distributed consistently",
       goal: "Make the outputs visible in the places that matter to stakeholders.",
@@ -941,7 +975,35 @@ function buildWorkItems(input: {
   sourceIds: string[];
   desiredOutcome: string;
   availableSources: Record<string, AvailableSourceDescriptor>;
+  intentType: NormalizedIntent["intentType"];
 }): NormalizedIntent["businessIntent"]["workItems"] {
+  if (input.intentType === "change-behavior" && input.codeSurface.id === "orchestrator-and-planning") {
+    return input.sourceIds.map((sourceId, index) => {
+      const scenarioIds = input.scenarios
+        .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
+        .map((scenario) => scenario.id);
+
+      return {
+        id: createPlanId("work", `implement-behavior-change-${sourceId}`, index),
+        type: "playwright-spec",
+        title: `Implement behavior change for ${sourceId}`,
+        description: `Apply and verify the requested behavior change for ${sourceId}.`,
+        scenarioIds,
+        sourceIds: [sourceId],
+        userVisibleOutcome: `The requested behavior change works in ${sourceId}.`,
+        verification: `Typecheck and targeted source-scoped code tests validate the requested behavior change for ${sourceId}.`,
+        execution: {
+          order: index + 1,
+          dependsOnWorkItemIds: []
+        },
+        playwright: {
+          generatedBy: "rules",
+          specs: []
+        }
+      };
+    });
+  }
+
   const executableScenarios = input.scenarios.filter(isExecutableVisualScenario);
 
   const scenarioItems: TDDWorkItem[] = [];
@@ -1830,7 +1892,8 @@ function buildIntentDraft(
           statement,
           desiredOutcome,
           sourceIds: resolution.sourceIds,
-          acceptanceCriteria
+          acceptanceCriteria,
+          intentType: resolution.intentType
         });
   const workItems =
     planningDepth === "scoping"
@@ -1843,10 +1906,14 @@ function buildIntentDraft(
           sourcePlans,
           sourceIds: resolution.sourceIds,
           desiredOutcome,
-          availableSources: options.availableSources
+          availableSources: options.availableSources,
+          intentType: resolution.intentType
         });
 
-  if (planningDepth === "full") {
+  if (
+    planningDepth === "full"
+    && !(resolution.intentType === "change-behavior" && codeSurface.id === "orchestrator-and-planning")
+  ) {
     assertMinimumE2ECoverage({
       sourceIds: resolution.sourceIds,
       workItems

@@ -208,7 +208,7 @@ export function buildSourceSummaryMarkdown(input: {
         (workItem) =>
           [
             `- ${workItem.title}`,
-            `  - Type: QA-runnable Playwright screenshot spec`,
+            `  - Type: ${workItem.playwright.specs.length > 0 ? "QA-runnable Playwright screenshot spec" : "Behavior-oriented implementation work item"}`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
             `  - Verification: ${workItem.verification}`,
             `  - Order: ${workItem.execution.order}`,
@@ -351,7 +351,7 @@ export function buildBusinessSummaryMarkdown(input: {
           [
             `- ${workItem.title}`,
             `  - Sources: ${workItem.sourceIds.join(", ")}`,
-            `  - Type: QA-runnable Playwright screenshot spec`,
+            `  - Type: ${workItem.playwright.specs.length > 0 ? "QA-runnable Playwright screenshot spec" : "Behavior-oriented implementation work item"}`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
             `  - Verification: ${workItem.verification}`,
             `  - Playwright specs: ${workItem.playwright.specs.length}`,

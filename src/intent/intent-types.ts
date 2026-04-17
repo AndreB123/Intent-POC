@@ -1,7 +1,7 @@
 import type { AgentStageId } from "./agent-stage-config";
 import type { CodeSurfaceSelection } from "./code-surface";
 
-export type IntentType = "capture-evidence" | "refresh-library";
+export type IntentType = "capture-evidence" | "refresh-library" | "change-behavior";
 export type NormalizationSource = "llm" | "rules" | "fallback";
 export type AgentStageSource = NormalizationSource | "skipped";
 export type ExecutionStrategy = "single-source" | "multi-source";
@@ -57,6 +57,8 @@ export interface PlaywrightCheckpoint {
 export interface WorkItemExecutionPlan {
   order: number;
   dependsOnWorkItemIds: string[];
+  stepMapping?: Record<string, string>;
+  reversionState?: Record<string, unknown>;
 }
 
 export interface PlaywrightSpecArtifact {

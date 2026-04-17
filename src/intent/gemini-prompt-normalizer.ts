@@ -26,7 +26,7 @@ export interface PromptNormalizationHints {
 }
 
 const promptNormalizationHintsSchema: z.ZodType<PromptNormalizationHints> = z.object({
-  intentType: z.enum(["capture-evidence", "refresh-library"]).optional(),
+  intentType: z.enum(["capture-evidence", "refresh-library", "change-behavior"]).optional(),
   desiredOutcome: z.string().min(1).optional(),
   sourceIds: z.array(z.string().min(1)).optional(),
   codeSurfaceId: z.enum(CODE_SURFACE_IDS).optional(),
@@ -41,7 +41,7 @@ const promptNormalizationResponseJsonSchema = {
   properties: {
     intentType: {
       type: "string",
-      enum: ["capture-evidence", "refresh-library"]
+      enum: ["capture-evidence", "refresh-library", "change-behavior"]
     },
     desiredOutcome: {
       type: "string"
@@ -114,7 +114,7 @@ function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string
           "Keep any returned sourceIds inside the requested source scope."
         ]
       : []),
-    "The supported intentType values are capture-evidence and refresh-library.",
+    "The supported intentType values are capture-evidence, refresh-library, and change-behavior.",
     `Configured default source id: ${input.defaultSourceId}`,
     "Configured sources:",
     buildSourceSummary(input.availableSources),

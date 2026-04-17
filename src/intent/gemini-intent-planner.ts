@@ -43,6 +43,8 @@ export interface GeminiIntentPlanningRefinement {
     then: string[];
     applicableSourceIds?: string[];
   }>;
+  stepMapping?: Record<string, string>;
+  reversionState?: Record<string, unknown>;
   warnings?: string[];
 }
 
@@ -68,6 +70,8 @@ const planningRefinementSchema: z.ZodType<GeminiIntentPlanningRefinement> = z.ob
       })
     )
     .optional(),
+  stepMapping: z.record(z.string()).optional(),
+  reversionState: z.record(z.unknown()).optional(),
   warnings: z.array(z.string().min(1)).optional()
 });
 
@@ -104,6 +108,8 @@ const planningRefinementResponseJsonSchema = {
         required: ["title", "goal", "given", "when", "then"]
       }
     },
+    stepMapping: { type: "object", additionalProperties: { type: "string" } },
+    reversionState: { type: "object" },
     warnings: {
       type: "array",
       items: { type: "string" }
@@ -139,6 +145,8 @@ function buildPlanningPrompt(input: GeminiIntentPlanningInput): string {
     "You may rewrite the business statement, desired outcome, acceptance criteria, and scenarios to make the plan clearer and more execution-ready.",
     "Keep all scenarios within the provided source ids.",
     "If you are unsure, omit the field instead of guessing.",
+    "Explicitly map execution steps and define state reversion requirements for the intent lifecycle.",
+    "The response must include 'stepMapping' (a record of step IDs to descriptions) and 'reversionState' (a record of state keys to initial values) to support lifecycle-aware execution.",
     `Intent type: ${input.intentType}`,
     `Selected source ids: ${input.sourceIds.join(", ")}`,
     ...(input.requestedSourceIds && input.requestedSourceIds.length > 0

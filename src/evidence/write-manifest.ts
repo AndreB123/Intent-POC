@@ -38,6 +38,8 @@ export interface SourceStageExecutionRecord {
   remainingWorkItemIds: string[];
   commands: SourceStageCommandRecord[];
   fileOperations: SourceStageFileOperationRecord[];
+  stepMapping?: Record<string, string>;
+  reversionState?: Record<string, unknown>;
 }
 
 export interface SourceRunAttemptRecord {

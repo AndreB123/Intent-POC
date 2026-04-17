@@ -309,6 +309,8 @@ export function buildSourceStageExecutionRecord(
     remainingWorkItemIds: [],
     commands: [],
     fileOperations: [],
+    stepMapping: {},
+    reversionState: {},
     ...overrides
   };
 }

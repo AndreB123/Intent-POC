@@ -507,6 +507,52 @@ test("normalizeIntent routes results-page screenshot linking prompts through Int
   assert.equal(resultsSpec?.checkpoints[0]?.waitForSelector, "#captures .capture-card img");
 });
 
+test("normalizeIntent maps orchestrator lifecycle rerun prompts to change-behavior work without bogus screenshot checkpoints", () => {
+  const normalized = normalizeIntent({
+    rawPrompt:
+      "the intent lifecycle needs to map the execution plan better and support state reversion when the model calls a rerun on a step.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: intentPocAppSources
+  });
+
+  assert.equal(normalized.intentType, "change-behavior");
+  assert.equal(normalized.codeSurface?.id, "orchestrator-and-planning");
+  assert.equal(normalized.summary, "change behavior for intent-poc-app");
+  assert.equal(normalized.businessIntent.workItems.length, 1);
+  assert.deepEqual(normalized.businessIntent.workItems[0]?.playwright.specs, []);
+  assert.ok(
+    normalized.businessIntent.workItems.every((workItem) =>
+      workItem.playwright.specs.every((spec) =>
+        spec.checkpoints.every((checkpoint) => checkpoint.captureId !== "page-system-settings")
+      )
+    )
+  );
+});
+
+test("normalizeIntentWithAgent still generates Playwright specs for Intent Studio behavior fixes when Gemini classifies the prompt as change-behavior", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "the run workspace and studio guide buttons shift after run intent is submitted. that need to be fixed",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        intentType: "change-behavior",
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "intent-studio"
+      })
+    }
+  );
+
+  assert.equal(normalized.intentType, "change-behavior");
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+  assert.ok((normalized.businessIntent.workItems[0]?.playwright.specs.length ?? 0) > 0);
+});
+
 test("normalizeIntent honors the requested source scope across multiple sources", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Prepare reviewable visual evidence for the current release.",

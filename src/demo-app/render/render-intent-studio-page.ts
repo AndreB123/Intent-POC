@@ -393,6 +393,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         align-items: center;
         justify-content: space-between;
         gap: 14px;
+        min-height: 44px;
       }
 
       .primary-button {

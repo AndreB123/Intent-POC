@@ -373,6 +373,37 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
   assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
 });
 
+test("buildQAVerificationExecutionPlan Given active zero-spec behavior work When QA planning runs Then it falls back to targeted code regression", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "the intent lifecycle needs to map the execution plan better and support state reversion when the model calls a rerun on a step.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: {
+      "intent-poc-app": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "intent-poc-app",
+    activeWorkItemIds: [normalizedIntent.businessIntent.workItems[0]!.id],
+    generatedPlaywrightTests: [],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/orchestrator/run-intent.ts", rationale: "qa", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.equal(plan.error, undefined);
+  assert.deepEqual(
+    plan.commands?.map((command) => command.label),
+    ["typecheck", "test-code-targeted"]
+  );
+  assert.equal(
+    plan.commands?.[1]?.command,
+    'npm run test:code -- "src/orchestrator/run-intent.behavior.test.ts"'
+  );
+});
+
 test("buildQAVerificationExecutionPlan Given no active work items and demo app changes When QA planning runs Then it chooses targeted code regression", () => {
   const normalizedIntent = normalizeIntent({
     rawPrompt:
