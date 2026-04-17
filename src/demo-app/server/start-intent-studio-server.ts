@@ -14,7 +14,7 @@ import {
   resolveAgentStageConfig
 } from "../../intent/agent-stage-config";
 import { normalizeIntentWithAgent } from "../../intent/normalize-intent";
-import { NormalizedIntent } from "../../intent/intent-types";
+import { NormalizedIntent, IntentLifecycleStatus } from "../../intent/intent-types";
 import { RunIntentEvent, RunIntentResult, runIntent } from "../../orchestrator/run-intent";
 import { pathExists } from "../../shared/fs";
 import { renderIntentStudioPage } from "../render/render-intent-studio-page";
@@ -68,6 +68,7 @@ interface StudioCaptureSummary {
 interface StudioSourceRunSummary {
   sourceId: string;
   status: "planned" | "running" | "completed" | "failed";
+  lifecycleStatus: IntentLifecycleStatus;
   error?: string;
   counts?: Record<string, number>;
   executedCaptureCount?: number;
@@ -650,6 +651,7 @@ function ensureStudioSourceRunSummary(run: StudioRunRecord, sourceId: string): S
     sourceRun = {
       sourceId,
       status: "planned",
+      lifecycleStatus: "planned",
       implementationStageStatus: "pending",
       qaVerificationStageStatus: "pending"
     };
@@ -688,6 +690,7 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
     return {
       sourceId: sourceRun.sourceId,
       status: sourceRun.status,
+      lifecycleStatus: "verified",
       error: sourceRun.error,
       counts: sourceRun.comparison?.counts,
       executedCaptureCount: sourceRun.captures.length,
@@ -864,6 +867,7 @@ export async function startIntentStudioServer(
       if (details.sourceId) {
         const sourceRun = ensureStudioSourceRunSummary(run, details.sourceId);
         sourceRun.status = "running";
+        sourceRun.lifecycleStatus = "executing";
 
         if (event.phase === "implementation") {
           sourceRun.implementationStageStatus = details.status ?? "running";
@@ -890,6 +894,7 @@ export async function startIntentStudioServer(
       if (details.sourceId) {
         const sourceRun = ensureStudioSourceRunSummary(run, details.sourceId);
         sourceRun.status = "running";
+        sourceRun.lifecycleStatus = "executing";
         if (event.message.startsWith("Captured '") || event.message.startsWith("Capture failed for '") ) {
           sourceRun.executedCaptureCount = (sourceRun.executedCaptureCount ?? 0) + 1;
         }
@@ -911,6 +916,7 @@ export async function startIntentStudioServer(
       if (details.sourceId) {
         const sourceRun = ensureStudioSourceRunSummary(run, details.sourceId);
         sourceRun.status = details.status ?? sourceRun.status;
+        sourceRun.lifecycleStatus = sourceRun.status === "completed" ? "verified" : sourceRun.status === "failed" ? "reverted" : "executing";
         sourceRun.attemptCount = details.attemptCount ?? sourceRun.attemptCount;
         sourceRun.latestFailureStage = details.latestFailureStage ?? sourceRun.latestFailureStage;
         sourceRun.completedWorkItemIds = details.completedWorkItemIds ?? sourceRun.completedWorkItemIds;

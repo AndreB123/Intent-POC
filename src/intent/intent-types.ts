@@ -25,6 +25,8 @@ export type ExecutionToolType =
   | "reporting"
   | "linear-publishing";
 
+export type IntentLifecycleStatus = "planned" | "executing" | "verified" | "reverted";
+
 export type PlaywrightCheckpointAction =
   | "goto"
   | "click"

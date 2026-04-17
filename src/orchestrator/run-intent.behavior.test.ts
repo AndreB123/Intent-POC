@@ -376,7 +376,7 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
 test("buildQAVerificationExecutionPlan Given active zero-spec behavior work When QA planning runs Then it falls back to targeted code regression", () => {
   const normalizedIntent = normalizeIntent({
     rawPrompt:
-      "the intent lifecycle needs to map the execution plan better and support state reversion when the model calls a rerun on a step.",
+      "the planner needs to keep source-lane distribution summaries aligned with linear publishing without changing the Studio UI.",
     defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {

@@ -436,6 +436,7 @@ function buildPlaywrightSpecRelativePath(sourceId: string, workItemId: string): 
 }
 
 function buildPlaywrightCheckpoints(input: {
+  sourceId: string;
   codeSurface: CodeSurfaceSelection;
   scenario?: BDDScenario;
   captureItems: CaptureItemConfig[];
@@ -444,6 +445,26 @@ function buildPlaywrightCheckpoints(input: {
   desiredOutcome: string;
   acceptanceCriteria: string[];
 }): PlaywrightCheckpoint[] {
+  if (
+    shouldBuildIntentStudioLifecycleCheckpoints({
+      sourceId: input.sourceId,
+      codeSurface: input.codeSurface,
+      promptText: input.promptText,
+      desiredOutcome: input.desiredOutcome,
+      acceptanceCriteria: input.acceptanceCriteria,
+      scenario: input.scenario
+    })
+  ) {
+    return buildIntentStudioLifecyclePlaywrightCheckpoints({
+      sourceId: input.sourceId,
+      workItemTitle: input.workItemTitle,
+      promptText: input.promptText,
+      desiredOutcome: input.desiredOutcome,
+      acceptanceCriteria: input.acceptanceCriteria,
+      scenario: input.scenario
+    });
+  }
+
   if (input.codeSurface.id === "intent-studio") {
     return buildIntentStudioPlaywrightCheckpoints({
       scenario: input.scenario,
@@ -483,6 +504,335 @@ function buildPlaywrightCheckpoints(input: {
     target: item.locator,
     waitUntil: item.waitForSelector ? "load" : "networkidle"
   }));
+}
+
+function supportsIntentStudioLifecycleVerification(sourceId: string): boolean {
+  return sourceId === "intent-poc-app" || sourceId === "demo-catalog";
+}
+
+function hasIntentStudioLifecycleSignals(text: string): boolean {
+  return /\b(intent lifecycle|lifecycle|lifecycle state|lifecycle status|application state|application status|state and status|state machine|planned execution|reverted|reversion|rollback|rerun|execution state|status of the application)\b/i.test(
+    text
+  );
+}
+
+function shouldPlanIntentStudioLifecycleVerification(input: {
+  codeSurface: CodeSurfaceSelection;
+  sourceIds: string[];
+  rawPrompt: string;
+  desiredOutcome: string;
+  acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
+}): boolean {
+  const combinedText = [input.rawPrompt, input.desiredOutcome].join(" ");
+
+  return input.codeSurface.id === "orchestrator-and-planning"
+    && input.sourceIds.some(supportsIntentStudioLifecycleVerification)
+    && hasIntentStudioLifecycleSignals(combinedText);
+}
+
+function shouldBuildIntentStudioLifecycleCheckpoints(input: {
+  sourceId: string;
+  codeSurface: CodeSurfaceSelection;
+  promptText: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+  scenario?: BDDScenario;
+}): boolean {
+  const combinedText = [input.promptText, input.desiredOutcome].join(" ");
+
+  return input.codeSurface.id === "orchestrator-and-planning"
+    && supportsIntentStudioLifecycleVerification(input.sourceId)
+    && hasIntentStudioLifecycleSignals(combinedText);
+}
+
+function buildIntentStudioLifecycleMockState(input: {
+  sourceId: string;
+  promptText: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+  workItemTitle: string;
+  runStatus: "running" | "failed";
+  lifecycleStatus: "executing" | "reverted";
+  implementationStageStatus: "running" | "failed";
+  qaVerificationStageStatus: "pending" | "failed";
+  latestImplementationSummary: string;
+}): Record<string, unknown> {
+  const runId = `2026-04-16T00-00-00-000Z-${input.sourceId}`;
+  const workItemId = `work-1-${sanitizeFileSegment(input.workItemTitle) || "verify-lifecycle-behavior"}-${input.sourceId}`;
+
+  return {
+    configPath: "intent-poc.yaml",
+    linearEnabled: false,
+    defaultSourceId: input.sourceId,
+    agentStages: [],
+    sources: [
+      {
+        id: input.sourceId,
+        label: input.sourceId === "intent-poc-app" ? "Intent POC App" : "Demo Catalog",
+        repoLabel: "Intent POC",
+        role: "controller-and-demo-source",
+        summary: "Intent Studio and demo catalog source.",
+        aliases: [input.sourceId],
+        captureCount: 0,
+        sourceType: "local",
+        sourceLocation: ".",
+        startCommand: "echo start",
+        readiness: "HTTP http://127.0.0.1:6006",
+        baseUrl: "http://127.0.0.1:6006",
+        defaultScope: true,
+        status: "ready",
+        issues: [],
+        notes: []
+      }
+    ],
+    currentRun: {
+      sessionId: "session-1",
+      prompt: input.promptText,
+      requestedSourceIds: [input.sourceId],
+      sourceId: input.sourceId,
+      dryRun: false,
+      status: input.runStatus,
+      startedAt: "2026-04-16T00:00:00.000Z",
+      finishedAt: input.runStatus === "failed" ? "2026-04-16T00:00:05.000Z" : undefined,
+      normalizedSummary: `change behavior for ${input.sourceId}`,
+      runId,
+      intentPlan: {
+        summary: `change behavior for ${input.sourceId}`,
+        intentType: "change-behavior",
+        sourceId: input.sourceId,
+        linear: {
+          createIssue: false,
+          issueTitle: ""
+        },
+        planning: {
+          reviewNotes: [],
+          linearPlan: {
+            mode: "new"
+          }
+        },
+        businessIntent: {
+          statement: input.promptText,
+          desiredOutcome: input.desiredOutcome,
+          acceptanceCriteria: input.acceptanceCriteria.map((description, index) => ({
+            id: `ac-${index + 1}`,
+            description,
+            origin: "inferred"
+          })),
+          scenarios: [],
+          workItems: [
+            {
+              id: workItemId,
+              type: "playwright-spec",
+              title: input.workItemTitle,
+              description: input.desiredOutcome,
+              scenarioIds: [],
+              sourceIds: [input.sourceId],
+              userVisibleOutcome: input.desiredOutcome,
+              verification: "A generated Playwright spec with mocked Studio app state validates lifecycle state handling through the Studio UI.",
+              execution: {
+                order: 1,
+                dependsOnWorkItemIds: []
+              },
+              playwright: {
+                generatedBy: "rules",
+                specs: [
+                  {
+                    framework: "playwright",
+                    sourceId: input.sourceId,
+                    relativeSpecPath: `${input.sourceId}/mock-lifecycle.spec.ts`,
+                    suiteName: `Intent-driven flow for ${input.sourceId}`,
+                    testName: input.workItemTitle,
+                    scenarioIds: [],
+                    checkpoints: []
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        executionPlan: {
+          primarySourceId: input.sourceId,
+          sources: [
+            {
+              sourceId: input.sourceId,
+              selectionReason: `Source ${input.sourceId} was selected in the requested source scope.`,
+              captureScope: {
+                mode: "all",
+                captureIds: []
+              },
+              warnings: []
+            }
+          ],
+          tools: [
+            {
+              id: "playwright-tdd",
+              type: "playwright-tdd",
+              label: "Playwright TDD generation",
+              enabled: true,
+              reason: "Lifecycle verification is exposed through the Studio UI.",
+              details: ["Tracked specs validate Studio lifecycle state handling."]
+            }
+          ],
+          destinations: [
+            {
+              id: "controller-artifacts",
+              type: "controller",
+              label: "Controller artifacts",
+              status: "active",
+              reason: "Local evidence bundles are always written by the controller.",
+              details: ["Stores plan, manifests, logs, captures, and summaries on disk."]
+            }
+          ]
+        }
+      },
+      events: [],
+      captures: [],
+      sourceRuns: [
+        {
+          sourceId: input.sourceId,
+          status: input.runStatus === "failed" ? "failed" : "running",
+          lifecycleStatus: input.lifecycleStatus,
+          implementationStageStatus: input.implementationStageStatus,
+          qaVerificationStageStatus: input.qaVerificationStageStatus,
+          targetedWorkItemIds: [workItemId],
+          completedWorkItemIds: [],
+          remainingWorkItemIds: [workItemId],
+          completedWorkItemCount: 0,
+          remainingWorkItemCount: 1,
+          latestImplementationSummary: input.latestImplementationSummary,
+          captureScopeSummary: "Capture scope: all configured captures (0 executed).",
+          sourceWarnings: []
+        }
+      ],
+      artifacts: {
+        summaryPath: `artifacts/runs/${runId}/summary.md`
+      }
+    },
+    recentRuns: [],
+    serverTime: "2026-04-16T00:00:05.000Z"
+  };
+}
+
+function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
+  sourceId: string;
+  workItemTitle: string;
+  promptText: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+  scenario?: BDDScenario;
+}): PlaywrightCheckpoint[] {
+  const combinedText = [
+    input.promptText,
+    input.desiredOutcome,
+    ...input.acceptanceCriteria,
+    input.scenario?.title ?? "",
+    input.scenario?.goal ?? "",
+    ...(input.scenario?.given ?? []),
+    ...(input.scenario?.when ?? []),
+    ...(input.scenario?.then ?? [])
+  ].join(" ");
+  const includesFailureFlow = /\b(fail|failure|revert|reverted|reversion|rollback|error)\b/i.test(combinedText);
+  const executingState = buildIntentStudioLifecycleMockState({
+    sourceId: input.sourceId,
+    promptText: input.promptText,
+    desiredOutcome: input.desiredOutcome,
+    acceptanceCriteria: input.acceptanceCriteria,
+    workItemTitle: input.workItemTitle,
+    runStatus: "running",
+    lifecycleStatus: "executing",
+    implementationStageStatus: "running",
+    qaVerificationStageStatus: "pending",
+    latestImplementationSummary: "Implementation is applying the planned lifecycle changes."
+  });
+
+  const checkpoints: PlaywrightCheckpoint[] = [
+    {
+      id: createPlanId("checkpoint", `${input.workItemTitle}-mock-executing-state`, 0),
+      label: "Lifecycle State Running",
+      action: "mock-studio-state",
+      assertion: "The Studio renders an executing lifecycle state for the active run.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-mock-executing-state`, 0),
+      path: "/",
+      waitForSelector: "#step-implementation-status",
+      waitUntil: "domcontentloaded",
+      mockStudioState: executingState
+    },
+    {
+      id: createPlanId("checkpoint", `${input.workItemTitle}-runner-running`, 1),
+      label: "Runner Status Shows Running",
+      action: "assert-attribute-contains",
+      assertion: input.desiredOutcome,
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-runner-running`, 1),
+      target: "#current-status-pill",
+      attributeName: "class",
+      expectedSubstring: "status-running",
+      waitForSelector: "#current-status-pill"
+    },
+    {
+      id: createPlanId("checkpoint", `${input.workItemTitle}-plan-step-completed`, 2),
+      label: "Planned Execution Step Completed",
+      action: "assert-attribute-contains",
+      assertion: "The planned execution step is marked complete once a run is active.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-plan-step-completed`, 2),
+      target: "#step-plan-status",
+      attributeName: "data-state",
+      expectedSubstring: "completed",
+      waitForSelector: "#step-plan-status"
+    },
+    {
+      id: createPlanId("checkpoint", `${input.workItemTitle}-implementation-step-running`, 3),
+      label: "Implementation Step Running",
+      action: "assert-attribute-contains",
+      assertion: "The implementation lifecycle step reflects active execution.",
+      screenshotId: createPlanId("shot", `${input.workItemTitle}-implementation-step-running`, 3),
+      target: "#step-implementation-status",
+      attributeName: "data-state",
+      expectedSubstring: "running",
+      waitForSelector: "#step-implementation-status"
+    }
+  ];
+
+  if (includesFailureFlow) {
+    const revertedState = buildIntentStudioLifecycleMockState({
+      sourceId: input.sourceId,
+      promptText: input.promptText,
+      desiredOutcome: input.desiredOutcome,
+      acceptanceCriteria: input.acceptanceCriteria,
+      workItemTitle: input.workItemTitle,
+      runStatus: "failed",
+      lifecycleStatus: "reverted",
+      implementationStageStatus: "failed",
+      qaVerificationStageStatus: "failed",
+      latestImplementationSummary: "The lifecycle reverted after the runner detected a failed execution path."
+    });
+
+    checkpoints.push(
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-mock-reverted-state`, checkpoints.length),
+        label: "Lifecycle State Reverted",
+        action: "mock-studio-state",
+        assertion: "The Studio renders a failed run after lifecycle reversion is triggered.",
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-mock-reverted-state`, checkpoints.length),
+        path: "/",
+        waitForSelector: "#current-status-pill",
+        waitUntil: "domcontentloaded",
+        mockStudioState: revertedState
+      },
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-runner-failed`, checkpoints.length + 1),
+        label: "Runner Status Shows Failed",
+        action: "assert-attribute-contains",
+        assertion: "The lifecycle shows a failed run after reversion.",
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-runner-failed`, checkpoints.length + 1),
+        target: "#current-status-pill",
+        attributeName: "class",
+        expectedSubstring: "status-failed",
+        waitForSelector: "#current-status-pill"
+      }
+    );
+  }
+
+  return checkpoints;
 }
 
 function buildIntentStudioPlaywrightCheckpoints(input: {
@@ -787,6 +1137,7 @@ function buildPlaywrightSpecs(input: {
       testName: input.title,
       scenarioIds: input.scenarioIds,
       checkpoints: buildPlaywrightCheckpoints({
+        sourceId,
         codeSurface: input.codeSurface,
         scenario: input.scenario,
         captureItems,
@@ -977,6 +1328,57 @@ function buildWorkItems(input: {
   availableSources: Record<string, AvailableSourceDescriptor>;
   intentType: NormalizedIntent["intentType"];
 }): NormalizedIntent["businessIntent"]["workItems"] {
+  const shouldGenerateLifecycleVerification = shouldPlanIntentStudioLifecycleVerification({
+    codeSurface: input.codeSurface,
+    sourceIds: input.sourceIds,
+    rawPrompt: input.rawPrompt,
+    desiredOutcome: input.desiredOutcome,
+    acceptanceCriteria: input.acceptanceCriteria
+  });
+
+  if (shouldGenerateLifecycleVerification) {
+    return input.sourceIds.map((sourceId, index) => {
+      const scenarioIds = input.scenarios
+        .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
+        .map((scenario) => scenario.id);
+      const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
+        mode: "all",
+        captureIds: []
+      };
+      const id = createPlanId("work", `verify-lifecycle-behavior-${sourceId}`, index);
+
+      return {
+        id,
+        type: "playwright-spec",
+        title: `Verify lifecycle behavior for ${sourceId}`,
+        description: `Generate tracked lifecycle verification for ${sourceId}.`,
+        scenarioIds,
+        sourceIds: [sourceId],
+        userVisibleOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
+        verification: `A generated Playwright spec with mocked Studio app state validates lifecycle state handling through the Studio UI for ${sourceId}.`,
+        execution: {
+          order: index + 1,
+          dependsOnWorkItemIds: []
+        },
+        playwright: {
+          generatedBy: "rules",
+          specs: buildPlaywrightSpecs({
+            codeSurface: input.codeSurface,
+            workItemId: id,
+            title: `Verify lifecycle behavior for ${sourceId}`,
+            promptText: input.rawPrompt,
+            scenarioIds,
+            sourceIds: [sourceId],
+            desiredOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
+            acceptanceCriteria: input.acceptanceCriteria.map((criterion) => criterion.description),
+            captureScope,
+            availableSources: input.availableSources
+          })
+        }
+      };
+    });
+  }
+
   if (input.intentType === "change-behavior" && input.codeSurface.id === "orchestrator-and-planning") {
     return input.sourceIds.map((sourceId, index) => {
       const scenarioIds = input.scenarios
@@ -1912,6 +2314,13 @@ function buildIntentDraft(
 
   if (
     planningDepth === "full"
+    && !shouldPlanIntentStudioLifecycleVerification({
+      codeSurface,
+      sourceIds: resolution.sourceIds,
+      rawPrompt: trimmedPrompt,
+      desiredOutcome,
+      acceptanceCriteria
+    })
     && !(resolution.intentType === "change-behavior" && codeSurface.id === "orchestrator-and-planning")
   ) {
     assertMinimumE2ECoverage({

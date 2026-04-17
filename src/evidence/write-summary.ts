@@ -127,6 +127,22 @@ function buildRuntimeAttemptsMarkdown(controllerRoot: string, attempts: SourceRu
     .join("\n\n");
 }
 
+function describeWorkItemType(workItem: NormalizedIntent["businessIntent"]["workItems"][number]): string {
+  if (workItem.playwright.specs.length === 0) {
+    return "Behavior-oriented implementation work item";
+  }
+
+  const usesMockedStudioState = workItem.playwright.specs.some((spec) =>
+    spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")
+  );
+
+  if (usesMockedStudioState) {
+    return "QA-runnable Playwright spec with mocked Studio app state";
+  }
+
+  return "QA-runnable Playwright screenshot spec";
+}
+
 export function buildSourceSummaryMarkdown(input: {
   config: AppConfig;
   paths: SourceRunPaths;
@@ -208,7 +224,7 @@ export function buildSourceSummaryMarkdown(input: {
         (workItem) =>
           [
             `- ${workItem.title}`,
-            `  - Type: ${workItem.playwright.specs.length > 0 ? "QA-runnable Playwright screenshot spec" : "Behavior-oriented implementation work item"}`,
+            `  - Type: ${describeWorkItemType(workItem)}`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
             `  - Verification: ${workItem.verification}`,
             `  - Order: ${workItem.execution.order}`,
@@ -351,7 +367,7 @@ export function buildBusinessSummaryMarkdown(input: {
           [
             `- ${workItem.title}`,
             `  - Sources: ${workItem.sourceIds.join(", ")}`,
-            `  - Type: ${workItem.playwright.specs.length > 0 ? "QA-runnable Playwright screenshot spec" : "Behavior-oriented implementation work item"}`,
+            `  - Type: ${describeWorkItemType(workItem)}`,
             `  - Outcome: ${workItem.userVisibleOutcome}`,
             `  - Verification: ${workItem.verification}`,
             `  - Playwright specs: ${workItem.playwright.specs.length}`,

@@ -507,7 +507,7 @@ test("normalizeIntent routes results-page screenshot linking prompts through Int
   assert.equal(resultsSpec?.checkpoints[0]?.waitForSelector, "#captures .capture-card img");
 });
 
-test("normalizeIntent maps orchestrator lifecycle rerun prompts to change-behavior work without bogus screenshot checkpoints", () => {
+test("normalizeIntent maps orchestrator lifecycle rerun prompts to mocked-state Playwright verification without bogus catalog checkpoints", () => {
   const normalized = normalizeIntent({
     rawPrompt:
       "the intent lifecycle needs to map the execution plan better and support state reversion when the model calls a rerun on a step.",
@@ -520,7 +520,16 @@ test("normalizeIntent maps orchestrator lifecycle rerun prompts to change-behavi
   assert.equal(normalized.codeSurface?.id, "orchestrator-and-planning");
   assert.equal(normalized.summary, "change behavior for intent-poc-app");
   assert.equal(normalized.businessIntent.workItems.length, 1);
-  assert.deepEqual(normalized.businessIntent.workItems[0]?.playwright.specs, []);
+  assert.match(
+    normalized.businessIntent.workItems[0]?.verification ?? "",
+    /mocked Studio app state/
+  );
+  assert.ok((normalized.businessIntent.workItems[0]?.playwright.specs.length ?? 0) > 0);
+  assert.ok(
+    normalized.businessIntent.workItems[0]?.playwright.specs.some((spec) =>
+      spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")
+    )
+  );
   assert.ok(
     normalized.businessIntent.workItems.every((workItem) =>
       workItem.playwright.specs.every((spec) =>
@@ -528,6 +537,20 @@ test("normalizeIntent maps orchestrator lifecycle rerun prompts to change-behavi
       )
     )
   );
+});
+
+test("normalizeIntent keeps pure planner change-behavior prompts on the zero-spec code-validation path", () => {
+  const normalized = normalizeIntent({
+    rawPrompt:
+      "the planner needs to keep source-lane distribution summaries aligned with linear publishing without changing the Studio UI.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: intentPocAppSources
+  });
+
+  assert.equal(normalized.intentType, "change-behavior");
+  assert.equal(normalized.codeSurface?.id, "orchestrator-and-planning");
+  assert.deepEqual(normalized.businessIntent.workItems[0]?.playwright.specs, []);
 });
 
 test("normalizeIntentWithAgent still generates Playwright specs for Intent Studio behavior fixes when Gemini classifies the prompt as change-behavior", async () => {

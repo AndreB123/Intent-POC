@@ -18,7 +18,7 @@ import {
   writeSourceEvidenceFiles
 } from "../evidence/write-manifest";
 import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evidence/write-summary";
-import { NormalizedIntent, TDDWorkItem } from "../intent/intent-types";
+import { NormalizedIntent, TDDWorkItem, IntentLifecycleStatus } from "../intent/intent-types";
 import {
   ResolvedAgentStageConfig,
   RunAgentConfigOverride,

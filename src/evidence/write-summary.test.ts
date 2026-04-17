@@ -122,7 +122,7 @@ test("buildSourceSummaryMarkdown labels zero-spec behavior work items correctly"
   });
   const normalizedIntent = normalizeIntent({
     rawPrompt:
-      "the intent lifecycle needs to map the execution plan better and support state reversion when the model calls a rerun on a step.",
+      "the planner needs to keep source-lane distribution summaries aligned with linear publishing without changing the Studio UI.",
     defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: config.sources
@@ -145,4 +145,40 @@ test("buildSourceSummaryMarkdown labels zero-spec behavior work items correctly"
   });
 
   assert.match(markdown, /Behavior-oriented implementation work item/);
+});
+
+test("buildSourceSummaryMarkdown labels mocked-state Playwright work items clearly", () => {
+  const rootDir = "/tmp/intent-poc-summary";
+  const config = buildBehaviorTestConfig(rootDir, {
+    sources: {
+      "intent-poc-app": buildDemoCatalogBehaviorSource(rootDir)
+    },
+    defaultSourceId: "intent-poc-app"
+  });
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "the intent lifecycle needs to map the execution plan better and support state reversion when the model calls a rerun on a step.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: config.sources
+  });
+
+  const paths = {
+    ...buildSourcePaths(rootDir),
+    sourceId: "intent-poc-app",
+    sourceDir: path.join(rootDir, "artifacts", "runs", "run-1", "sources", "intent-poc-app")
+  };
+
+  const markdown = buildSourceSummaryMarkdown({
+    config,
+    paths,
+    normalizedIntent,
+    linearIssue: null,
+    captures: [],
+    status: "planned",
+    attempts: []
+  });
+
+  assert.match(markdown, /QA-runnable Playwright spec with mocked Studio app state/);
+  assert.match(markdown, /mocked Studio app state/);
 });
