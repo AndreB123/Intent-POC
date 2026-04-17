@@ -123,6 +123,7 @@
       {
         "id": "work-1-qa-runnable-visual-evidence-is-defined-for-applicable-sources-intent-poc-app",
         "type": "playwright-spec",
+        "verificationMode": "tracked-playwright",
         "title": "QA-runnable visual evidence is defined for applicable sources",
         "description": "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
         "scenarioIds": [

@@ -569,7 +569,9 @@ export function buildQAVerificationExecutionPlan(input: {
     )
   );
   const activeWorkItemIds = activeWorkItems.map((workItem) => workItem.id);
-  const expectsGeneratedPlaywright = activeWorkItems.some((workItem) => workItem.playwright.specs.length > 0);
+  const expectsGeneratedPlaywright = activeWorkItems.some(
+    (workItem) => workItem.verificationMode !== "targeted-code-validation"
+  );
 
   if (expectsGeneratedPlaywright && input.generatedPlaywrightTests.length === 0) {
     return {
@@ -580,28 +582,31 @@ export function buildQAVerificationExecutionPlan(input: {
   const implementationChangedPaths = normalizeImplementationChangedPaths(
     input.implementationFileOperations.map((operation) => operation.filePath)
   );
-  const allActiveWorkIsPlaywright = activeWorkItems.length > 0 && activeWorkItems.every((workItem) => workItem.type === "playwright-spec");
   const fallbackCommand = resolveSourceScopedQAFallback({ implementationChangedPaths });
+  const requiresCodeValidationFallback =
+    activeWorkItems.length === 0 || activeWorkItems.some((workItem) => workItem.verificationMode === "targeted-code-validation");
+  const commands: QAVerificationCommandPlan[] = [
+    {
+      label: "typecheck",
+      command: "npm run typecheck"
+    }
+  ];
+
+  if (expectsGeneratedPlaywright) {
+    commands.push({
+      label: "generated-playwright",
+      command: `npx playwright test ${input.generatedPlaywrightTests
+        .map((filePath) => quoteShellArg(path.relative(input.workspaceRootDir, filePath)))
+        .join(" ")}`
+    });
+  }
+
+  if (requiresCodeValidationFallback) {
+    commands.push(fallbackCommand);
+  }
 
   return {
-    commands: [
-      {
-        label: "typecheck",
-        command: "npm run typecheck"
-      },
-      ...(allActiveWorkIsPlaywright && input.generatedPlaywrightTests.length > 0
-        ? [
-            {
-              label: "generated-playwright",
-              command: `npx playwright test ${input.generatedPlaywrightTests
-                .map((filePath) => quoteShellArg(path.relative(input.workspaceRootDir, filePath)))
-                .join(" ")}`
-            }
-          ]
-        : [
-            fallbackCommand
-          ])
-    ]
+    commands
   };
 }
 
@@ -910,6 +915,7 @@ function formatWorkItemDescription(workItem: TDDWorkItem, includeSources: boolea
     ...(includeSources ? [`  - Sources: ${workItem.sourceIds.join(", ")}`] : []),
     `  - Outcome: ${workItem.userVisibleOutcome}`,
     `  - Verification: ${workItem.verification}`,
+    `  - Verification mode: ${workItem.verificationMode}`,
     `  - Order: ${workItem.execution.order}`,
     `  - Depends on: ${workItem.execution.dependsOnWorkItemIds.length > 0 ? workItem.execution.dependsOnWorkItemIds.join(", ") : "none"}`,
     `  - Playwright specs: ${workItem.playwright.specs.length}`,

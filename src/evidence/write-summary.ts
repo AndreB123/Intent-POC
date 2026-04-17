@@ -128,19 +128,14 @@ function buildRuntimeAttemptsMarkdown(controllerRoot: string, attempts: SourceRu
 }
 
 function describeWorkItemType(workItem: NormalizedIntent["businessIntent"]["workItems"][number]): string {
-  if (workItem.playwright.specs.length === 0) {
-    return "Behavior-oriented implementation work item";
+  switch (workItem.verificationMode) {
+    case "mocked-state-playwright":
+      return "QA-runnable Playwright spec with mocked Studio app state";
+    case "targeted-code-validation":
+      return "Targeted code validation work item";
+    default:
+      return "QA-runnable Playwright screenshot spec";
   }
-
-  const usesMockedStudioState = workItem.playwright.specs.some((spec) =>
-    spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")
-  );
-
-  if (usesMockedStudioState) {
-    return "QA-runnable Playwright spec with mocked Studio app state";
-  }
-
-  return "QA-runnable Playwright screenshot spec";
 }
 
 export function buildSourceSummaryMarkdown(input: {

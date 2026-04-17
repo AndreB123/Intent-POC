@@ -28,6 +28,7 @@ function buildLoopWorkItem(id: string, order: number, dependsOnWorkItemIds: stri
   return {
     id,
     type: "playwright-spec",
+    verificationMode: "tracked-playwright",
     title: id,
     description: `${id} description`,
     scenarioIds: [],
@@ -373,7 +374,7 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
   assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
 });
 
-test("buildQAVerificationExecutionPlan Given active zero-spec behavior work When QA planning runs Then it falls back to targeted code regression", () => {
+test("buildQAVerificationExecutionPlan Given active targeted code-validation work When QA planning runs Then it falls back to targeted code regression", () => {
   const normalizedIntent = normalizeIntent({
     rawPrompt:
       "the planner needs to keep source-lane distribution summaries aligned with linear publishing without changing the Studio UI.",
@@ -400,6 +401,58 @@ test("buildQAVerificationExecutionPlan Given active zero-spec behavior work When
   );
   assert.equal(
     plan.commands?.[1]?.command,
+    'npm run test:code -- "src/orchestrator/run-intent.behavior.test.ts"'
+  );
+});
+
+test("buildQAVerificationExecutionPlan Given mixed verification modes When QA planning runs Then it includes generated Playwright and targeted code validation", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
+    defaultSourceId: "demo-catalog",
+    continueOnCaptureError: false,
+    availableSources: {
+      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  normalizedIntent.businessIntent.workItems.push({
+    id: "work-2-targeted-validation",
+    type: "code-validation",
+    verificationMode: "targeted-code-validation",
+    title: "Validate planner wiring",
+    description: "Validate the planner wiring with targeted code regression.",
+    scenarioIds: [],
+    sourceIds: ["demo-catalog"],
+    userVisibleOutcome: "Planner wiring remains validated.",
+    verification: "Typecheck and targeted source-scoped code tests validate the planner wiring.",
+    execution: {
+      order: 2,
+      dependsOnWorkItemIds: []
+    },
+    playwright: {
+      generatedBy: "rules",
+      specs: []
+    }
+  });
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "demo-catalog",
+    activeWorkItemIds: normalizedIntent.businessIntent.workItems.map((workItem) => workItem.id),
+    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/demo-catalog/work-1.spec.ts"],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/orchestrator/run-intent.ts", rationale: "qa", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.equal(plan.error, undefined);
+  assert.deepEqual(
+    plan.commands?.map((command) => command.label),
+    ["typecheck", "generated-playwright", "test-code-targeted"]
+  );
+  assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
+  assert.equal(
+    plan.commands?.[2]?.command,
     'npm run test:code -- "src/orchestrator/run-intent.behavior.test.ts"'
   );
 });

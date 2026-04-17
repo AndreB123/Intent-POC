@@ -89,9 +89,15 @@ export interface BDDScenario {
   applicableSourceIds: string[];
 }
 
+export type WorkItemVerificationMode =
+  | "tracked-playwright"
+  | "mocked-state-playwright"
+  | "targeted-code-validation";
+
 export interface TDDWorkItem {
   id: string;
-  type: "playwright-spec";
+  type: "playwright-spec" | "code-validation";
+  verificationMode: WorkItemVerificationMode;
   title: string;
   description: string;
   scenarioIds: string[];

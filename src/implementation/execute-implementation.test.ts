@@ -54,6 +54,7 @@ function buildNormalizedIntent(sourceId: string, codeSurface?: CodeSurfaceSelect
         {
           id: "work-item-1",
           type: "playwright-spec",
+          verificationMode: "tracked-playwright",
           title: "Validate dashboard affordance",
           description: "Cover the new affordance with a generated Playwright spec.",
           scenarioIds: ["scenario-1"],

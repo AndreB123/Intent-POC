@@ -124,6 +124,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
           {
             id: "work-1-collapse-configuration-section-demo-catalog",
             type: "playwright-spec",
+            verificationMode: "tracked-playwright",
             title: "Collapse configuration section",
             description: "Verify the configuration section collapses.",
             scenarioIds: [],
@@ -270,6 +271,7 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
           {
             id: "work-1-verify-prompt-layout-demo-catalog",
             type: "playwright-spec",
+            verificationMode: "tracked-playwright",
             title: "Verify prompt layout",
             description: "Verify the prompt layout relationship.",
             scenarioIds: [],
@@ -415,6 +417,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
           {
             id: "work-1-verify-results-links-demo-catalog",
             type: "playwright-spec",
+            verificationMode: "mocked-state-playwright",
             title: "Verify results links",
             description: "Verify the Studio results page uses file-backed screenshot links.",
             scenarioIds: [],

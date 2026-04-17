@@ -506,6 +506,14 @@ function buildPlaywrightCheckpoints(input: {
   }));
 }
 
+function derivePlaywrightVerificationMode(
+  specs: PlaywrightSpecArtifact[]
+): TDDWorkItem["verificationMode"] {
+  return specs.some((spec) => spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state"))
+    ? "mocked-state-playwright"
+    : "tracked-playwright";
+}
+
 function supportsIntentStudioLifecycleVerification(sourceId: string): boolean {
   return sourceId === "intent-poc-app" || sourceId === "demo-catalog";
 }
@@ -516,18 +524,23 @@ function hasIntentStudioLifecycleSignals(text: string): boolean {
   );
 }
 
-function shouldPlanIntentStudioLifecycleVerification(input: {
+function resolveOrchestratorBehaviorVerificationMode(input: {
   codeSurface: CodeSurfaceSelection;
   sourceIds: string[];
   rawPrompt: string;
   desiredOutcome: string;
   acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
-}): boolean {
+}): TDDWorkItem["verificationMode"] | null {
+  if (input.codeSurface.id !== "orchestrator-and-planning") {
+    return null;
+  }
+
   const combinedText = [input.rawPrompt, input.desiredOutcome].join(" ");
 
-  return input.codeSurface.id === "orchestrator-and-planning"
-    && input.sourceIds.some(supportsIntentStudioLifecycleVerification)
-    && hasIntentStudioLifecycleSignals(combinedText);
+  return input.sourceIds.some(supportsIntentStudioLifecycleVerification)
+    && hasIntentStudioLifecycleSignals(combinedText)
+    ? "mocked-state-playwright"
+    : "targeted-code-validation";
 }
 
 function shouldBuildIntentStudioLifecycleCheckpoints(input: {
@@ -623,6 +636,7 @@ function buildIntentStudioLifecycleMockState(input: {
             {
               id: workItemId,
               type: "playwright-spec",
+              verificationMode: "mocked-state-playwright",
               title: input.workItemTitle,
               description: input.desiredOutcome,
               scenarioIds: [],
@@ -1328,15 +1342,17 @@ function buildWorkItems(input: {
   availableSources: Record<string, AvailableSourceDescriptor>;
   intentType: NormalizedIntent["intentType"];
 }): NormalizedIntent["businessIntent"]["workItems"] {
-  const shouldGenerateLifecycleVerification = shouldPlanIntentStudioLifecycleVerification({
-    codeSurface: input.codeSurface,
-    sourceIds: input.sourceIds,
-    rawPrompt: input.rawPrompt,
-    desiredOutcome: input.desiredOutcome,
-    acceptanceCriteria: input.acceptanceCriteria
-  });
+  const orchestratorVerificationMode = input.intentType === "change-behavior"
+    ? resolveOrchestratorBehaviorVerificationMode({
+        codeSurface: input.codeSurface,
+        sourceIds: input.sourceIds,
+        rawPrompt: input.rawPrompt,
+        desiredOutcome: input.desiredOutcome,
+        acceptanceCriteria: input.acceptanceCriteria
+      })
+    : null;
 
-  if (shouldGenerateLifecycleVerification) {
+  if (orchestratorVerificationMode === "mocked-state-playwright") {
     return input.sourceIds.map((sourceId, index) => {
       const scenarioIds = input.scenarios
         .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
@@ -1346,10 +1362,23 @@ function buildWorkItems(input: {
         captureIds: []
       };
       const id = createPlanId("work", `verify-lifecycle-behavior-${sourceId}`, index);
+      const specs = buildPlaywrightSpecs({
+        codeSurface: input.codeSurface,
+        workItemId: id,
+        title: `Verify lifecycle behavior for ${sourceId}`,
+        promptText: input.rawPrompt,
+        scenarioIds,
+        sourceIds: [sourceId],
+        desiredOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
+        acceptanceCriteria: input.acceptanceCriteria.map((criterion) => criterion.description),
+        captureScope,
+        availableSources: input.availableSources
+      });
 
       return {
         id,
         type: "playwright-spec",
+        verificationMode: derivePlaywrightVerificationMode(specs),
         title: `Verify lifecycle behavior for ${sourceId}`,
         description: `Generate tracked lifecycle verification for ${sourceId}.`,
         scenarioIds,
@@ -1362,38 +1391,28 @@ function buildWorkItems(input: {
         },
         playwright: {
           generatedBy: "rules",
-          specs: buildPlaywrightSpecs({
-            codeSurface: input.codeSurface,
-            workItemId: id,
-            title: `Verify lifecycle behavior for ${sourceId}`,
-            promptText: input.rawPrompt,
-            scenarioIds,
-            sourceIds: [sourceId],
-            desiredOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
-            acceptanceCriteria: input.acceptanceCriteria.map((criterion) => criterion.description),
-            captureScope,
-            availableSources: input.availableSources
-          })
+          specs
         }
       };
     });
   }
 
-  if (input.intentType === "change-behavior" && input.codeSurface.id === "orchestrator-and-planning") {
+  if (orchestratorVerificationMode === "targeted-code-validation") {
     return input.sourceIds.map((sourceId, index) => {
       const scenarioIds = input.scenarios
         .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
         .map((scenario) => scenario.id);
 
       return {
-        id: createPlanId("work", `implement-behavior-change-${sourceId}`, index),
-        type: "playwright-spec",
-        title: `Implement behavior change for ${sourceId}`,
-        description: `Apply and verify the requested behavior change for ${sourceId}.`,
+        id: createPlanId("work", `validate-behavior-change-${sourceId}`, index),
+        type: "code-validation",
+        verificationMode: "targeted-code-validation",
+        title: `Validate behavior change for ${sourceId}`,
+        description: `Apply and validate the requested behavior change for ${sourceId} through targeted code verification.`,
         scenarioIds,
         sourceIds: [sourceId],
-        userVisibleOutcome: `The requested behavior change works in ${sourceId}.`,
-        verification: `Typecheck and targeted source-scoped code tests validate the requested behavior change for ${sourceId}.`,
+        userVisibleOutcome: `The requested behavior change is validated in ${sourceId}.`,
+        verification: `Typecheck and targeted source-scoped code tests validate the requested behavior change for ${sourceId}; no tracked Playwright spec is planned for this verification mode.`,
         execution: {
           order: index + 1,
           dependsOnWorkItemIds: []
@@ -1424,6 +1443,21 @@ function buildWorkItems(input: {
       scenarioItems.push({
         id,
         type: "playwright-spec",
+        verificationMode: derivePlaywrightVerificationMode(
+          buildPlaywrightSpecs({
+            codeSurface: input.codeSurface,
+            scenario,
+            workItemId: id,
+            title: scenario.title,
+            promptText: input.rawPrompt,
+            scenarioIds: [scenario.id],
+            sourceIds: [sourceId],
+            desiredOutcome: userVisibleOutcome,
+            acceptanceCriteria: relevantAcceptanceCriteria,
+            captureScope,
+            availableSources: input.availableSources
+          })
+        ),
         title: scenario.title,
         description: scenario.goal,
         scenarioIds: [scenario.id],
@@ -1473,6 +1507,20 @@ function buildWorkItems(input: {
       {
         id,
         type: "playwright-spec",
+        verificationMode: derivePlaywrightVerificationMode(
+          buildPlaywrightSpecs({
+            codeSurface: input.codeSurface,
+            workItemId: id,
+            title: `Capture reviewable evidence for ${sourceId}`,
+            promptText: input.rawPrompt,
+            scenarioIds,
+            sourceIds: [sourceId],
+            desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
+            acceptanceCriteria: [],
+            captureScope,
+            availableSources: input.availableSources
+          })
+        ),
         title: `Capture reviewable evidence for ${sourceId}`,
         description: `Generate a QA-runnable Playwright screenshot flow for ${sourceId}.`,
         scenarioIds,
@@ -1510,6 +1558,15 @@ function assertMinimumE2ECoverage(input: {
   workItems: TDDWorkItem[];
 }): void {
   const uncoveredSourceIds = input.sourceIds.filter((sourceId) => {
+    const sourceWorkItems = input.workItems.filter((workItem) => workItem.sourceIds.includes(sourceId));
+    const requiresPlaywrightCoverage = sourceWorkItems.some(
+      (workItem) => workItem.verificationMode !== "targeted-code-validation"
+    );
+
+    if (!requiresPlaywrightCoverage) {
+      return false;
+    }
+
     return !input.workItems.some((workItem) => {
       if (!workItem.sourceIds.includes(sourceId)) {
         return false;
@@ -2312,17 +2369,7 @@ function buildIntentDraft(
           intentType: resolution.intentType
         });
 
-  if (
-    planningDepth === "full"
-    && !shouldPlanIntentStudioLifecycleVerification({
-      codeSurface,
-      sourceIds: resolution.sourceIds,
-      rawPrompt: trimmedPrompt,
-      desiredOutcome,
-      acceptanceCriteria
-    })
-    && !(resolution.intentType === "change-behavior" && codeSurface.id === "orchestrator-and-planning")
-  ) {
+  if (planningDepth === "full") {
     assertMinimumE2ECoverage({
       sourceIds: resolution.sourceIds,
       workItems

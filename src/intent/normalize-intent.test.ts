@@ -520,6 +520,8 @@ test("normalizeIntent maps orchestrator lifecycle rerun prompts to mocked-state 
   assert.equal(normalized.codeSurface?.id, "orchestrator-and-planning");
   assert.equal(normalized.summary, "change behavior for intent-poc-app");
   assert.equal(normalized.businessIntent.workItems.length, 1);
+  assert.equal(normalized.businessIntent.workItems[0]?.type, "playwright-spec");
+  assert.equal(normalized.businessIntent.workItems[0]?.verificationMode, "mocked-state-playwright");
   assert.match(
     normalized.businessIntent.workItems[0]?.verification ?? "",
     /mocked Studio app state/
@@ -539,7 +541,7 @@ test("normalizeIntent maps orchestrator lifecycle rerun prompts to mocked-state 
   );
 });
 
-test("normalizeIntent keeps pure planner change-behavior prompts on the zero-spec code-validation path", () => {
+test("normalizeIntent keeps code-only planner change-behavior prompts on the targeted code-validation path", () => {
   const normalized = normalizeIntent({
     rawPrompt:
       "the planner needs to keep source-lane distribution summaries aligned with linear publishing without changing the Studio UI.",
@@ -550,7 +552,10 @@ test("normalizeIntent keeps pure planner change-behavior prompts on the zero-spe
 
   assert.equal(normalized.intentType, "change-behavior");
   assert.equal(normalized.codeSurface?.id, "orchestrator-and-planning");
+  assert.equal(normalized.businessIntent.workItems[0]?.type, "code-validation");
+  assert.equal(normalized.businessIntent.workItems[0]?.verificationMode, "targeted-code-validation");
   assert.deepEqual(normalized.businessIntent.workItems[0]?.playwright.specs, []);
+  assert.match(normalized.businessIntent.workItems[0]?.verification ?? "", /no tracked Playwright spec is planned/);
 });
 
 test("normalizeIntentWithAgent still generates Playwright specs for Intent Studio behavior fixes when Gemini classifies the prompt as change-behavior", async () => {
