@@ -4,7 +4,7 @@ This directory is the checked-in sample artifact set for the canonical single-so
 
 ## Why This Exists
 
-The original generated run bundle lives under `artifacts/runs/`, but that path is gitignored in this repo. This sample directory keeps the canonical planning and completion artifacts in version control so AI and humans have a stable template to read.
+The live workflow now writes to stable paths under `artifacts/business/` and `artifacts/sources/<sourceId>/`. This sample directory keeps the canonical planning and completion artifacts in version control so AI and humans have a stable template to read.
 
 The bundle is split into two parts:
 
@@ -27,10 +27,9 @@ The JSON snapshots are derived from the real CLI dry-run for the canonical promp
 - `runId`
 - `updatedAt`
 
-The markdown summary snapshots are normalized only where run-specific values appear:
+The markdown summary snapshots are normalized only where audit-only dynamic values appear:
 
 - `Run ID`
-- artifact paths under `artifacts/runs/<generated-run-id>/`
 
 Everything else is kept as the real structured sample output that the runner currently produces.
 

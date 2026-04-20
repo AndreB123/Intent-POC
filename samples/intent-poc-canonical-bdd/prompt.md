@@ -24,4 +24,4 @@ npm run dev -- run --config ./intent-poc.yaml --intent "Create a baseline screen
 - It includes prompt-driven acceptance language through `must`, `should`, and `needs to`.
 - It includes a `so that` business outcome.
 - It exercises planned destinations beyond controller artifacts by mentioning GitHub, documentation, and process-level rollout.
-- It stays on the shared `runIntent` path without relying on the tracked-baseline demo-components special case.
+- It stays on the shared `runIntent` path without relying on the legacy tracked-baseline demo-only special case.

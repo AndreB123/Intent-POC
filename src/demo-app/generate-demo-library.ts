@@ -10,12 +10,19 @@ function shouldSkipPreflightChecks(): boolean {
   return process.argv.includes("--skip-preflight");
 }
 
-function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
+export function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
+  const screenshotRoot = getDemoScreenshotRoot(workspaceRoot);
+
   return [
     path.join(workspaceRoot, "artifacts", "runs", "demo-baseline-captures"),
     path.join(workspaceRoot, "artifacts", "runs", "demo-baseline-diffs"),
     path.join(workspaceRoot, "artifacts", "runs", "demo-compare-captures"),
-    path.join(workspaceRoot, "artifacts", "runs", "demo-compare-diffs")
+    path.join(workspaceRoot, "artifacts", "runs", "demo-compare-diffs"),
+    path.join(screenshotRoot, "demo-catalog"),
+    path.join(screenshotRoot, "demo-components"),
+    path.join(screenshotRoot, "components"),
+    path.join(screenshotRoot, "pages"),
+    path.join(screenshotRoot, "views")
   ];
 }
 
@@ -55,7 +62,7 @@ async function listTrackedScreenshotFiles(rootPath: string): Promise<string[]> {
   return files.flat().sort();
 }
 
-async function runDemoLibrary(): Promise<void> {
+export async function runDemoLibrary(): Promise<void> {
   const workspaceRoot = process.cwd();
   const screenshotRoot = getDemoScreenshotRoot(workspaceRoot);
   const configPath = path.join(workspaceRoot, "intent-poc.yaml");
@@ -96,7 +103,9 @@ async function runDemoLibrary(): Promise<void> {
   });
 }
 
-void runDemoLibrary().catch((error) => {
-  log.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  void runDemoLibrary().catch((error) => {
+    log.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

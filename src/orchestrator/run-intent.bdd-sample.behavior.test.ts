@@ -37,9 +37,7 @@ function normalizePlanLifecycleSnapshot(planLifecycle: PlanLifecycleRecord): Rec
 }
 
 function normalizeSummaryMarkdown(markdown: string): string {
-  return markdown
-    .replace(/- Run ID: .+/g, "- Run ID: <generated-run-id>")
-    .replace(/artifacts\/runs\/[^/\n]+/g, "artifacts/runs/<generated-run-id>");
+  return markdown.replace(/- Run ID: .+/g, "- Run ID: <generated-run-id>");
 }
 
 function assertIntentPocBddSamplePlan(normalizedIntent: NormalizedIntent): void {

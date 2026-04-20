@@ -87,8 +87,8 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Generated Playwright specs: 0
 - Attempts: 0
 - Latest runtime result: not run
-- Summary: artifacts/runs/<generated-run-id>/sources/intent-poc-app/summary.md
-- Manifest: artifacts/runs/<generated-run-id>/sources/intent-poc-app/manifest.json
+- Summary: artifacts/sources/intent-poc-app/summary.md
+- Manifest: artifacts/sources/intent-poc-app/manifest.json
 
 ## Counts
 
@@ -107,6 +107,6 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 
 ## Artifacts
 
-- Manifest: artifacts/runs/<generated-run-id>/manifest.json
-- Hashes: artifacts/runs/<generated-run-id>/hashes.json
-- Comparison: artifacts/runs/<generated-run-id>/comparison.json
+- Manifest: artifacts/business/manifest.json
+- Hashes: artifacts/business/hashes.json
+- Comparison: artifacts/business/comparison.json

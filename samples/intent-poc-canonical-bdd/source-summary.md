@@ -101,10 +101,10 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 
 ## Artifacts
 
-- Manifest: artifacts/runs/<generated-run-id>/sources/intent-poc-app/manifest.json
-- Hashes: artifacts/runs/<generated-run-id>/sources/intent-poc-app/hashes.json
-- Comparison: artifacts/runs/<generated-run-id>/sources/intent-poc-app/comparison.json
-- App log: artifacts/runs/<generated-run-id>/sources/intent-poc-app/logs/app.log
+- Manifest: artifacts/sources/intent-poc-app/manifest.json
+- Hashes: artifacts/sources/intent-poc-app/hashes.json
+- Comparison: artifacts/sources/intent-poc-app/comparison.json
+- App log: artifacts/sources/intent-poc-app/logs/app.log
 
 ## Changed Captures
 

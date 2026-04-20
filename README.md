@@ -217,7 +217,7 @@ The Playwright integration tests validate:
 - baseline screenshot library creation for component-like pages
 - drift detection between baseline and comparison runs
 
-The tracked demo screenshot workflow is also part of the default test command, so `npm test` can leave pending PNG diffs under `artifacts/library/demo-components/` when rendered output changes.
+The tracked demo screenshot workflow is also part of the default test command, so `npm test` can leave pending PNG diffs under `artifacts/library/intent-poc-app/` when rendered output changes.
 
 `npm test` remains the authoritative full-coverage command. `npm run test:changed` is only a conservative local shortcut and defaults unknown paths to the full workflow.
 
@@ -242,22 +242,30 @@ The repo now includes a checked-in canonical BDD sample artifact set under `samp
 
 - `normalized-intent.json` is the machine-readable dry-run snapshot for the canonical `demo-catalog` intent.
 - `plan-lifecycle.json` is the corresponding dry-run lifecycle snapshot.
-- `README.md` explains the sample prompt, why `artifacts/runs/` is not the right persistent home, and how the sample is verified.
+- `README.md` explains the sample prompt, the stable `artifacts/` contract, and how the sample is verified.
 
-These files are intentionally checked in because `artifacts/runs/` is gitignored. The executable sample suite in `src/orchestrator/run-intent.bdd-sample.behavior.test.ts` verifies that fresh dry-run outputs still match the checked-in snapshots.
+These files are intentionally checked in because they define the repo's canonical stable artifact shape. The executable sample suite in `src/orchestrator/run-intent.bdd-sample.behavior.test.ts` verifies that fresh dry-run outputs still match the checked-in snapshots.
 
 ## Output
 
-### Transient Run Artifacts
+### Persistent Artifacts
 
-Run bundles are written to `artifacts/runs/<runId>/` (gitignored). Each run captures:
-- per-source evidence: `sources/<sourceId>/`
-  - `manifest.json` — run metadata: captures array, comparison summary, intent intent
-  - `hashes.json` — SHA256 fingerprints for each captured image (for fast comparison)
-  - `comparison.json` — full pixel-diff results: status, counts, baseline/current/diff paths  
-  - `sources/<sourceId>/captures/*` — raw captured images
-  - `sources/<sourceId>/diffs/*` — pixel-diff visualizations (for changed captures only)
-- plan lifecycle metadata: `plan-lifecycle.json` — normalized intent, source selection, Linear issue refs, execution transcript
+The workflow writes to one deterministic artifact tree under `artifacts/`:
+- business-level evidence under `artifacts/business/`
+	- `normalized-intent.json`
+	- `plan-lifecycle.json`
+	- `manifest.json`
+	- `hashes.json`
+	- `comparison.json`
+	- `summary.md`
+- per-source evidence under `artifacts/sources/<sourceId>/`
+	- `manifest.json`
+	- `hashes.json`
+	- `comparison.json`
+	- `summary.md`
+	- `captures/*`
+	- `diffs/*`
+	- `logs/*`
 
 ### Deterministic Screenshot Library
 
@@ -271,20 +279,19 @@ Screenshot library is maintained at `artifacts/library/<sourceId>/` (Git-tracked
 - `artifacts/library/<sourceId>/userflows/*.png`
 - `artifacts/library/<sourceId>/manifest.json` — lightweight metadata: capture count, drift summary, intent
 
-The manifest files are lightweight metadata for potential future UI consumption. Hashes and full comparison data are intentionally excluded—Git handles SHA tracking, and comparison results are ephemeral run-scoped outputs.
+The library manifests are lightweight metadata for potential future UI consumption. Business and source manifests, hashes, and comparison outputs live in the same stable tree so downstream tooling can rely on fixed locations.
 
 ### Demo Tracked Screenshots  
 
-Built-in demo surfaces now write to the canonical source-of-truth root under `artifacts/library/demo-components/`. These are updated by `npm test` and `npm run demo:library`:
+Built-in demo surfaces now write to the canonical source-of-truth root under `artifacts/library/intent-poc-app/`. These are updated by `npm test` and `npm run demo:library`:
 
 
-- `artifacts/library/demo-components/components/*.png`
-- `artifacts/library/demo-components/views/*.png`
-- `artifacts/library/demo-components/pages/*.png`
+- `artifacts/library/intent-poc-app/components/*.png`
+- `artifacts/library/intent-poc-app/views/*.png`
+- `artifacts/library/intent-poc-app/pages/*.png`
 
-	- run manifests and hashes stay in `artifacts/runs/<runId>/` rather than cluttering the tracked screenshot tree
-	- the workflow stages captures in run artifacts and then upserts into the flat library tree
-	- the command does not generate demo diff PNGs; review image changes through Git
+- business and source manifests stay under `artifacts/business/` and `artifacts/sources/intent-poc-app/`
+- the command does not generate demo diff PNGs for review; image review happens through Git
 - summaries are written as markdown and JSON artifacts
 
 To publish artifacts into the source repo as well:
@@ -296,10 +303,10 @@ To publish artifacts into the source repo as well:
 - Artifacts are controller-owned by default. The source repo is not modified unless storage mode is configured to publish back into the source workspace.
 - Multiple source repos are supported through multiple `sources` profiles in one config.
 - Each source can now carry `planning` metadata so the planner can describe repo identity, role, and notes separately from capture/runtime settings.
-- `demo:library` now routes through the shared `runIntent` pipeline using the `demo-components` source profile plus tracked baseline output, instead of maintaining a separate capture implementation.
+- `demo:library` now routes through the shared `runIntent` pipeline using the `intent-poc-app` source profile plus tracked baseline output, instead of maintaining a separate capture implementation.
 - `demo:library` runs `npm run typecheck` and `npm run test:code` before it upserts tracked screenshots, and `npm test` runs the code tests before invoking the tracked refresh directly.
 - `run.resumeIssue` or `--resume-issue` lets the planner attach to an existing Linear parent issue and update only planner-managed IDD sections.
-- `run.trackedBaseline` or `--tracked-baseline` stages captures under the run artifacts and upserts them into a configured source `capture.trackedRoot`; this is currently used by the built-in `demo-components` source.
+- The persistent artifact contract does not use per-run directories. Captures, summaries, manifests, and comparison output are written to stable business/source paths, and tracked screenshots are upserted into the matching library tree.
 - The prompt entrypoint is intentionally unstructured. The runner converts it into a bounded internal plan.
 - The implementation now supports an optional Gemini-backed prompt interpretation stage and an optional Gemini-backed intent-planning stage; execution, capture, comparison, and artifact publishing remain deterministic.
 
@@ -315,7 +322,7 @@ The demo library currently regenerates 46 tracked screenshots from the internal 
 - 12 views
 - 8 pages
 
-Each screenshot is written into the matching layer folder under `artifacts/library/demo-components/`, so relationships stay obvious and Git can review the PNG changes directly.
+Each screenshot is written into the matching layer folder under `artifacts/library/intent-poc-app/`, so relationships stay obvious and Git can review the PNG changes directly.
 
 When editing demo-app UI, extract reusable render helpers/components from Intent Studio first and adapt the `/library` surfaces onto that shared layer. Do not treat the primitive/component/view/page catalog renderers as an independent source of truth.
 

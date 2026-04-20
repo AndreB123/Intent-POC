@@ -17,7 +17,8 @@ export async function updateScreenshotLibrary(input: {
   captures: CaptureOutcome[];
   normalizedIntent: NormalizedIntent;
 }): Promise<ScreenshotLibraryResult> {
-  const sourceLibraryRoot = path.join(input.config.artifacts.libraryRoot, input.sourceId);
+  const libraryRoot = input.config.artifacts.libraryRoot ?? path.join(input.config.artifacts.root, "library");
+  const sourceLibraryRoot = path.join(libraryRoot, input.sourceId);
 
   await ensureDirectory(sourceLibraryRoot);
 
@@ -42,7 +43,7 @@ export async function updateScreenshotLibrary(input: {
   });
 
   return {
-    libraryRoot: input.config.artifacts.libraryRoot,
+    libraryRoot,
     sourceLibraryRoot
   };
 }

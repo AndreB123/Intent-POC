@@ -9,27 +9,28 @@ The current wrappers are intentional:
 - `src/demo-app/generate-demo-library.ts` is a convenience wrapper that now routes tracked demo screenshot regeneration through `runIntent` instead of maintaining a separate implementation.
 
 ## Screenshot Workflows
-There are two screenshot storage contracts in this repo.
+There is one persistent artifact contract in this repo, rooted under `artifacts/`.
 
-Generic sources use the artifact pipeline:
-- captures under `artifacts/runs/<runId>/sources/<sourceId>/captures`
-- comparison output under the same run directory
-- screenshot library under `artifacts/library/<sourceId>/`
+Persistent artifacts use fixed deterministic paths:
+- business-level artifacts under `artifacts/business/`
+- per-source artifacts under `artifacts/sources/<sourceId>/`
+- tracked screenshots under `artifacts/library/<sourceId>/`
 - approved baselines under `artifacts/library/<sourceId>/{components,views,pages,bdd,userflows}`
 
-The built-in demo surface catalog uses a tracked screenshot contract:
-- source id: `demo-components`
-- tracked root: `artifacts/library/demo-components/{components,views,pages}`
-- review happens through Git image diffs, not generated demo diff PNGs
-- captures are staged under the run artifacts first and then upserted into the tracked root only after validation succeeds
+Do not introduce per-run artifact directories as a durable output model. `runId` may exist as audit metadata inside files, but it must not control persistent folder naming or file locations.
 
-Do not introduce another screenshot pipeline for demo surfaces. If the behavior needs to change, extend the tracked-baseline branch in `runIntent` or promote that behavior into a reusable generic capability.
-Do not delete `artifacts/library/demo-components/` before regeneration. Preserve existing tracked screenshots until staged captures and validation have succeeded.
+The built-in demo surface catalog uses the same persistent contract:
+- source id: `intent-poc-app`
+- tracked root: `artifacts/library/intent-poc-app/{components,views,pages}`
+- review happens through Git image diffs, not generated demo diff PNGs
+
+Do not introduce another screenshot pipeline for demo surfaces. If the behavior needs to change, extend `runIntent` or promote that behavior into a reusable generic capability.
+Do not delete `artifacts/library/intent-poc-app/` before regeneration. Preserve existing tracked screenshots until replacement output has been written successfully.
 
 ## Config Conventions
 The sample config in `intent-poc.yaml` is the source of truth for runnable sources. If a built-in demo source needs many captures, prefer a config-declared catalog or helper-backed expansion over copying large inline capture lists into scripts.
 
-`demo-components` intentionally uses the built-in `demo-surface-catalog` capture catalog and a tracked screenshot root. Keep that source aligned with `src/demo-app/model/catalog.ts`, `src/demo-app/capture/build-capture-items.ts`, and `src/demo-app/capture/screenshot-paths.ts`.
+`intent-poc-app` intentionally uses the built-in `demo-surface-catalog` capture catalog and the tracked screenshot root. Keep that source aligned with `src/demo-app/model/catalog.ts`, `src/demo-app/capture/build-capture-items.ts`, and `src/demo-app/capture/screenshot-paths.ts`.
 
 ## Demo UI Architecture
 Intent Studio at `/` is the source of truth for reusable demo-app UI. The `/library` catalog must stay a stable showcase and screenshot surface, but it should be backed by shared app render helpers/components rather than a second parallel mock UI tree.
@@ -47,7 +48,7 @@ When changing the demo surface catalog or screenshot path mapping:
 - update the catalog-driven helpers first
 - remember that `npm test` now refreshes the tracked demo screenshot set; use `npm run demo:library` when you want to force the refresh directly
 - use `npm run test:changed` only as a conservative local shortcut; it must escalate demo, theme, capture, evidence, config, and orchestrator changes to the full `npm test` workflow
-- verify Git shows the PNG changes under `artifacts/library/demo-components/`
+- verify Git shows the PNG changes under `artifacts/library/intent-poc-app/`
 - treat screenshot refresh as an upsert workflow: existing tracked screenshots should survive failed validation or failed captures
 
 ## Verification

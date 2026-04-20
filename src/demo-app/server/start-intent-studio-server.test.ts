@@ -100,7 +100,7 @@ async function writeStudioConfig(configPath: string, tmpDir: string): Promise<vo
       "  browser: chromium",
       "artifacts:",
       "  storageMode: controller",
-      "  runRoot: ./artifacts/runs",
+      "  root: ./artifacts",
       "comparison:",
       "  hashAlgorithm: sha256",
       "run:",
@@ -541,8 +541,8 @@ test("startIntentStudioServer exposes controller-relative capture paths for Stud
   });
 
   const runId = "run-1";
-  const captureOutputPath = path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "captures", "result.png");
-  const expectedImagePath = path.join("artifacts", "runs", runId, "sources", "app", "captures", "result.png");
+  const captureOutputPath = path.join(tmpDir, "artifacts", "sources", "app", "captures", "result.png");
+  const expectedImagePath = path.join("artifacts", "sources", "app", "captures", "result.png");
 
   const mockedRunIntent = async (): Promise<RunIntentResult> => ({
     status: "completed",
@@ -552,32 +552,32 @@ test("startIntentStudioServer exposes controller-relative capture paths for Stud
     paths: {
       runId,
       controllerRoot: tmpDir,
-      runDir: path.join(tmpDir, "artifacts", "runs", runId),
-      sourcesDir: path.join(tmpDir, "artifacts", "runs", runId, "sources"),
-      logsDir: path.join(tmpDir, "artifacts", "runs", runId, "logs"),
-      normalizedIntentPath: path.join(tmpDir, "artifacts", "runs", runId, "normalized-intent.json"),
-      linearPath: path.join(tmpDir, "artifacts", "runs", runId, "linear.json"),
-      planLifecyclePath: path.join(tmpDir, "artifacts", "runs", runId, "plan-lifecycle.json"),
-      summaryPath: path.join(tmpDir, "artifacts", "runs", runId, "summary.md"),
-      manifestPath: path.join(tmpDir, "artifacts", "runs", runId, "manifest.json"),
-      hashesPath: path.join(tmpDir, "artifacts", "runs", runId, "hashes.json"),
-      comparisonPath: path.join(tmpDir, "artifacts", "runs", runId, "comparison.json"),
+      runDir: path.join(tmpDir, "artifacts", "business"),
+      sourcesDir: path.join(tmpDir, "artifacts", "sources"),
+      logsDir: path.join(tmpDir, "artifacts", "logs"),
+      normalizedIntentPath: path.join(tmpDir, "artifacts", "business", "normalized-intent.json"),
+      linearPath: path.join(tmpDir, "artifacts", "business", "linear.json"),
+      planLifecyclePath: path.join(tmpDir, "artifacts", "business", "plan-lifecycle.json"),
+      summaryPath: path.join(tmpDir, "artifacts", "business", "summary.md"),
+      manifestPath: path.join(tmpDir, "artifacts", "business", "manifest.json"),
+      hashesPath: path.join(tmpDir, "artifacts", "business", "hashes.json"),
+      comparisonPath: path.join(tmpDir, "artifacts", "business", "comparison.json"),
       sourceRuns: {
         app: {
           runId,
           sourceId: "app",
           controllerRoot: tmpDir,
-          sourceDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app"),
-          attemptsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "attempts"),
-          capturesDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "captures"),
-          diffsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "diffs"),
-          logsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs"),
+          sourceDir: path.join(tmpDir, "artifacts", "sources", "app"),
+          attemptsDir: path.join(tmpDir, "artifacts", "sources", "app", "attempts"),
+          capturesDir: path.join(tmpDir, "artifacts", "sources", "app", "captures"),
+          diffsDir: path.join(tmpDir, "artifacts", "sources", "app", "diffs"),
+          logsDir: path.join(tmpDir, "artifacts", "sources", "app", "logs"),
           baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
-          appLogPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs", "app.log"),
-          manifestPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "manifest.json"),
-          hashesPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "hashes.json"),
-          comparisonPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "comparison.json"),
-          summaryPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "summary.md")
+          appLogPath: path.join(tmpDir, "artifacts", "sources", "app", "logs", "app.log"),
+          manifestPath: path.join(tmpDir, "artifacts", "sources", "app", "manifest.json"),
+          hashesPath: path.join(tmpDir, "artifacts", "sources", "app", "hashes.json"),
+          comparisonPath: path.join(tmpDir, "artifacts", "sources", "app", "comparison.json"),
+          summaryPath: path.join(tmpDir, "artifacts", "sources", "app", "summary.md")
         }
       }
     },
@@ -591,17 +591,17 @@ test("startIntentStudioServer exposes controller-relative capture paths for Stud
           runId,
           sourceId: "app",
           controllerRoot: tmpDir,
-          sourceDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app"),
-          attemptsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "attempts"),
-          capturesDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "captures"),
-          diffsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "diffs"),
-          logsDir: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs"),
+          sourceDir: path.join(tmpDir, "artifacts", "sources", "app"),
+          attemptsDir: path.join(tmpDir, "artifacts", "sources", "app", "attempts"),
+          capturesDir: path.join(tmpDir, "artifacts", "sources", "app", "captures"),
+          diffsDir: path.join(tmpDir, "artifacts", "sources", "app", "diffs"),
+          logsDir: path.join(tmpDir, "artifacts", "sources", "app", "logs"),
           baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
-          appLogPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "logs", "app.log"),
-          manifestPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "manifest.json"),
-          hashesPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "hashes.json"),
-          comparisonPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "comparison.json"),
-          summaryPath: path.join(tmpDir, "artifacts", "runs", runId, "sources", "app", "summary.md")
+          appLogPath: path.join(tmpDir, "artifacts", "sources", "app", "logs", "app.log"),
+          manifestPath: path.join(tmpDir, "artifacts", "sources", "app", "manifest.json"),
+          hashesPath: path.join(tmpDir, "artifacts", "sources", "app", "hashes.json"),
+          comparisonPath: path.join(tmpDir, "artifacts", "sources", "app", "comparison.json"),
+          summaryPath: path.join(tmpDir, "artifacts", "sources", "app", "summary.md")
         },
         captures: [
           {

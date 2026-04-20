@@ -610,7 +610,7 @@ test("executeImplementationStage Given a planned ad hoc spec target When validat
         operations: [
           {
             operation: "create",
-            filePath: "demo-catalog/work-1-verify-dark-mode-toggle-appearance-in-demo-catalog.spec.ts",
+            filePath: "demo-catalog/verify-dark-mode-toggle-appearance.spec.ts",
             rationale: "Add a verification spec for the requested UI change."
           }
         ],
@@ -649,7 +649,7 @@ test("executeImplementationStage Given an existing rogue spec file When validati
   try {
     await fs.mkdir(path.join(rootDir, "demo-catalog"), { recursive: true });
     await fs.writeFile(
-      path.join(rootDir, "demo-catalog", "work-1-verify-dark-mode-toggle-appearance-in-demo-catalog.spec.ts"),
+      path.join(rootDir, "demo-catalog", "verify-dark-mode-toggle-appearance.spec.ts"),
       "test('rogue spec', () => {});\n"
     );
 
@@ -658,7 +658,7 @@ test("executeImplementationStage Given an existing rogue spec file When validati
         operations: [
           {
             operation: "replace",
-            filePath: "demo-catalog/work-1-verify-dark-mode-toggle-appearance-in-demo-catalog.spec.ts",
+            filePath: "demo-catalog/verify-dark-mode-toggle-appearance.spec.ts",
             rationale: "Update the verification spec content."
           }
         ],

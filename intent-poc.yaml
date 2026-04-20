@@ -99,13 +99,12 @@ playwright:
   disableAnimations: true
 artifacts:
   storageMode: controller
-  runRoot: ./artifacts/runs
+  root: ./artifacts
   libraryRoot: ./artifacts/library
   copyToSourcePath: .intent-poc/artifacts
   writeMarkdownSummary: true
   writeJsonSummary: true
-  retainRuns: 20
-  cleanBeforeRun: false
+  cleanBeforeRun: true
 comparison:
   enabled: true
   hashAlgorithm: sha256

@@ -144,7 +144,7 @@
             {
               "framework": "playwright",
               "sourceId": "intent-poc-app",
-              "relativeSpecPath": "intent-poc-app/work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.spec.ts",
+              "relativeSpecPath": "intent-poc-app/verify-behavior-visually-for-intent-poc-app.spec.ts",
               "suiteName": "Intent-driven flow for intent-poc-app",
               "testName": "Behavior is verified visually for applicable sources",
               "scenarioIds": [

@@ -201,7 +201,6 @@ export interface RunIntentDependencies {
   writePlanLifecycleFile: typeof writePlanLifecycleFile;
   writeBusinessEvidenceFiles: typeof writeBusinessEvidenceFiles;
   writeBusinessSummaryMarkdown: typeof writeBusinessSummaryMarkdown;
-  retainRecentRuns: typeof retainRecentRuns;
 }
 
 export interface QAVerificationCommandPlan {
@@ -2259,8 +2258,7 @@ function createDefaultRunIntentDependencies(): RunIntentDependencies {
     writeJsonFile,
     writePlanLifecycleFile,
     writeBusinessEvidenceFiles,
-    writeBusinessSummaryMarkdown,
-    retainRecentRuns
+    writeBusinessSummaryMarkdown
   };
 }
 
@@ -2502,7 +2500,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
         planLifecyclePath: toRelativePath(paths.controllerRoot, paths.planLifecyclePath)
       });
 
-      await dependencies.retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
       return {
         status: "completed",
         sourceId: normalizedIntent.executionPlan.primarySourceId,
@@ -2652,8 +2649,6 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       errors,
       linearIssueUrl: linearPublication.parentIssue?.url
     }, status === "completed" ? "info" : "error");
-
-    await dependencies.retainRecentRuns(config.artifacts.runRoot, config.artifacts.retainRuns);
 
     return {
       status,

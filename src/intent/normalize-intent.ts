@@ -443,9 +443,11 @@ function buildScenarios(input: {
   }));
 }
 
-function buildPlaywrightSpecRelativePath(sourceId: string, workItemId: string): string {
+function buildPlaywrightSpecRelativePath(sourceId: string, workItemTitle: string, fallbackWorkItemId: string): string {
   const sourceSegment = sanitizeFileSegment(sourceId) || "source";
-  const workItemSegment = sanitizeFileSegment(workItemId) || "work-item";
+  const workItemSegment = sanitizeFileSegment(workItemTitle)
+    || sanitizeFileSegment(fallbackWorkItemId)
+    || "generated-playwright-test";
   return `${sourceSegment}/${workItemSegment}.spec.ts`;
 }
 
@@ -735,7 +737,7 @@ function buildIntentStudioLifecycleMockState(input: {
         }
       ],
       artifacts: {
-        summaryPath: `artifacts/runs/${runId}/summary.md`
+        summaryPath: "artifacts/business/summary.md"
       }
     },
     recentRuns: [],
@@ -902,7 +904,7 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
 
   if (isResultsLinkFlow) {
     const runId = "2026-04-16T00-00-00-000Z-intent-poc-app";
-    const imagePath = `artifacts/runs/${runId}/sources/intent-poc-app/captures/verify-screenshot-artifact-linking.png`;
+    const imagePath = "artifacts/sources/intent-poc-app/captures/verify-screenshot-artifact-linking.png";
     const expectedFileUrl = toFileUrlPath(imagePath) ?? "#";
     const mockStudioState: Record<string, unknown> = {
       configPath: "intent-poc.yaml",
@@ -951,7 +953,7 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         ],
         sourceRuns: [],
         artifacts: {
-          summaryPath: `artifacts/runs/${runId}/summary.md`
+          summaryPath: "artifacts/business/summary.md"
         }
       },
       recentRuns: [],
@@ -1165,7 +1167,7 @@ function buildPlaywrightSpecs(input: {
     return {
       framework: "playwright",
       sourceId,
-      relativeSpecPath: buildPlaywrightSpecRelativePath(sourceId, input.workItemId),
+      relativeSpecPath: buildPlaywrightSpecRelativePath(sourceId, input.title, input.workItemId),
       suiteName: `Intent-driven flow for ${sourceId}`,
       testName: input.title,
       scenarioIds: input.scenarioIds,

@@ -73,7 +73,7 @@ function buildConfig(baseUrl: string) {
     },
     artifacts: {
       storageMode: "controller",
-      runRoot: "./artifacts/runs"
+      root: "./artifacts"
     },
     comparison: {
       enabled: true,

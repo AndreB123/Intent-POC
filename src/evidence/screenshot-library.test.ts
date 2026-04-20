@@ -75,7 +75,7 @@ function buildConfig(tmpRoot: string) {
     },
     artifacts: {
       storageMode: "controller",
-      runRoot: path.join(tmpRoot, "runs"),
+      root: tmpRoot,
       libraryRoot: path.join(tmpRoot, "library")
     },
     comparison: {

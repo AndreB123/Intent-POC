@@ -556,7 +556,7 @@ test("normalizeIntent routes results-page screenshot linking prompts through Int
   assert.equal(resultsSpec?.checkpoints[2]?.attributeName, "href");
   assert.equal(
     resultsSpec?.checkpoints[1]?.expectedSubstring,
-    toFileUrlPath("artifacts/runs/2026-04-16T00-00-00-000Z-intent-poc-app/sources/intent-poc-app/captures/verify-screenshot-artifact-linking.png")
+    toFileUrlPath("artifacts/sources/intent-poc-app/captures/verify-screenshot-artifact-linking.png")
   );
   assert.equal(resultsSpec?.checkpoints[0]?.waitForSelector, "#captures .capture-card img");
 });

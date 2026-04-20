@@ -1,5 +1,4 @@
 import path from "node:path";
-import { promises as fs } from "node:fs";
 import { LoadedConfig } from "../config/load-config";
 import { ensureDirectory, removeDirectory, sanitizeFileSegment } from "../shared/fs";
 
@@ -43,16 +42,22 @@ export async function createRunPaths(
   const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
   const sourceScope = sourceIds.length === 1 ? sourceIds[0] : `${sourceIds.length}-sources`;
   const runId = `${timestamp}-${sanitizeFileSegment(sourceScope)}`;
-  const runDir = path.join(loadedConfig.config.artifacts.runRoot, runId);
+  const artifactRoot = loadedConfig.config.artifacts.root;
+  const libraryRoot = loadedConfig.config.artifacts.libraryRoot ?? path.join(artifactRoot, "library");
+  const runDir = path.join(artifactRoot, "business");
+  const sourcesDir = path.join(artifactRoot, "sources");
+  const logsDir = path.join(artifactRoot, "logs");
 
   if (loadedConfig.config.artifacts.cleanBeforeRun) {
     await removeDirectory(runDir);
+    await removeDirectory(sourcesDir);
+    await removeDirectory(logsDir);
   }
 
   const sourceRuns = Object.fromEntries(
     sourceIds.map((sourceId) => {
-      const sourceDir = path.join(runDir, "sources", sourceId);
-      const baselineSourceDir = path.join(loadedConfig.config.artifacts.libraryRoot, sourceId);
+      const sourceDir = path.join(sourcesDir, sourceId);
+      const baselineSourceDir = path.join(libraryRoot, sourceId);
 
       return [
         sourceId,
@@ -80,8 +85,8 @@ export async function createRunPaths(
     controllerRoot: loadedConfig.configDir,
     runId,
     runDir,
-    sourcesDir: path.join(runDir, "sources"),
-    logsDir: path.join(runDir, "logs"),
+    sourcesDir,
+    logsDir,
     normalizedIntentPath: path.join(runDir, "normalized-intent.json"),
     linearPath: path.join(runDir, "linear.json"),
     planLifecyclePath: path.join(runDir, "plan-lifecycle.json"),
@@ -125,22 +130,6 @@ export function toFileUrlPath(relativePath?: string): string | undefined {
 }
 
 export async function retainRecentRuns(runRoot: string, keepCount: number): Promise<void> {
-  await ensureDirectory(runRoot);
-  const entries = await fs.readdir(runRoot, { withFileTypes: true });
-  const runDirs = entries.filter((entry) => entry.isDirectory()).map((entry) => path.join(runRoot, entry.name));
-
-  if (runDirs.length <= keepCount) {
-    return;
-  }
-
-  const sorted = await Promise.all(
-    runDirs.map(async (entry) => ({
-      path: entry,
-      modifiedAt: (await fs.stat(entry)).mtimeMs
-    }))
-  );
-
-  sorted.sort((left, right) => right.modifiedAt - left.modifiedAt);
-  const toDelete = sorted.slice(keepCount);
-  await Promise.all(toDelete.map((entry) => removeDirectory(entry.path)));
+  void runRoot;
+  void keepCount;
 }

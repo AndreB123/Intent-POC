@@ -26,7 +26,7 @@ export async function publishArtifactsToSourceIfConfigured(input: {
   const sourceOutputDir = path.resolve(
     input.workspace.rootDir,
     input.config.artifacts.copyToSourcePath,
-    input.paths.runId
+    input.sourcePaths.sourceId
   );
 
   await ensureDirectory(sourceOutputDir);

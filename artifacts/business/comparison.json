@@ -1,0 +1,30 @@
+{
+  "runId": "2026-04-20T20-22-07-275Z-intent-poc-app",
+  "status": "completed",
+  "errors": [],
+  "hasDrift": false,
+  "counts": {
+    "baseline-written": 0,
+    "unchanged": 0,
+    "changed": 0,
+    "missing-baseline": 0,
+    "capture-failed": 0,
+    "diff-error": 0
+  },
+  "sources": [
+    {
+      "sourceId": "intent-poc-app",
+      "status": "completed",
+      "hasDrift": false,
+      "counts": {
+        "baseline-written": 0,
+        "unchanged": 0,
+        "changed": 0,
+        "missing-baseline": 0,
+        "capture-failed": 0,
+        "diff-error": 0
+      },
+      "items": []
+    }
+  ]
+}

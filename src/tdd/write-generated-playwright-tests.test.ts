@@ -142,7 +142,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
                 {
                   framework: "playwright",
                   sourceId: "demo-catalog",
-                  relativeSpecPath: "demo-catalog/work-1-collapse-configuration-section-demo-catalog.spec.ts",
+                  relativeSpecPath: "demo-catalog/collapse-configuration-section.spec.ts",
                   suiteName: "Intent-driven flow for demo-catalog",
                   testName: "Collapse configuration section",
                   scenarioIds: [],
@@ -295,7 +295,7 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
                 {
                   framework: "playwright",
                   sourceId: "demo-catalog",
-                  relativeSpecPath: "demo-catalog/work-1-verify-prompt-layout-demo-catalog.spec.ts",
+                  relativeSpecPath: "demo-catalog/verify-prompt-layout.spec.ts",
                   suiteName: "Intent-driven flow for demo-catalog",
                   testName: "Verify prompt layout",
                   scenarioIds: [],
@@ -447,7 +447,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                 {
                   framework: "playwright",
                   sourceId: "demo-catalog",
-                  relativeSpecPath: "demo-catalog/work-1-verify-results-links-demo-catalog.spec.ts",
+                  relativeSpecPath: "demo-catalog/verify-results-links.spec.ts",
                   suiteName: "Intent-driven flow for demo-catalog",
                   testName: "Verify results links",
                   scenarioIds: [],
@@ -499,7 +499,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                               captureId: "result",
                               status: "captured",
                               url: "/results",
-                              imagePath: "artifacts/runs/run-1/sources/demo-catalog/captures/result.png"
+                              imagePath: "artifacts/sources/demo-catalog/captures/result.png"
                             }
                           ],
                           sourceRuns: [],
@@ -511,24 +511,24 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                     },
                     {
                       id: "checkpoint-image-src",
-                      label: "Capture Preview Uses Run Artifact Path",
+                      label: "Capture Preview Uses Stable Artifact Path",
                       action: "assert-attribute-contains",
                       assertion: "The results page capture previews link to the generated images.",
                       screenshotId: "results-page-image-src",
                       target: "#captures .capture-card img",
                       attributeName: "src",
-                      expectedSubstring: toFileUrlPath("artifacts/runs/run-1/sources/demo-catalog/captures/result.png") ?? "",
+                      expectedSubstring: toFileUrlPath("artifacts/sources/demo-catalog/captures/result.png") ?? "",
                       waitForSelector: "#captures .capture-card img"
                     },
                     {
                       id: "checkpoint-link-href",
-                      label: "Capture Link Uses Run Artifact Path",
+                      label: "Capture Link Uses Stable Artifact Path",
                       action: "assert-attribute-contains",
                       assertion: "The results page capture previews link to the generated images.",
                       screenshotId: "results-page-link-href",
                       target: "#captures .capture-card .capture-links a",
                       attributeName: "href",
-                      expectedSubstring: toFileUrlPath("artifacts/runs/run-1/sources/demo-catalog/captures/result.png") ?? "",
+                      expectedSubstring: toFileUrlPath("artifacts/sources/demo-catalog/captures/result.png") ?? "",
                       waitForSelector: "#captures .capture-card .capture-links a"
                     }
                   ]
@@ -615,7 +615,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
     assert.equal(generatedContent.includes('await page.route("**/api/events", async (route) => {'), true);
     assert.equal(generatedContent.includes('const attributeValue = await target.getAttribute("src");'), true);
     assert.equal(
-      generatedContent.includes('expect(attributeValue ?? "", "The results page capture previews link to the generated images.").toContain("/files/artifacts%2Fruns%2Frun-1%2Fsources%2Fdemo-catalog%2Fcaptures%2Fresult.png");'),
+      generatedContent.includes('expect(attributeValue ?? "", "The results page capture previews link to the generated images.").toContain("/files/artifacts%2Fsources%2Fdemo-catalog%2Fcaptures%2Fresult.png");'),
       true
     );
   } finally {

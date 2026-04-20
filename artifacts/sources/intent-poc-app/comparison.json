@@ -1,0 +1,35 @@
+{
+  "runId": "2026-04-20T20-22-07-275Z-intent-poc-app",
+  "sourceId": "intent-poc-app",
+  "status": "completed",
+  "businessIntent": {
+    "statement": "Create a baseline for the deterministic screenshot library for the built-in demo surface catalog.",
+    "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
+    "sourceIds": [
+      "intent-poc-app"
+    ],
+    "destinationIds": [
+      "controller-artifacts",
+      "linear-parent-issue",
+      "source-workspace"
+    ]
+  },
+  "hasDrift": false,
+  "counts": {
+    "baseline-written": 0,
+    "unchanged": 0,
+    "changed": 0,
+    "missing-baseline": 0,
+    "capture-failed": 0,
+    "diff-error": 0
+  },
+  "captureCoverage": {
+    "configuredCaptureCount": 47,
+    "executedCaptureCount": 47,
+    "scopeMode": "all",
+    "scopeCaptureIds": []
+  },
+  "warnings": [],
+  "comparisonIssues": [],
+  "items": []
+}

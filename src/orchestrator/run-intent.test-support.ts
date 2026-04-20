@@ -213,12 +213,11 @@ export function buildBehaviorTestConfig(rootDir: string, options: BehaviorTestCo
     },
     artifacts: {
       storageMode: options.storageMode ?? "controller",
-      runRoot: path.join(rootDir, "artifacts", "runs"),
+      root: path.join(rootDir, "artifacts"),
       libraryRoot: path.join(rootDir, "artifacts", "library"),
       writeMarkdownSummary: true,
       writeJsonSummary: true,
-      retainRuns: 20,
-      cleanBeforeRun: false
+      cleanBeforeRun: true
     },
     comparison: {
       enabled: true,
