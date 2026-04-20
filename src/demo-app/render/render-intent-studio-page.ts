@@ -1,4 +1,6 @@
 import { AGENT_STAGE_DEFINITIONS, AGENT_STAGE_SEQUENCE, GEMINI_MODEL_OPTIONS } from "../../intent/agent-stage-config";
+import { renderSelectionCard } from "../shared/render-content-cards";
+import { renderButton, renderTextInput } from "../shared/render-controls";
 
 function escapeHtml(value: string): string {
   return value
@@ -1155,7 +1157,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                       </label>
                       <div class="submit-row">
                         <span class="notice" id="form-note">No run in progress.</span>
-                        <button class="primary-button" id="submit-button" type="submit">Run intent</button>
+                        ${renderButton({ label: "Run intent", className: "primary-button", id: "submit-button", type: "submit" })}
                       </div>
                     </div>
                   </div>
@@ -1163,8 +1165,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                     <div class="field-head">
                       <label>Work scope</label>
                       <div class="field-actions">
-                        <button type="button" class="ghost-link" id="toggle-work-scope-visibility">Collapse</button>
-                        <button type="button" class="ghost-link" id="toggle-source-editor">Edit Source Metadata</button>
+                        ${renderButton({ label: "Collapse", className: "ghost-link", id: "toggle-work-scope-visibility", type: "button" })}
+                        ${renderButton({ label: "Edit Source Metadata", className: "ghost-link", id: "toggle-source-editor", type: "button" })}
                         <a class="ghost-link" id="config-editor-link" href="#">Open config in editor</a>
                         <a class="ghost-link" id="config-file-link" href="#">View YAML</a>
                       </div>
@@ -1180,7 +1182,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 <div class="agent-stages-section">
                   <div class="field-head">
                     <label>AI Orchestration Stages</label>
-                    <button type="button" class="ghost-link" id="toggle-stages-visibility">Collapse</button>
+                    ${renderButton({ label: "Collapse", className: "ghost-link", id: "toggle-stages-visibility", type: "button" })}
                   </div>
                   <div id="steps-panel">
                     <div class="agent-stages-grid" id="agent-stages-grid">
@@ -1209,17 +1211,17 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                   </div>
                   <div class="field">
                     <label for="source-editor-display-name">Display name</label>
-                    <input id="source-editor-display-name" type="text" placeholder="Current app" />
+                    ${renderTextInput({ id: "source-editor-display-name", placeholder: "Current app" })}
                     <div class="field-note">Shown on work scope cards and plan summaries. Leave blank to fall back to the repo label or configured id.</div>
                   </div>
                   <div class="field">
                     <label for="source-editor-repo-label">Repo label</label>
-                    <input id="source-editor-repo-label" type="text" placeholder="Intent POC" />
+                    ${renderTextInput({ id: "source-editor-repo-label", placeholder: "Intent POC" })}
                     <div class="field-note">Short repo or app label shown as secondary context.</div>
                   </div>
                   <div class="field">
                     <label for="source-editor-role">Role</label>
-                    <input id="source-editor-role" type="text" placeholder="current app" />
+                    ${renderTextInput({ id: "source-editor-role", placeholder: "current app" })}
                     <div class="field-note">Describe why this source exists in the workflow.</div>
                   </div>
                   <div class="field-wide">
@@ -1229,8 +1231,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                   </div>
                 </div>
                 <div class="editor-actions">
-                  <button class="primary-button" id="source-editor-save" type="submit">Save source metadata</button>
-                  <button class="ghost-button" id="source-editor-reset" type="button">Reload selected source</button>
+                  ${renderButton({ label: "Save source metadata", className: "primary-button", id: "source-editor-save", type: "submit" })}
+                  ${renderButton({ label: "Reload selected source", className: "ghost-button", id: "source-editor-reset", type: "button" })}
                 </div>
               </form>
             </section>
@@ -1268,26 +1270,27 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               </div>
               <div class="prompt-grid">
                 <div class="field-wide">
-                  <div class="selection-card">
-                    <div class="selection-title">
-                      <strong>How Work Scope Works</strong>
-                      <span class="target-badge target-ready">guide</span>
-                    </div>
-                    <div class="selection-summary"><strong>Work scope</strong> constrains which configured repos or apps can participate in the run. It does not change how screenshots are handled after capture.</div>
-                    <div class="selection-summary">Rename cards and update repo context directly in the Source Metadata editor. Use the YAML config when you need to add, remove, or structurally rewire sources.</div>
-                    <div class="selection-summary">When multiple sources are checked, the planner creates one evidence lane per selected source inside the same business run.</div>
-                  </div>
+                  ${renderSelectionCard({
+                    title: "How Work Scope Works",
+                    badge: { label: "guide", toneClass: "target-ready" },
+                    lines: [
+                      { html: "<strong>Work scope</strong> constrains which configured repos or apps can participate in the run. It does not change how screenshots are handled after capture." },
+                      { text: "Rename cards and update repo context directly in the Source Metadata editor. Use the YAML config when you need to add, remove, or structurally rewire sources." },
+                      { text: "When multiple sources are checked, the planner creates one evidence lane per selected source inside the same business run." }
+                    ]
+                  })}
                 </div>
                 <div class="field-wide">
-                  <div class="selection-card">
-                    <div class="selection-title">
-                      <strong id="selection-title">Default work scope</strong>
-                      <span class="target-badge target-ready" id="selection-status">optional</span>
-                    </div>
-                    <div class="selection-summary" id="selection-summary">The runner can choose sources from your prompt, then fall back to the config default if needed.</div>
-                    <div class="selection-summary" id="selection-defaults">Blank work scope falls back to prompt matching, business-wide expansion, then config default.</div>
-                    <div class="selection-summary" id="selection-details">Use the Work Scope selector in the Run Workspace tab to understand what each source actually does before you constrain the run.</div>
-                  </div>
+                  ${renderSelectionCard({
+                    title: "Default work scope",
+                    titleId: "selection-title",
+                    badge: { label: "optional", toneClass: "target-ready", id: "selection-status" },
+                    lines: [
+                      { text: "The runner can choose sources from your prompt, then fall back to the config default if needed.", id: "selection-summary" },
+                      { text: "Blank work scope falls back to prompt matching, business-wide expansion, then config default.", id: "selection-defaults" },
+                      { text: "Use the Work Scope selector in the Run Workspace tab to understand what each source actually does before you constrain the run.", id: "selection-details" }
+                    ]
+                  })}
                 </div>
               </div>
             </section>

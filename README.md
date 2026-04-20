@@ -85,6 +85,8 @@ The asset library is still available at:
 http://127.0.0.1:6010/library
 ```
 
+Intent Studio at `/` is the source of truth for shared demo-app UI. The `/library` catalog is a showcase and verification surface that should reuse shared render helpers/components from the app instead of growing a second parallel UI implementation.
+
 You can switch demo library variants in the browser with:
 
 ```text
@@ -314,5 +316,7 @@ The demo library currently regenerates 46 tracked screenshots from the internal 
 - 8 pages
 
 Each screenshot is written into the matching layer folder under `artifacts/library/demo-components/`, so relationships stay obvious and Git can review the PNG changes directly.
+
+When editing demo-app UI, extract reusable render helpers/components from Intent Studio first and adapt the `/library` surfaces onto that shared layer. Do not treat the primitive/component/view/page catalog renderers as an independent source of truth.
 
 All styling is driven by a single theme token file at `src/demo-app/theme/theme.ts`, so one edit to token values can restyle every surface in one commit.

@@ -11,8 +11,8 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
 
   assert.match(html, /<button class="dark-mode-toggle" id="dark-mode-toggle">Toggle Dark Mode<\/button>/);
   assert.match(html, /document.body.classList.toggle\("dark-mode"\);/);
-  assert.match(html, /id="toggle-work-scope-visibility">Collapse<\/button>/);
-  assert.match(html, /id="toggle-stages-visibility">Collapse<\/button>/);
+  assert.match(html, /id="toggle-work-scope-visibility"[^>]*>Collapse<\/button>/);
+  assert.match(html, /id="toggle-stages-visibility"[^>]*>Collapse<\/button>/);
   assert.match(html, /wireCollapseToggle\("toggle-work-scope-visibility", "work-scope-panel", "block"\);/);
   assert.match(html, /wireCollapseToggle\("toggle-stages-visibility", "steps-panel", "block"\);/);
   assert.ok(promptInputIndex >= 0);

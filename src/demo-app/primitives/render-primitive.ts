@@ -1,4 +1,9 @@
 import { LibraryVariant } from "../model/types";
+import { renderButton, renderTextInput } from "../shared/render-controls";
+
+export function renderInputField(value: string): string {
+  return renderTextInput({ className: "input-field", value });
+}
 
 export function renderPrimitive(id: string, variant: LibraryVariant): string {
   const changed = variant === "v2";
@@ -11,9 +16,9 @@ export function renderPrimitive(id: string, variant: LibraryVariant): string {
     case "primitive-pill-tag":
       return `<div class="row"><span class="chip">alpha</span><span class="chip">beta</span><span class="chip">stable</span></div>`;
     case "primitive-input-field":
-      return `<div class="row"><input value="Search users" readonly /><button class="accent">Find</button><button>Clear</button></div>`;
+      return `<div class="row">${renderInputField("Search users")}${renderButton({ label: "Find", className: "accent" })}${renderButton({ label: "Clear" })}</div>`;
     case "primitive-button-set":
-      return `<div class="row"><button class="accent">Primary</button><button>Secondary</button><button class="danger">Danger</button></div>`;
+      return `<div class="row">${renderButton({ label: "Primary", className: "accent" })}${renderButton({ label: "Secondary" })}${renderButton({ label: "Danger", className: "danger" })}</div>`;
     case "primitive-avatar-stack":
       return `<div class="avatar-stack"><span class="avatar">AA</span><span class="avatar">BM</span><span class="avatar">CH</span><span class="avatar">DK</span></div>`;
     case "primitive-status-indicator":

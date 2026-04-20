@@ -31,6 +31,14 @@ The sample config in `intent-poc.yaml` is the source of truth for runnable sourc
 
 `demo-components` intentionally uses the built-in `demo-surface-catalog` capture catalog and a tracked screenshot root. Keep that source aligned with `src/demo-app/model/catalog.ts`, `src/demo-app/capture/build-capture-items.ts`, and `src/demo-app/capture/screenshot-paths.ts`.
 
+## Demo UI Architecture
+Intent Studio at `/` is the source of truth for reusable demo-app UI. The `/library` catalog must stay a stable showcase and screenshot surface, but it should be backed by shared app render helpers/components rather than a second parallel mock UI tree.
+
+When editing demo-app rendering:
+- extract shared UI from `src/demo-app/render/render-intent-studio-page.ts` first
+- keep `/library`, current surface ids, and tracked screenshot paths stable while migrating internals
+- treat `src/demo-app/primitives/render-primitive.ts`, `src/demo-app/components/render-component.ts`, `src/demo-app/views/render-view.ts`, and `src/demo-app/pages/render-page.ts` as compatibility adapters during migration, not the long-term source of truth
+
 ## Guardrails
 Treat `src/capture/capture-target.ts`, `src/compare/run-comparison.ts`, and `src/evidence/screenshot-library.ts` as shared infrastructure. Avoid adding demo-only behavior there unless it is explicitly modeled as a generic option.
 
