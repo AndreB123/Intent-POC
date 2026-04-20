@@ -86,12 +86,30 @@ const testingSchema = z.object({
   playwright: playwrightTestOutputSchema.default({})
 });
 
+const sourceUiStateActivationSchema = z.object({
+  type: z.enum(["query-param", "mocked-state", "ui-control", "environment", "seed-data"]),
+  target: z.string().min(1).optional(),
+  values: z.record(z.string()).default({}),
+  notes: z.array(z.string()).default([])
+});
+
+const sourceUiStateSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1).optional(),
+  description: z.string().min(1),
+  activation: z.array(sourceUiStateActivationSchema).default([]),
+  verificationStrategies: z.array(z.string().min(1)).default([]),
+  notes: z.array(z.string()).default([])
+});
+
 const sourcePlanningSchema = z.object({
   repoId: z.string().min(1).optional(),
   repoLabel: z.string().min(1).optional(),
   role: z.string().min(1).optional(),
   summary: z.string().min(1).optional(),
-  notes: z.array(z.string()).default([])
+  notes: z.array(z.string()).default([]),
+  verificationNotes: z.array(z.string()).default([]),
+  uiStates: z.array(sourceUiStateSchema).default([])
 });
 
 const sourceStudioSchema = z.object({

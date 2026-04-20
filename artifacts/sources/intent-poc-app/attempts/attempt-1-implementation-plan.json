@@ -1,0 +1,643 @@
+{
+  "context": {
+    "rawPrompt": "help me fix a bug in our dark mode input field. for some reason both the background and htte text color of the typed text of the user is white or light grey. i cant read what i type",
+    "summary": "change behavior for intent-poc-app",
+    "sourceId": "intent-poc-app",
+    "codeSurface": {
+      "id": "surface-catalog",
+      "label": "Surface Catalog",
+      "confidence": "high",
+      "rationale": "Prompt normalization identified Surface Catalog as the most likely code surface within intent-poc-app.",
+      "primaryPathPrefixes": [
+        "src/demo-app/render/render-surface-frame.ts",
+        "src/demo-app/render/render-surface-page.ts",
+        "src/demo-app/components/",
+        "src/demo-app/pages/",
+        "src/demo-app/views/",
+        "src/demo-app/primitives/"
+      ],
+      "adjacentPathPrefixes": [
+        "src/demo-app/model/catalog.ts",
+        "src/demo-app/model/types.ts"
+      ],
+      "avoidPathPrefixes": [
+        "src/demo-app/render/render-intent-studio-page.ts",
+        "src/demo-app/server/start-intent-studio-server.ts"
+      ]
+    },
+    "desiredOutcome": "The input field in dark mode must have a high-contrast text color against the background, ensuring readability.",
+    "acceptanceCriteria": [
+      "The input field background color is dark in dark mode.",
+      "The input field text color is light/white in dark mode.",
+      "The contrast ratio between text and background meets accessibility standards."
+    ],
+    "scenarios": [
+      {
+        "title": "Verify dark mode input field readability",
+        "goal": "Ensure text is visible when typing in dark mode",
+        "given": [
+          "The application is set to dark mode",
+          "The primitive-input-field component is rendered"
+        ],
+        "when": [
+          "The user types text into the input field"
+        ],
+        "then": [
+          "The text color is clearly distinguishable from the background color",
+          "A screenshot verification confirms the contrast ratio is sufficient"
+        ]
+      }
+    ],
+    "activeWorkItems": [
+      {
+        "id": "work-1-verify-dark-mode-input-field-readability-intent-poc-app",
+        "title": "Verify dark mode input field readability",
+        "description": "Ensure text is visible when typing in dark mode",
+        "verification": "A screenshot verification confirms the contrast ratio is sufficient",
+        "userVisibleOutcome": "The text color is clearly distinguishable from the background color",
+        "order": 1,
+        "dependsOnWorkItemIds": [],
+        "scenarioIds": [
+          "scenario-1-verify-dark-mode-input-field-readability"
+        ],
+        "verificationNotes": [
+          "playwright coverage \"Intent-driven flow for intent-poc-app\" / \"Verify dark mode input field readability\" is a tracked read-only verification asset during implementation."
+        ]
+      }
+    ],
+    "backlogWorkItems": [],
+    "workspaceFiles": [
+      {
+        "relativePath": "AGENTS.md",
+        "bytes": 4420,
+        "lineCount": 58
+      },
+      {
+        "relativePath": "demo-catalog/work-1-verify-dark-mode-toggle-appearance-in-demo-catalog.spec.ts",
+        "bytes": 494,
+        "lineCount": 15
+      },
+      {
+        "relativePath": "demo-catalog/work-2-visible-evidence-demo-catalog.spec.ts",
+        "bytes": 616,
+        "lineCount": 18
+      },
+      {
+        "relativePath": "intent-poc.local-no-linear.yaml",
+        "bytes": 3772,
+        "lineCount": 139
+      },
+      {
+        "relativePath": "intent-poc.yaml",
+        "bytes": 3326,
+        "lineCount": 123
+      },
+      {
+        "relativePath": "package-lock.json",
+        "bytes": 39174,
+        "lineCount": 1179
+      },
+      {
+        "relativePath": "package.json",
+        "bytes": 1308,
+        "lineCount": 42
+      },
+      {
+        "relativePath": "README.md",
+        "bytes": 15239,
+        "lineCount": 329
+      },
+      {
+        "relativePath": "samples/intent-poc-canonical-bdd/business-summary.md",
+        "bytes": 5864,
+        "lineCount": 113
+      },
+      {
+        "relativePath": "samples/intent-poc-canonical-bdd/normalized-intent.json",
+        "bytes": 21259,
+        "lineCount": 511
+      },
+      {
+        "relativePath": "samples/intent-poc-canonical-bdd/plan-lifecycle.json",
+        "bytes": 4508,
+        "lineCount": 138
+      },
+      {
+        "relativePath": "samples/intent-poc-canonical-bdd/prompt.md",
+        "bytes": 2071,
+        "lineCount": 27
+      },
+      {
+        "relativePath": "samples/intent-poc-canonical-bdd/README.md",
+        "bytes": 3645,
+        "lineCount": 66
+      },
+      {
+        "relativePath": "samples/intent-poc-canonical-bdd/source-summary.md",
+        "bytes": 5338,
+        "lineCount": 116
+      },
+      {
+        "relativePath": "samples/intent-poc-canonical-bdd/template-map.md",
+        "bytes": 3042,
+        "lineCount": 83
+      },
+      {
+        "relativePath": "src/capture/capture-target.ts",
+        "bytes": 5049,
+        "lineCount": 159
+      },
+      {
+        "relativePath": "src/capture/run-capture.ts",
+        "bytes": 2751,
+        "lineCount": 86
+      },
+      {
+        "relativePath": "src/capture/screenshot-library.integration.test.ts",
+        "bytes": 14035,
+        "lineCount": 404
+      },
+      {
+        "relativePath": "src/cli.ts",
+        "bytes": 3101,
+        "lineCount": 94
+      },
+      {
+        "relativePath": "src/compare/hash-image.ts",
+        "bytes": 345,
+        "lineCount": 11
+      },
+      {
+        "relativePath": "src/compare/pixel-diff.ts",
+        "bytes": 1726,
+        "lineCount": 60
+      },
+      {
+        "relativePath": "src/compare/run-comparison.ts",
+        "bytes": 6831,
+        "lineCount": 236
+      },
+      {
+        "relativePath": "src/config/load-config.test.ts",
+        "bytes": 6955,
+        "lineCount": 196
+      },
+      {
+        "relativePath": "src/config/load-config.ts",
+        "bytes": 4854,
+        "lineCount": 162
+      },
+      {
+        "relativePath": "src/config/schema.ts",
+        "bytes": 8969,
+        "lineCount": 255
+      },
+      {
+        "relativePath": "src/demo-app/capture/build-capture-items.ts",
+        "bytes": 610,
+        "lineCount": 16
+      },
+      {
+        "relativePath": "src/demo-app/capture/screenshot-paths.test.ts",
+        "bytes": 1285,
+        "lineCount": 28
+      },
+      {
+        "relativePath": "src/demo-app/capture/screenshot-paths.ts",
+        "bytes": 672,
+        "lineCount": 21
+      },
+      {
+        "relativePath": "src/demo-app/capture/upsert-tracked-screenshots.test.ts",
+        "bytes": 3467,
+        "lineCount": 84
+      },
+      {
+        "relativePath": "src/demo-app/capture/upsert-tracked-screenshots.ts",
+        "bytes": 1185,
+        "lineCount": 34
+      },
+      {
+        "relativePath": "src/demo-app/components/render-component.ts",
+        "bytes": 4469,
+        "lineCount": 72
+      },
+      {
+        "relativePath": "src/demo-app/generate-demo-library.test.ts",
+        "bytes": 708,
+        "lineCount": 17
+      },
+      {
+        "relativePath": "src/demo-app/generate-demo-library.ts",
+        "bytes": 3958,
+        "lineCount": 111
+      },
+      {
+        "relativePath": "src/demo-app/model/catalog.ts",
+        "bytes": 6120,
+        "lineCount": 53
+      },
+      {
+        "relativePath": "src/demo-app/model/types.ts",
+        "bytes": 641,
+        "lineCount": 31
+      },
+      {
+        "relativePath": "src/demo-app/pages/render-page.ts",
+        "bytes": 2555,
+        "lineCount": 64
+      },
+      {
+        "relativePath": "src/demo-app/primitives/render-primitive.ts",
+        "bytes": 2581,
+        "lineCount": 35
+      },
+      {
+        "relativePath": "src/demo-app/render/render-intent-studio-page.test.ts",
+        "bytes": 1416,
+        "lineCount": 23
+      },
+      {
+        "relativePath": "src/demo-app/render/render-surface-frame.ts",
+        "bytes": 7933,
+        "lineCount": 233
+      },
+      {
+        "relativePath": "src/demo-app/render/render-surface-page.test.ts",
+        "bytes": 3446,
+        "lineCount": 109
+      },
+      {
+        "relativePath": "src/demo-app/render/render-surface-page.ts",
+        "bytes": 2585,
+        "lineCount": 44
+      },
+      {
+        "relativePath": "src/demo-app/serve-demo-app.ts",
+        "bytes": 1366,
+        "lineCount": 56
+      },
+      {
+        "relativePath": "src/demo-app/server/start-intent-studio-server.test.ts",
+        "bytes": 26236,
+        "lineCount": 681
+      },
+      {
+        "relativePath": "src/demo-app/server/start-intent-studio-server.ts",
+        "bytes": 45560,
+        "lineCount": 1288
+      },
+      {
+        "relativePath": "src/demo-app/server/start-surface-catalog-server.ts",
+        "bytes": 2546,
+        "lineCount": 81
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-content-cards.test.ts",
+        "bytes": 1546,
+        "lineCount": 25
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-content-cards.ts",
+        "bytes": 1436,
+        "lineCount": 45
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-controls.test.ts",
+        "bytes": 955,
+        "lineCount": 33
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-controls.ts",
+        "bytes": 1883,
+        "lineCount": 54
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-display-primitives.test.ts",
+        "bytes": 2037,
+        "lineCount": 45
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-display-primitives.ts",
+        "bytes": 2326,
+        "lineCount": 65
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-layout.test.ts",
+        "bytes": 1619,
+        "lineCount": 31
+      },
+      {
+        "relativePath": "src/demo-app/shared/render-layout.ts",
+        "bytes": 1694,
+        "lineCount": 53
+      },
+      {
+        "relativePath": "src/demo-app/theme/theme.ts",
+        "bytes": 1498,
+        "lineCount": 60
+      },
+      {
+        "relativePath": "src/demo-app/views/render-view.ts",
+        "bytes": 4802,
+        "lineCount": 98
+      },
+      {
+        "relativePath": "src/implementation/apply-changes.test.ts",
+        "bytes": 1398,
+        "lineCount": 42
+      },
+      {
+        "relativePath": "src/implementation/apply-changes.ts",
+        "bytes": 4346,
+        "lineCount": 116
+      },
+      {
+        "relativePath": "src/implementation/execute-implementation.test.ts",
+        "bytes": 33672,
+        "lineCount": 971
+      },
+      {
+        "relativePath": "src/implementation/execute-implementation.ts",
+        "bytes": 23109,
+        "lineCount": 646
+      },
+      {
+        "relativePath": "src/implementation/gemini-code-generator.ts",
+        "bytes": 29958,
+        "lineCount": 931
+      },
+      {
+        "relativePath": "src/implementation/implementation-events.ts",
+        "bytes": 685,
+        "lineCount": 20
+      },
+      {
+        "relativePath": "src/intent/agent-stage-config.ts",
+        "bytes": 6297,
+        "lineCount": 208
+      },
+      {
+        "relativePath": "src/intent/code-surface.ts",
+        "bytes": 12221,
+        "lineCount": 353
+      },
+      {
+        "relativePath": "src/intent/gemini-client.ts",
+        "bytes": 827,
+        "lineCount": 25
+      },
+      {
+        "relativePath": "src/intent/gemini-intent-planner.ts",
+        "bytes": 6291,
+        "lineCount": 196
+      },
+      {
+        "relativePath": "src/intent/gemini-prompt-normalizer.ts",
+        "bytes": 7083,
+        "lineCount": 207
+      },
+      {
+        "relativePath": "src/intent/intent-poc-bdd-sample.ts",
+        "bytes": 5623,
+        "lineCount": 133
+      },
+      {
+        "relativePath": "src/intent/intent-types.ts",
+        "bytes": 5837,
+        "lineCount": 248
+      },
+      {
+        "relativePath": "src/intent/normalize-intent.test.ts",
+        "bytes": 51046,
+        "lineCount": 1311
+      },
+      {
+        "relativePath": "src/linear/linear-client.ts",
+        "bytes": 7156,
+        "lineCount": 283
+      },
+      {
+        "relativePath": "src/linear/planner-sections.test.ts",
+        "bytes": 1336,
+        "lineCount": 42
+      },
+      {
+        "relativePath": "src/linear/planner-sections.ts",
+        "bytes": 2090,
+        "lineCount": 69
+      },
+      {
+        "relativePath": "src/orchestrator/run-intent.bdd-sample.behavior.test.ts",
+        "bytes": 10885,
+        "lineCount": 278
+      },
+      {
+        "relativePath": "src/orchestrator/run-intent.behavior.test.ts",
+        "bytes": 45199,
+        "lineCount": 1165
+      },
+      {
+        "relativePath": "src/orchestrator/run-intent.test-support.ts",
+        "bytes": 10929,
+        "lineCount": 364
+      },
+      {
+        "relativePath": "src/orchestrator/test-impact-detector.test.ts",
+        "bytes": 1923,
+        "lineCount": 52
+      },
+      {
+        "relativePath": "src/orchestrator/test-impact-detector.ts",
+        "bytes": 6613,
+        "lineCount": 202
+      },
+      {
+        "relativePath": "src/runtime/start-app.ts",
+        "bytes": 1597,
+        "lineCount": 59
+      },
+      {
+        "relativePath": "src/runtime/wait-for-ready.ts",
+        "bytes": 3407,
+        "lineCount": 119
+      },
+      {
+        "relativePath": "src/shared/fs.ts",
+        "bytes": 1975,
+        "lineCount": 69
+      },
+      {
+        "relativePath": "src/shared/log.ts",
+        "bytes": 708,
+        "lineCount": 26
+      },
+      {
+        "relativePath": "src/shared/process.ts",
+        "bytes": 3890,
+        "lineCount": 160
+      },
+      {
+        "relativePath": "src/target/prepare-workspace.ts",
+        "bytes": 652,
+        "lineCount": 19
+      },
+      {
+        "relativePath": "src/target/resolve-target.ts",
+        "bytes": 3682,
+        "lineCount": 126
+      },
+      {
+        "relativePath": "src/tdd/write-generated-playwright-tests.test.ts",
+        "bytes": 22676,
+        "lineCount": 624
+      },
+      {
+        "relativePath": "src/tdd/write-generated-playwright-tests.ts",
+        "bytes": 11972,
+        "lineCount": 284
+      },
+      {
+        "relativePath": "src/test/run-code-tests.ts",
+        "bytes": 805,
+        "lineCount": 31
+      },
+      {
+        "relativePath": "src/test/run-test-stack.test.ts",
+        "bytes": 1034,
+        "lineCount": 30
+      },
+      {
+        "relativePath": "src/test/run-test-stack.ts",
+        "bytes": 1094,
+        "lineCount": 49
+      },
+      {
+        "relativePath": "src/test/test-target-args.ts",
+        "bytes": 1405,
+        "lineCount": 56
+      },
+      {
+        "relativePath": "test-results/.last-run.json",
+        "bytes": 45,
+        "lineCount": 4
+      },
+      {
+        "relativePath": "tests/intent/demo-catalog/verify-collapse-functionality-on-demo-catalog-components.spec.ts",
+        "bytes": 3408,
+        "lineCount": 46
+      },
+      {
+        "relativePath": "tests/intent/demo-catalog/verify-collapsible-sections.spec.ts",
+        "bytes": 4497,
+        "lineCount": 63
+      },
+      {
+        "relativePath": "tests/intent/demo-catalog/verify-expand-functionality-on-demo-catalog-components.spec.ts",
+        "bytes": 4786,
+        "lineCount": 63
+      },
+      {
+        "relativePath": "tests/intent/demo-catalog/verify-prompt-run-component-layout.spec.ts",
+        "bytes": 1879,
+        "lineCount": 29
+      },
+      {
+        "relativePath": "tests/intent/generated/demo-catalog/verify-collapsable-configuration-section.spec.ts",
+        "bytes": 3302,
+        "lineCount": 46
+      },
+      {
+        "relativePath": "tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts",
+        "bytes": 35392,
+        "lineCount": 434
+      },
+      {
+        "relativePath": "tests/intent/intent-poc-app/verify-button-stability-after-intent-submission.spec.ts",
+        "bytes": 1940,
+        "lineCount": 29
+      },
+      {
+        "relativePath": "tests/intent/intent-poc-app/verify-dark-mode-input-field-readability.spec.ts",
+        "bytes": 1327,
+        "lineCount": 22
+      },
+      {
+        "relativePath": "tests/intent/intent-poc-app/verify-reactive-metadata-updates.spec.ts",
+        "bytes": 1855,
+        "lineCount": 29
+      },
+      {
+        "relativePath": "tsconfig.json",
+        "bytes": 482,
+        "lineCount": 20
+      }
+    ],
+    "generatedSpecs": [
+      {
+        "relativePath": "tests/intent/intent-poc-app/verify-dark-mode-input-field-readability.spec.ts",
+        "content": "import { mkdir } from \"node:fs/promises\";\nimport path from \"node:path\";\nimport { expect, test } from \"playwright/test\";\n\n// Generated by Intent POC. This tracked Playwright spec is regenerated in place when the same intent path is requested.\nconst baseUrl = process.env.INTENT_POC_BASE_URL ?? \"http://127.0.0.1:6006\";\nconst screenshotRoot = process.env.INTENT_POC_E2E_SCREENSHOT_ROOT ?? \"/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library\";\n\ntest.describe(\"Intent-driven flow for intent-poc-app\", () => {\n  test(\"Verify dark mode input field readability\", async ({ page }) => {\n    await test.step(\"Input Field\", async () => {\n      await page.goto(new URL(\"/library/primitive-input-field\", baseUrl).toString(), { waitUntil: \"load\" });\n      await page.waitForSelector(\"[data-testid='primitive-input-field']\");\n      const target = page.locator(\"[data-testid='primitive-input-field']\");\n      await expect(target, \"The target '[data-testid='primitive-input-field']' is visible for Input Field.\").toBeVisible();\n      const screenshotPath = path.join(screenshotRoot, \"bdd/intent-poc-app-verify-dark-mode-input-field-readability-spec\", \"shot-1-primitive-input-field.png\");\n      await mkdir(path.dirname(screenshotPath), { recursive: true });\n      await target.screenshot({ path: screenshotPath });\n    });\n  });\n});\n"
+      }
+    ],
+    "relevantFiles": [
+      {
+        "relativePath": "src/demo-app/render/render-surface-frame.ts",
+        "content": "import { LibraryVariant, SurfaceLayer } from \"../model/types\";\nimport { getThemeTokens, getThemeToggleState } from \"../theme/theme\";\n\nfunction layerLabel(layer: SurfaceLayer): string {\n  return layer;\n}\n\nexport function renderSurfaceFrame(input: {\n  title: string;\n  testId: string;\n  layer: SurfaceLayer;\n  body: string;\n  variant: LibraryVariant;\n  isDark?: boolean;\n}): string {\n  const theme = getThemeTokens(input.variant);\n  const toggleState = getThemeToggleState(!!input.isDark);\n\n  return `\n    <section data-testid=\"${input.testId}\" class=\"surface-frame ${input.isDark ? \"dark-mode\" : \"\"}\">\n      <header class=\"surface-header\">\n        <div class=\"header-left\">\n          <h1>${input.title}</h1>\n        </div>\n        <div class=\"header-right\">\n          <button data-testid=\"theme-toggle\" aria-label=\"${toggleState.label}\" onclick=\"window.location.search = '?dark=' + ${!input.isDark}\">${toggleState.icon}</button>\n          <span class=\"chip chip-${input.layer}\">${layerLabel(input.layer)}</span>\n        </div>\n      </header>\n      <div class=\"surface-content\">\n        ${input.body}\n      </div>\n    </section>\n    <style>\n      :root {\n        --bg: ${theme.background};\n        --surface: ${theme.surface};\n        --text: ${theme.text};\n        --muted: ${theme.textMuted};\n        --accent: ${theme.accent};\n        --accent-strong: ${theme.accentStrong};\n        --success: ${theme.success};\n        --warning: ${theme.warning};\n        --danger: ${theme.danger};\n        --border: ${theme.border};\n        --border-strong: ${theme.borderStrong};\n        --radius-md: ${theme.radiusMd};\n        --radius-lg: ${theme.radiusLg};\n        --space-sm: ${theme.spaceSm};\n        --space-md: ${theme.spaceMd};\n        --space-lg: ${theme.spaceLg};\n        --font-body: ${theme.fontBody};\n        --font-heading: ${theme.fontHeading};\n      }\n      html, body {\n        margin: 0;\n        padding: 0;\n        background: var(--bg);\n        color: var(--text);\n        font-family: var(--font-body);\n      }\n      .dark-mode {\n        background: #1a1a1a;\n        color: #e0e0e0;\n      }\n      .page {\n        padding: var(--space-lg);\n      }\n      .surface-frame {\n        max-width: 1100px;\n        background: var(--surface);\n        border: 2px solid var(--border);\n        border-radius: var(--radius-lg);\n        padding: var(--space-lg);\n        box-shadow: 0 10px 24px rgba(28, 36, 46, 0.08);\n      }\n      .surface-header {\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        margin-bottom: var(--space-md);\n      }\n      .header-left {\n        display: flex;\n        align-items: center;\n        gap: var(--space-md);\n      }\n      .header-right {\n        display: flex;\n        align-items: center;\n        gap: var(--space-md);\n      }\n      .surface-header h1,\n      h2,\n      h3 {\n        margin: 0;\n        font-family: var(--font-heading);\n      }\n      .chip {\n        border-radius: 999px;\n        border: 1px solid var(--border);\n        padding: 4px 10px;\n        font-size: 12px;\n        font-weight: 700;\n      }\n      .chip-primitive { background: rgba(45, 103, 176, 0.08); }\n      .chip-component { background: rgba(45, 103, 176, 0.12); }\n      .chip-view { background: rgba(42, 139, 93, 0.12); }\n      .chip-page { background: rgba(191, 84, 84, 0.12); }\n      .selection-card {\n        display: grid;\n        gap: 10px;\n        border: 1px solid var(--border);\n        border-radius: var(--radius-md);\n        padding: 12px;\n        background: var(--surface);\n      }\n      .selection-title {\n        display: flex;\n        align-items: center;\n        justify-content: space-between;\n        gap: 12px;\n      }\n      .target-badge {\n        display: inline-flex;\n        align-items: center;\n        justify-content: center;\n        padding: 6px 10px;\n        border-radius: 999px;\n        font-size: 12px;\n        font-weight: 800;\n        letter-spacing: 0.04em;\n        text-transform: uppercase;\n      }\n      .target-ready {\n        background: rgba(42, 139, 93, 0.12);\n        color: var(--success);\n      }\n      .target-attention {\n        background: rgba(191, 84, 84, 0.12);\n        color: var(--warning);\n      }\n      .selection-summary {\n        color: var(--muted);\n        font-size: 13px;\n        line-height: 1.5;\n      }\n      .page-header,\n      .section-header {\n        display: grid;\n        gap: 6px;\n      }\n      .page-subtitle,\n      .section-subtitle {\n        color: var(--muted);\n        font-size: 13px;\n        line-height: 1.5;\n      }\n      .row { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }\n      .tile {\n        border: 1px solid var(--border);\n        border-radius: var(--radius-md);\n        padding: 12px;\n        background: var(--surface);\n      }\n      .accent { background: var(--accent); color: white; }\n      .accent-strong { background: var(--accent-strong); color: white; }\n      .success { background: var(--success); color: white;\n/* truncated for prompt context */",
+        "reason": "Matched prompt, plan, and surface terms: surface:surface-catalog:primary, dark, mode, input, field, background"
+      },
+      {
+        "relativePath": "src/demo-app/components/render-component.ts",
+        "content": "import { LibraryVariant } from \"../model/types\";\nimport { renderSelectionCard } from \"../shared/render-content-cards\";\nimport {\n  renderCallout,\n  renderPersonListItem,\n  renderStatTile,\n  renderStatusChip,\n  renderTabStrip\n} from \"../shared/render-display-primitives\";\nimport { renderButton, renderTextInput } from \"../shared/render-controls\";\n\nfunction componentCard(title: string, subtitle: string, toneClass?: string): string {\n  return renderSelectionCard({\n    title,\n    badge: { label: toneClass === \"warning\" ? \"alert\" : \"summary\", toneClass: toneClass === \"warning\" ? \"target-attention\" : \"target-ready\" },\n    lines: [{ text: subtitle }],\n    className: `selection-card ${toneClass ?? \"\"}`.trim()\n  });\n}\n\nexport function renderComponent(id: string, variant: LibraryVariant): string {\n  const changed = variant === \"v2\";\n\n  switch (id) {\n    case \"component-button-primary\":\n      return `<div class=\"row\">${renderButton({ label: changed ? \"Launch\" : \"Save\", className: changed ? \"accent-strong\" : \"accent\" })}</div>`;\n    case \"component-button-secondary\":\n      return `<div class=\"row\">${renderButton({ label: changed ? \"Back\" : \"Cancel\" })}</div>`;\n    case \"component-button-danger\":\n      return `<div class=\"row\">${renderButton({ label: \"Delete Campaign\", className: \"danger\" })}</div>`;\n    case \"component-card-highlight\":\n      return componentCard(changed ? \"Alert Card\" : \"Highlight Card\", \"Priority signal for operators\", changed ? \"warning\" : \"accent\");\n    case \"component-card-compact\":\n      return componentCard(\"Compact Card\", \"Small summary payload for dashboard rails\");\n    case \"component-banner-info\":\n      return renderCallout({ title: changed ? \"Migration Window Open\" : \"Information\", description: \"All write paths are healthy.\" });\n    case \"component-banner-warning\":\n      return renderCallout({ title: \"Warning\", description: \"One connector is running in degraded mode.\", borderColorVar: \"--warning\" });\n    case \"component-modal-shell\":\n      return `<div class=\"tile\"><h3>Confirm Change</h3><div class=\"muted\">This action will update all placements.</div><div class=\"row\">${renderButton({ label: \"Cancel\" })}${renderButton({ label: \"Confirm\", className: \"accent\" })}</div></div>`;\n    case \"component-table-row\":\n      return `<table class=\"table\"><thead><tr><th>Name</th><th>Status</th><th>Spend</th></tr></thead><tbody><tr><td>Launch-Alpha</td><td>${renderStatusChip({ label: \"Active\", className: \"success\" })}</td><td>$12,320</td></tr></tbody></table>`;\n    case \"component-search-bar\":\n      return `<div class=\"row\">${renderTextInput({ className: \"input-field\", value: \"Search campaigns\" })}${renderButton({ label: \"Search\", className: \"accent\" })}${renderButton({ label: \"Filters\" })}</div>`;\n    case \"component-stat-tile\":\n      return renderStatTile({ value: changed ? \"$1.34M\" : \"$1.20M\", label: \"Projected Quarterly Revenue\" });\n    case \"component-nav-tabs\":\n      return renderTabStrip({ tabs: [\"Overview\", \"Audiences\", \"Rules\", \"History\"], activeTab: \"Overview\" });\n    case \"component-toast-success\":\n      return renderSelectionCard({\n        title: \"Saved\",\n        badge: { label: \"success\", toneClass: \"target-ready\" },\n        lines: [{ text: \"Your changes were applied.\" }],\n        className: \"selection-card success\"\n      });\n    case \"component-toast-error\":\n      return renderSelectionCard({\n        title: \"Deploy Failed\",\n        badge: { label: \"error\", toneClass: \"target-attention\" },\n        lines: [{ text: \"Check build logs and retry.\" }],\n        className: \"selection-card danger\"\n      });\n    case \"component-form-section\":\n      return `<div class=\"tile layout-stack\"><div><strong>Campaign Name</strong><div class=\"row\">${renderTextInput({ className: \"input-field\", value: \"Spring-Launch\" })}</div></div><div><strong>Budget</strong><div class=\"row\">${renderTextInput({ className: \"input-field\", value: \"$8,000\" })}</div></div><div class=\"row\">${renderButton({ label: \"Save\", className: \"accent\" })}${renderButton({ label: \"Discard\" })}</div></div>`;\n    case \"component-user-list-item\":\n      return renderPersonListItem({ initials: \"AL\", title: \"Avery Lane\", subtitle: \"Role: Admin\", statusLabel: \"Online\" });\n    case \"component-activity-timeline\":\n      return `<div class=\"tile\"><details><summary><strong>Activity Timeline</strong></summary><div class=\"muted\">No recent activity.</div></details></div>`;\n    default:\n      return `<div class=\"tile\">Unknown component</div>`;\n  }\n}",
+        "reason": "Matched prompt, plan, and surface terms: surface:surface-catalog:primary, mode, input, field, text, color"
+      },
+      {
+        "relativePath": "src/demo-app/render/render-surface-page.ts",
+        "content": "import { renderComponent } from \"../components/render-component\";\nimport { renderPage } from \"../pages/render-page\";\nimport { renderPrimitive } from \"../primitives/render-primitive\";\nimport { SurfaceDefinition, LibraryVariant } from \"../model/types\";\nimport { renderSurfaceFrame } from \"./render-surface-frame\";\nimport { renderView } from \"../views/render-view\";\n\nfunction renderBody(definition: SurfaceDefinition, variant: LibraryVariant): string {\n  const effectiveVariant: LibraryVariant = definition.changesInV2 ? variant : \"v1\";\n\n  if (definition.layer === \"primitive\") {\n    return renderPrimitive(definition.id, effectiveVariant);\n  }\n\n  if (definition.layer === \"component\") {\n    return renderComponent(definition.id, effectiveVariant);\n  }\n\n  if (definition.layer === \"view\") {\n    return renderView(definition.id, effectiveVariant);\n  }\n\n  return renderPage(definition.id, effectiveVariant);\n}\n\nexport function renderSurfacePage(definition: SurfaceDefinition, variant: LibraryVariant): string {\n  const body = renderBody(definition, variant);\n  return `<!doctype html><html><head><meta charset=\"utf-8\" /><title>${definition.title}</title></head><body><div class=\"page\">${renderSurfaceFrame({ title: definition.title, testId: definition.testId, layer: definition.layer, body, variant })}</div></body></html>`;\n}\n\nexport function renderSurfaceCatalogIndex(catalog: SurfaceDefinition[], variant: LibraryVariant): string {\n  const groups = [\"primitive\", \"component\", \"view\", \"page\"] as const;\n  const sections = groups\n    .map((group) => {\n      const items = catalog\n        .filter((item) => item.layer === group)\n        .map((item) => `<li><a href=\"/library/${item.id}?variant=${variant}\">${item.title}</a></li>`)\n        .join(\"\");\n      return `<section><h2>${group}</h2><ul>${items}</ul></section>`;\n    })\n    .join(\"\");\n\n  return `<!doctype html><html><head><meta charset=\"utf-8\" /><title>Surface Catalog</title><style>body{font-family:Segoe UI,Helvetica Neue,sans-serif;padding:24px;background:#f2f6fc;color:#223449}section{background:#fff;border:1px solid #c4d0df;border-radius:12px;padding:16px;margin-bottom:14px}a{color:#1f5ea7;text-decoration:none}li{margin:6px 0}.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:20px;padding:14px 16px;background:#fff;border:1px solid #c4d0df;border-radius:12px}.toolbar strong{font-size:14px}</style></head><body><h1>Primitive/Component/View/Page Catalog</h1><div class=\"toolbar\"><strong>Variant:</strong><a href=\"/library?variant=v1\">v1</a><a href=\"/library?variant=v2\">v2</a></div>${sections}</body></html>`;\n}",
+        "reason": "Matched prompt, plan, and surface terms: surface:surface-catalog:primary, mode, background, text, color, type"
+      },
+      {
+        "relativePath": "src/demo-app/model/catalog.ts",
+        "content": "import { SurfaceDefinition } from \"./types\";\n\nexport const SURFACE_CATALOG: SurfaceDefinition[] = [\n  { id: \"primitive-color-chip\", title: \"Color Chip\", testId: \"primitive-color-chip\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-typography\", title: \"Typography Scale\", testId: \"primitive-typography\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-pill-tag\", title: \"Pill Tag\", testId: \"primitive-pill-tag\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-input-field\", title: \"Input Field\", testId: \"primitive-input-field\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-button-set\", title: \"Button Set\", testId: \"primitive-button-set\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-avatar-stack\", title: \"Avatar Stack\", testId: \"primitive-avatar-stack\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-status-indicator\", title: \"Status Indicator\", testId: \"primitive-status-indicator\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-spacing-scale\", title: \"Spacing Scale\", testId: \"primitive-spacing-scale\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-icon-list\", title: \"Icon List\", testId: \"primitive-icon-list\", layer: \"primitive\", changesInV2: true },\n  { id: \"primitive-kpi-block\", title: \"KPI Block\", testId: \"primitive-kpi-block\", layer: \"primitive\", changesInV2: true },\n\n  { id: \"component-button-primary\", title: \"Primary Button\", testId: \"component-button-primary\", layer: \"component\", changesInV2: true },\n  { id: \"component-button-secondary\", title: \"Secondary Button\", testId: \"component-button-secondary\", layer: \"component\", changesInV2: true },\n  { id: \"component-button-danger\", title: \"Danger Button\", testId: \"component-button-danger\", layer: \"component\", changesInV2: true },\n  { id: \"component-card-highlight\", title: \"Highlight Card\", testId: \"component-card-highlight\", layer: \"component\", changesInV2: true },\n  { id: \"component-card-compact\", title: \"Compact Card\", testId: \"component-card-compact\", layer: \"component\", changesInV2: true },\n  { id: \"component-banner-info\", title: \"Info Banner\", testId: \"component-banner-info\", layer: \"component\", changesInV2: true },\n  { id: \"component-banner-warning\", title: \"Warning Banner\", testId: \"component-banner-warning\", layer: \"component\", changesInV2: true },\n  { id: \"component-modal-shell\", title: \"Modal Shell\", testId: \"component-modal-shell\", layer: \"component\", changesInV2: true },\n  { id: \"component-table-row\", title: \"Table Row\", testId: \"component-table-row\", layer: \"component\", changesInV2: true },\n  { id: \"component-search-bar\", title: \"Search Bar\", testId: \"component-search-bar\", layer: \"component\", changesInV2: true },\n  { id: \"component-stat-tile\", title: \"Stat Tile\", testId: \"component-stat-tile\", layer: \"component\", changesInV2: true },\n  { id: \"component-nav-tabs\", title: \"Nav Tabs\", testId: \"component-nav-tabs\", layer: \"component\", changesInV2: true },\n  { id: \"component-toast-success\", title: \"Success Toast\", testId: \"component-toast-success\", layer: \"component\", changesInV2: true },\n  { id: \"component-toast-error\", title: \"Error Toast\", testId: \"component-toast-error\", layer: \"component\", changesInV2: true },\n  { id: \"component-form-section\", title: \"Form Section\", testId: \"component-form-section\", layer: \"component\", changesInV2: true },\n  { id: \"component-user-list-item\", title: \"User List Item\", testId: \"component-user-list-item\", layer: \"component\", changesInV2: true },\n\n  { id: \"view-dashboard-summary\", title: \"Dashboard Summary View\", testId: \"view-dashboard-summary\", layer: \"view\", changesInV2: true },\n  { id: \"view-list-overview\", title: \"List Overview View\", testId: \"view-list-overview\", layer: \"view\", changesInV2: true },\n  { id: \"view-settings-panel\", title: \"Settings Panel View\", testId: \"view-settings-panel\", layer: \"view\", changesInV2: true },\n  { id: \"view-empty-results\", title: \"Empty Results View\", testId: \"view-empty-results\", layer: \"view\", changesInV2: true },\n  { id: \"view-campaign-table\", title: \"Campaign Table View\", testId: \"view-campaign-table\", layer: \"view\", changesInV2: true },\n  { id: \"view-notifications-center\", title: \"Notifications Center View\", testId: \"view-notifications-center\", layer: \"view\", changesInV2: true },\n  { id: \"view-user-directory\", title: \"User Directory View\", testId: \"view-user-directory\", layer: \"view\", changesInV2: true },\n  { id: \"view-revenue-kpis\", title: \"Revenue KPIs View\", testId: \"view-revenue-kpis\", layer: \"view\", changesInV2: true },\n  { id: \"view-onboarding-checklist\", title: \"Onboarding Checklist View\", testId: \"view-onboarding-checklist\", layer: \"view\", changesInV2: true },\n  { id: \"view-approval-queue\", title: \"Approval Queue View\", testId: \"view-approval-queue\", layer: \"view\", changesInV2: true },\n  { id: \"view-audit-log\", title: \"Audit Log View\", testId: \"view-audit-log\", layer: \"view\", changesInV2: true },\n  { id: \"view-billing-overview\", title: \"Billing Overview View\", testId: \n/* truncated for prompt context */",
+        "reason": "Matched prompt, plan, and surface terms: surface:surface-catalog:adjacent, mode, input, field, color, user"
+      },
+      {
+        "relativePath": "src/demo-app/views/render-view.ts",
+        "content": "import { renderComponent } from \"../components/render-component\";\nimport { LibraryVariant } from \"../model/types\";\nimport { renderSelectionCard } from \"../shared/render-content-cards\";\nimport { renderChecklistRow, renderStatTile } from \"../shared/render-display-primitives\";\nimport { renderGridRow, renderGridThree, renderList, renderRow, renderSectionHeader, renderStack } from \"../shared/render-layout\";\n\nexport function renderView(id: string, variant: LibraryVariant): string {\n  const changed = variant === \"v2\";\n\n  switch (id) {\n    case \"view-dashboard-summary\":\n      return renderStack([\n        renderSelectionCard({ title: changed ? \"Revenue Operations\" : \"Growth Operations\", badge: { label: \"overview\", toneClass: \"target-ready\" }, lines: [{ text: \"Dashboard summary\" }] }),\n        renderGridRow([renderComponent(\"component-stat-tile\", variant), renderComponent(\"component-card-highlight\", variant)]),\n        renderComponent(\"component-banner-info\", variant)\n      ]);\n    case \"view-list-overview\":\n      return renderStack([\n        renderList([\n          renderComponent(\"component-user-list-item\", variant),\n          renderComponent(\"component-user-list-item\", variant),\n          renderComponent(\"component-user-list-item\", variant)\n        ])\n      ]);\n    case \"view-settings-panel\":\n      return renderStack([\n        renderComponent(\"component-form-section\", variant),\n        renderRow([\n          renderComponent(\"component-button-primary\", variant),\n          renderComponent(\"component-button-secondary\", variant),\n          renderComponent(\"component-button-danger\", variant)\n        ])\n      ]);\n    case \"view-empty-results\":\n      return renderSectionHeader({\n        title: \"No placements found\",\n        subtitle: \"Try broadening your filters.\",\n        bodyHtml: renderRow([renderComponent(\"component-button-primary\", variant), renderComponent(\"component-search-bar\", variant)])\n      });\n    case \"view-campaign-table\":\n      return renderStack([\n        renderComponent(\"component-nav-tabs\", variant),\n        renderComponent(\"component-table-row\", variant),\n        renderComponent(\"component-table-row\", variant)\n      ]);\n    case \"view-notifications-center\":\n      return renderStack([\n        renderComponent(\"component-toast-success\", variant),\n        renderComponent(\"component-toast-error\", variant),\n        renderComponent(\"component-banner-warning\", variant)\n      ]);\n    case \"view-user-directory\":\n      return renderStack([\n        renderComponent(\"component-search-bar\", variant),\n        renderList([\n          renderComponent(\"component-user-list-item\", variant),\n          renderComponent(\"component-user-list-item\", variant),\n          renderComponent(\"component-user-list-item\", variant)\n        ])\n      ]);\n    case \"view-revenue-kpis\":\n      return renderGridThree([\n        renderComponent(\"component-stat-tile\", variant),\n        renderComponent(\"component-stat-tile\", variant),\n        renderComponent(\"component-stat-tile\", variant)\n      ]);\n    case \"view-onboarding-checklist\":\n      return renderStack([\n        renderSelectionCard({ title: \"Onboarding\", badge: { label: \"checklist\", toneClass: \"target-ready\" }, lines: [{ text: \"Complete these tasks for launch readiness.\" }] }),\n        renderList([\n          renderChecklistRow({ statusLabel: \"done\", statusClassName: \"success\", text: \"Connect data feed\" }),\n          renderChecklistRow({ statusLabel: \"pending\", statusClassName: \"warning\", text: \"Define budget guardrails\" }),\n          renderChecklistRow({ statusLabel: \"pending\", statusClassName: \"warning\", text: \"Enable alert notifications\" })\n        ])\n      ]);\n    case \"view-approval-queue\":\n      return renderStack([\n        renderComponent(\"component-card-compact\", variant),\n        renderComponent(\"component-card-compact\", variant),\n        renderComponent(\"component-modal-shell\", variant)\n      ]);\n    case \"view-audit-log\":\n      return renderStack([\n        renderSelectionCard({ title: \"Audit Log\", badge: { label: \"recent\", toneClass: \"target-ready\" }, lines: [{ text: \"Recent critical events\" }] }),\n        '<table class=\"table\"><thead><tr><th>Time</th><th>Actor</th><th>Event</th></tr></thead><tbody><tr><td>09:41</td><td>system</td><td>Theme updated</td></tr><tr><td>09:43</td><td>andre</td><td>Campaign budget modified</td></tr><tr><td>09:46</td><td>agent</td><td>Intent run completed</td></tr></tbody></table>'\n      ]);\n    case \"view-billing-overview\":\n      return renderStack([\n        renderGridRow([\n          renderStatTile({ value: \"$248,330\", label: \"Month to Date\" }),\n          renderStatTile({ value: \"$19,882\", label: \"Outstanding\" })\n        ]),\n        renderComponent(\"component-banner-info\", variant)\n      ]);\n    default:\n      return `<div class=\"tile\">Unknown view</div>`;\n  }\n}",
+        "reason": "Matched prompt, plan, and surface terms: surface:surface-catalog:primary, mode, text, user, light, read"
+      },
+      {
+        "relativePath": "src/demo-app/primitives/render-primitive.ts",
+        "content": "import { LibraryVariant } from \"../model/types\";\nimport { renderButton, renderTextInput } from \"../shared/render-controls\";\n\nexport function renderInputField(value: string): string {\n  return renderTextInput({ className: \"input-field\", value });\n}\n\nexport function renderPrimitive(id: string, variant: LibraryVariant): string {\n  const changed = variant === \"v2\";\n\n  switch (id) {\n    case \"primitive-color-chip\":\n      return `<div class=\"row\"><span class=\"chip\">neutral</span><span class=\"chip accent\">accent</span><span class=\"chip success\">success</span><span class=\"chip warning\">warning</span></div>`;\n    case \"primitive-typography\":\n      return `<div><h2>${changed ? \"Narrative Heading\" : \"Heading Example\"}</h2><p>Body copy for typography testing.</p><div class=\"muted\">caption text</div></div>`;\n    case \"primitive-pill-tag\":\n      return `<div class=\"row\"><span class=\"chip\">alpha</span><span class=\"chip\">beta</span><span class=\"chip\">stable</span></div>`;\n    case \"primitive-input-field\":\n      return `<div class=\"row\">${renderInputField(\"Search users\")}${renderButton({ label: \"Find\", className: \"accent\" })}${renderButton({ label: \"Clear\" })}</div>`;\n    case \"primitive-button-set\":\n      return `<div class=\"row\">${renderButton({ label: \"Primary\", className: \"accent\" })}${renderButton({ label: \"Secondary\" })}${renderButton({ label: \"Danger\", className: \"danger\" })}</div>`;\n    case \"primitive-avatar-stack\":\n      return `<div class=\"avatar-stack\"><span class=\"avatar\">AA</span><span class=\"avatar\">BM</span><span class=\"avatar\">CH</span><span class=\"avatar\">DK</span></div>`;\n    case \"primitive-status-indicator\":\n      return `<div class=\"row\"><span class=\"chip success\">Healthy</span><span class=\"chip warning\">Degraded</span><span class=\"chip danger\">Critical</span></div>`;\n    case \"primitive-spacing-scale\":\n      return `<div class=\"layout-stack\"><div class=\"tile\" style=\"padding:8px\">space-sm</div><div class=\"tile\" style=\"padding:14px\">space-md</div><div class=\"tile\" style=\"padding:22px\">space-lg</div></div>`;\n    case \"primitive-icon-list\":\n      return `<div class=\"row\"><span class=\"chip\">i</span><span class=\"chip\">?</span><span class=\"chip\">!</span><span class=\"chip\">*</span></div>`;\n    case \"primitive-kpi-block\":\n      return `<div class=\"layout-row\"><div class=\"tile stat\"><strong>${changed ? \"19.2%\" : \"18.4%\"}</strong><div class=\"muted\">Conversion</div></div><div class=\"tile stat\"><strong>4m 21s</strong><div class=\"muted\">Avg Session</div></div></div>`;\n    default:\n      return `<div class=\"tile\">Unknown primitive</div>`;\n  }\n}",
+        "reason": "Matched prompt, plan, and surface terms: surface:surface-catalog:primary, mode, input, field, text, color"
+      }
+    ],
+    "packageContext": {
+      "scripts": {
+        "dev": "tsx src/cli.ts",
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc --noEmit",
+        "test:changed": "tsx src/orchestrator/test-impact-detector.ts",
+        "test:code": "tsx src/test/run-code-tests.ts",
+        "test:code:all": "tsx --test src/**/*.test.ts",
+        "test:update-demo-library": "tsx src/demo-app/generate-demo-library.ts --skip-preflight",
+        "test:stack": "tsx src/test/run-test-stack.ts",
+        "test:stack:all": "npm run test:code:all && npm run test:update-demo-library",
+        "test": "npm run test:stack",
+        "demo:serve": "tsx src/cli.ts demo",
+        "demo:library": "tsx src/demo-app/generate-demo-library.ts",
+        "start": "node dist/cli.js",
+        "install:browsers": "playwright install chromium"
+      }
+    }
+  },
+  "plannedChangeSet": {
+    "operations": [
+      {
+        "operation": "replace",
+        "filePath": "src/demo-app/render/render-surface-frame.ts",
+        "rationale": "Update the .dark-mode CSS to ensure the input field has a dark background and light text, improving contrast and readability in dark mode."
+      }
+    ],
+    "warnings": []
+  }
+}

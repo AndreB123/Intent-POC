@@ -23,6 +23,7 @@ import {
   NormalizationSource,
   PlaywrightCheckpoint,
   PlaywrightSpecArtifact,
+  ResolvedUiStateRequirement,
   TDDWorkItem
 } from "./intent-types";
 
@@ -322,6 +323,147 @@ function extractPromptCriteria(prompt: string): string[] {
   return dedupeValues(matches);
 }
 
+function buildUiStateNarrativeText(input: {
+  promptText: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+  scenario?: BDDScenario;
+}): string {
+  return [
+    input.promptText,
+    input.desiredOutcome,
+    ...input.acceptanceCriteria,
+    input.scenario?.title ?? "",
+    input.scenario?.goal ?? "",
+    ...(input.scenario?.given ?? []),
+    ...(input.scenario?.when ?? []),
+    ...(input.scenario?.then ?? [])
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function buildUiStateSearchText(uiState: SourceConfig["planning"]["uiStates"][number]): string {
+  return [
+    uiState.id,
+    uiState.label ?? "",
+    uiState.description,
+    ...uiState.notes,
+    ...uiState.verificationStrategies,
+    ...uiState.activation.flatMap((activation) => [activation.target ?? "", ...Object.keys(activation.values), ...activation.notes])
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function tokenizeUiStateText(text: string): string[] {
+  const stopWords = new Set([
+    "activate",
+    "activated",
+    "activation",
+    "before",
+    "capture",
+    "demo",
+    "deterministic",
+    "driven",
+    "explicit",
+    "mode",
+    "requested",
+    "reviewable",
+    "route",
+    "screenshot",
+    "screenshots",
+    "state",
+    "states",
+    "supports",
+    "support",
+    "ui",
+    "verification"
+  ]);
+
+  return Array.from(
+    new Set((text.match(/[a-z0-9]+(?:[-_][a-z0-9]+)*/g) ?? []).filter((token) => token.length > 2 && !stopWords.has(token)))
+  );
+}
+
+function resolveRequestedUiStateValue(
+  uiState: SourceConfig["planning"]["uiStates"][number],
+  combinedText: string,
+  promptTokens: Set<string>
+): string | undefined {
+  const candidateValues = dedupeValues(uiState.activation.flatMap((activation) => Object.keys(activation.values))).sort(
+    (left, right) => right.length - left.length
+  );
+
+  return candidateValues.find((value) => matchesPromptValue(combinedText, promptTokens, value));
+}
+
+function matchesUiStateDescriptor(
+  uiState: SourceConfig["planning"]["uiStates"][number],
+  combinedText: string,
+  promptTokens: Set<string>
+): boolean {
+  const directPhrases = [uiState.id, uiState.label ?? ""]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  if (directPhrases.some((phrase) => matchesPromptValue(combinedText, promptTokens, phrase))) {
+    return true;
+  }
+
+  const identityTokens = tokenizeUiStateText([uiState.id, uiState.label ?? ""].join(" "));
+  const descriptiveTokens = tokenizeUiStateText([uiState.description, ...uiState.notes].join(" "));
+
+  return identityTokens.some((token) => promptTokens.has(token))
+    && descriptiveTokens.some((token) => promptTokens.has(token));
+}
+
+function buildUiStateReason(
+  uiState: SourceConfig["planning"]["uiStates"][number],
+  requestedValue?: string
+): string {
+  const label = uiState.label ?? uiState.id;
+  return requestedValue
+    ? `Prompt requests the ${label} UI state with value "${requestedValue}".`
+    : `Prompt references the ${label} UI state.`;
+}
+
+function resolveUiStateRequirements(input: {
+  source: AvailableSourceDescriptor;
+  promptText: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+  scenario?: BDDScenario;
+}): ResolvedUiStateRequirement[] {
+  const combinedText = buildUiStateNarrativeText({
+    promptText: input.promptText,
+    desiredOutcome: input.desiredOutcome,
+    acceptanceCriteria: input.acceptanceCriteria,
+    scenario: input.scenario
+  });
+  const promptTokens = tokenizePrompt(combinedText);
+
+  return input.source.planning.uiStates.flatMap((uiState) => {
+    const requestedValue = resolveRequestedUiStateValue(uiState, combinedText, promptTokens);
+    if (!requestedValue && !matchesUiStateDescriptor(uiState, combinedText, promptTokens)) {
+      return [];
+    }
+
+    return [
+      {
+        stateId: uiState.id,
+        label: uiState.label,
+        description: uiState.description,
+        requestedValue,
+        activation: uiState.activation,
+        verificationStrategies: uiState.verificationStrategies,
+        notes: dedupeValues([...input.source.planning.verificationNotes, ...uiState.notes]),
+        reason: buildUiStateReason(uiState, requestedValue)
+      }
+    ];
+  });
+}
+
 function buildAcceptanceCriteria(
   prompt: string,
   desiredOutcome: string,
@@ -460,6 +602,7 @@ function buildPlaywrightCheckpoints(input: {
   promptText: string;
   desiredOutcome: string;
   acceptanceCriteria: string[];
+  uiStateRequirements: ResolvedUiStateRequirement[];
 }): PlaywrightCheckpoint[] {
   if (
     shouldBuildIntentStudioLifecycleCheckpoints({
@@ -477,7 +620,8 @@ function buildPlaywrightCheckpoints(input: {
       promptText: input.promptText,
       desiredOutcome: input.desiredOutcome,
       acceptanceCriteria: input.acceptanceCriteria,
-      scenario: input.scenario
+      scenario: input.scenario,
+      uiStateRequirements: input.uiStateRequirements
     });
   }
 
@@ -487,9 +631,12 @@ function buildPlaywrightCheckpoints(input: {
       workItemTitle: input.workItemTitle,
       promptText: input.promptText,
       desiredOutcome: input.desiredOutcome,
-      acceptanceCriteria: input.acceptanceCriteria
+      acceptanceCriteria: input.acceptanceCriteria,
+      uiStateRequirements: input.uiStateRequirements
     });
   }
+
+  const checkpointUiStateFields = input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {};
 
   if (input.captureItems.length === 0) {
     const label = `Open the primary flow for ${input.workItemTitle}`;
@@ -500,7 +647,8 @@ function buildPlaywrightCheckpoints(input: {
         action: "goto",
         assertion: input.desiredOutcome,
         screenshotId: createPlanId("shot", input.workItemTitle, 0),
-        path: "/"
+        path: "/",
+        ...checkpointUiStateFields
       }
     ];
   }
@@ -518,7 +666,8 @@ function buildPlaywrightCheckpoints(input: {
     locator: item.locator,
     waitForSelector: item.waitForSelector,
     target: item.locator,
-    waitUntil: item.waitForSelector ? "load" : "networkidle"
+    waitUntil: item.waitForSelector ? "load" : "networkidle",
+    ...checkpointUiStateFields
   }));
 }
 
@@ -752,6 +901,7 @@ function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
   desiredOutcome: string;
   acceptanceCriteria: string[];
   scenario?: BDDScenario;
+  uiStateRequirements: ResolvedUiStateRequirement[];
 }): PlaywrightCheckpoint[] {
   const combinedText = [
     input.promptText,
@@ -787,7 +937,8 @@ function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
       path: "/",
       waitForSelector: "#step-implementation-status",
       waitUntil: "domcontentloaded",
-      mockStudioState: executingState
+      mockStudioState: executingState,
+      ...(input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {})
     },
     {
       id: createPlanId("checkpoint", `${input.workItemTitle}-runner-running`, 1),
@@ -798,7 +949,8 @@ function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
       target: "#current-status-pill",
       attributeName: "class",
       expectedSubstring: "status-running",
-      waitForSelector: "#current-status-pill"
+      waitForSelector: "#current-status-pill",
+      ...(input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {})
     },
     {
       id: createPlanId("checkpoint", `${input.workItemTitle}-plan-step-completed`, 2),
@@ -809,7 +961,8 @@ function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
       target: "#step-plan-status",
       attributeName: "data-state",
       expectedSubstring: "completed",
-      waitForSelector: "#step-plan-status"
+      waitForSelector: "#step-plan-status",
+      ...(input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {})
     },
     {
       id: createPlanId("checkpoint", `${input.workItemTitle}-implementation-step-running`, 3),
@@ -820,7 +973,8 @@ function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
       target: "#step-implementation-status",
       attributeName: "data-state",
       expectedSubstring: "running",
-      waitForSelector: "#step-implementation-status"
+      waitForSelector: "#step-implementation-status",
+      ...(input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {})
     }
   ];
 
@@ -848,7 +1002,8 @@ function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
         path: "/",
         waitForSelector: "#current-status-pill",
         waitUntil: "domcontentloaded",
-        mockStudioState: revertedState
+        mockStudioState: revertedState,
+        ...(input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {})
       },
       {
         id: createPlanId("checkpoint", `${input.workItemTitle}-runner-failed`, checkpoints.length + 1),
@@ -859,7 +1014,8 @@ function buildIntentStudioLifecyclePlaywrightCheckpoints(input: {
         target: "#current-status-pill",
         attributeName: "class",
         expectedSubstring: "status-failed",
-        waitForSelector: "#current-status-pill"
+        waitForSelector: "#current-status-pill",
+        ...(input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {})
       }
     );
   }
@@ -873,6 +1029,7 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
   promptText: string;
   desiredOutcome: string;
   acceptanceCriteria: string[];
+  uiStateRequirements: ResolvedUiStateRequirement[];
 }): PlaywrightCheckpoint[] {
   const normalizedPromptText = input.promptText.toLowerCase();
   const scenarioText = [
@@ -901,6 +1058,7 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
   const includesStepsSection = /\b(steps|stages|optional config|optional configuration|configuration section|orchestration stages)\b/i.test(
     routingText
   );
+  const checkpointUiStateFields = input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {};
 
   if (isResultsLinkFlow) {
     const runId = "2026-04-16T00-00-00-000Z-intent-poc-app";
@@ -970,7 +1128,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         path: "/",
         waitForSelector: "#captures .capture-card img",
         waitUntil: "domcontentloaded",
-        mockStudioState
+        mockStudioState,
+        ...checkpointUiStateFields
       },
       {
         id: createPlanId("checkpoint", `${input.workItemTitle}-capture-preview-src`, 1),
@@ -981,7 +1140,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         target: "#captures .capture-card img",
         attributeName: "src",
         expectedSubstring: expectedFileUrl,
-        waitForSelector: "#captures .capture-card img"
+        waitForSelector: "#captures .capture-card img",
+        ...checkpointUiStateFields
       },
       {
         id: createPlanId("checkpoint", `${input.workItemTitle}-capture-link-href`, 2),
@@ -992,7 +1152,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         target: "#captures .capture-card .capture-links a",
         attributeName: "href",
         expectedSubstring: expectedFileUrl,
-        waitForSelector: "#captures .capture-card .capture-links a"
+        waitForSelector: "#captures .capture-card .capture-links a",
+        ...checkpointUiStateFields
       }
     ];
   }
@@ -1006,7 +1167,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       screenshotId: createPlanId("shot", `${input.workItemTitle}-intent-studio`, 0),
       path: "/",
       waitForSelector: "#prompt-input",
-      waitUntil: "domcontentloaded"
+      waitUntil: "domcontentloaded",
+      ...checkpointUiStateFields
     }
   ];
 
@@ -1018,7 +1180,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       assertion: "The run intent button is visible on the prompt run form.",
       screenshotId: createPlanId("shot", `${input.workItemTitle}-submit-button-visible`, checkpoints.length),
       target: "#submit-button",
-      waitForSelector: "#submit-button"
+      waitForSelector: "#submit-button",
+      ...checkpointUiStateFields
     });
     checkpoints.push({
       id: createPlanId("checkpoint", `${input.workItemTitle}-submit-button-below-input`, checkpoints.length),
@@ -1028,7 +1191,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       screenshotId: createPlanId("shot", `${input.workItemTitle}-submit-button-below-input`, checkpoints.length),
       target: "#submit-button",
       referenceTarget: "#prompt-input",
-      waitForSelector: "#submit-button"
+      waitForSelector: "#submit-button",
+      ...checkpointUiStateFields
     });
   }
 
@@ -1049,7 +1213,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       assertion: section.visibleAssertion,
       screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-visible`, checkpoints.length),
       target: section.collapsedTarget,
-      waitForSelector: section.collapsedTarget
+      waitForSelector: section.collapsedTarget,
+      ...checkpointUiStateFields
     });
 
     if (isCollapseFlow || isExpandFlow) {
@@ -1060,7 +1225,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         assertion: `The collapse toggle is available for the ${section.label.toLowerCase()}.`,
         screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-collapse-toggle`, checkpoints.length),
         target: section.toggleTarget,
-        waitForSelector: section.toggleTarget
+        waitForSelector: section.toggleTarget,
+        ...checkpointUiStateFields
       });
       checkpoints.push({
         id: createPlanId("checkpoint", `${input.workItemTitle}-${section.key}-collapsed`, checkpoints.length),
@@ -1069,7 +1235,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         assertion: section.collapsedAssertion,
         screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-collapsed`, checkpoints.length),
         target: section.collapsedTarget,
-        waitForSelector: section.collapsedTarget
+        waitForSelector: section.collapsedTarget,
+        ...checkpointUiStateFields
       });
     }
 
@@ -1081,7 +1248,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         assertion: `The expand toggle is available when the ${section.label.toLowerCase()} is collapsed.`,
         screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-expand-toggle`, checkpoints.length),
         target: section.toggleTarget,
-        waitForSelector: section.toggleTarget
+        waitForSelector: section.toggleTarget,
+        ...checkpointUiStateFields
       });
       checkpoints.push({
         id: createPlanId("checkpoint", `${input.workItemTitle}-${section.key}-expanded`, checkpoints.length),
@@ -1090,7 +1258,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
         assertion: section.expandedAssertion,
         screenshotId: createPlanId("shot", `${input.workItemTitle}-${section.key}-expanded`, checkpoints.length),
         target: section.expandedTarget,
-        waitForSelector: section.expandedTarget
+        waitForSelector: section.expandedTarget,
+        ...checkpointUiStateFields
       });
     }
   };
@@ -1133,7 +1302,8 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       assertion: "The optional configuration section is visible before interaction.",
       screenshotId: createPlanId("shot", `${input.workItemTitle}-configuration-visible`, checkpoints.length),
       target: "#agent-stages-grid",
-      waitForSelector: "#agent-stages-grid"
+      waitForSelector: "#agent-stages-grid",
+      ...checkpointUiStateFields
     });
   }
 
@@ -1151,6 +1321,7 @@ function buildPlaywrightSpecs(input: {
   desiredOutcome: string;
   acceptanceCriteria: string[];
   captureScope: NormalizedIntent["captureScope"];
+  uiStateRequirements: ResolvedUiStateRequirement[];
   availableSources: Record<string, AvailableSourceDescriptor>;
 }): PlaywrightSpecBuildResult {
   const warnings: string[] = [];
@@ -1171,6 +1342,7 @@ function buildPlaywrightSpecs(input: {
       suiteName: `Intent-driven flow for ${sourceId}`,
       testName: input.title,
       scenarioIds: input.scenarioIds,
+      requiredUiStates: input.uiStateRequirements.length > 0 ? input.uiStateRequirements : undefined,
       checkpoints: buildPlaywrightCheckpoints({
         sourceId,
         codeSurface: input.codeSurface,
@@ -1179,7 +1351,8 @@ function buildPlaywrightSpecs(input: {
         workItemTitle: input.title,
         promptText: input.promptText,
         desiredOutcome: input.desiredOutcome,
-        acceptanceCriteria: input.acceptanceCriteria
+        acceptanceCriteria: input.acceptanceCriteria,
+        uiStateRequirements: input.uiStateRequirements
       })
     };
   });
@@ -1460,10 +1633,12 @@ function buildWorkItems(input: {
         const scenarioIds = input.scenarios
           .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
           .map((scenario) => scenario.id);
-        const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
+        const sourcePlan = input.sourcePlans.find((candidate) => candidate.sourceId === sourceId);
+        const captureScope = sourcePlan?.captureScope ?? {
           mode: "all",
           captureIds: []
         };
+        const uiStateRequirements = sourcePlan?.uiStateRequirements ?? [];
         const id = createPlanId("work", `verify-lifecycle-behavior-${sourceId}`, index);
         const playwrightSpecs = buildPlaywrightSpecs({
           codeSurface: input.codeSurface,
@@ -1475,6 +1650,7 @@ function buildWorkItems(input: {
           desiredOutcome: `Lifecycle state and status handling remain reviewable in ${sourceId}.`,
           acceptanceCriteria: input.acceptanceCriteria.map((criterion) => criterion.description),
           captureScope,
+          uiStateRequirements,
           availableSources: input.availableSources
         });
         warnings.push(...playwrightSpecs.warnings);
@@ -1545,10 +1721,12 @@ function buildWorkItems(input: {
       const verification = buildWorkItemVerification(scenario);
       const relevantAcceptanceCriteria = selectRelevantAcceptanceCriteria(scenario, input.acceptanceCriteria);
       warnings.push(...relevantAcceptanceCriteria.warnings);
-      const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
+      const sourcePlan = input.sourcePlans.find((candidate) => candidate.sourceId === sourceId);
+      const captureScope = sourcePlan?.captureScope ?? {
         mode: "all",
         captureIds: []
       };
+      const uiStateRequirements = sourcePlan?.uiStateRequirements ?? [];
       const playwrightSpecs = buildPlaywrightSpecs({
         codeSurface: input.codeSurface,
         scenario,
@@ -1560,6 +1738,7 @@ function buildWorkItems(input: {
         desiredOutcome: userVisibleOutcome,
         acceptanceCriteria: relevantAcceptanceCriteria.descriptions,
         captureScope,
+        uiStateRequirements,
         availableSources: input.availableSources
       });
       warnings.push(...playwrightSpecs.warnings);
@@ -1601,10 +1780,12 @@ function buildWorkItems(input: {
         `Source "${sourceId}" did not have a confidently executable visual scenario, so the planner emitted a bounded visual verification flow.`
       );
     }
-    const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
+    const sourcePlan = input.sourcePlans.find((candidate) => candidate.sourceId === sourceId);
+    const captureScope = sourcePlan?.captureScope ?? {
       mode: "all",
       captureIds: []
     };
+    const uiStateRequirements = sourcePlan?.uiStateRequirements ?? [];
     const playwrightSpecs = buildPlaywrightSpecs({
       codeSurface: input.codeSurface,
       workItemId: id,
@@ -1615,6 +1796,7 @@ function buildWorkItems(input: {
       desiredOutcome: `QA can verify behavior through reviewable screenshots for ${sourceId}.`,
       acceptanceCriteria: [],
       captureScope,
+      uiStateRequirements,
       availableSources: input.availableSources
     });
     warnings.push(...playwrightSpecs.warnings);
@@ -2416,18 +2598,6 @@ function buildIntentDraft(
 ): IntentDraft {
   const planningDepth = options.planningDepth ?? "full";
   const primarySourceId = resolution.sourceIds[0] ?? options.defaultSourceId;
-  const sourcePlans = resolution.sourceIds.map((sourceId) => {
-    const captureSelection = pickCaptureScopeForSource(trimmedPrompt, sourceId, options, resolution);
-
-    return {
-      sourceId,
-      selectionReason: describeSelectionReason(resolution.selectionReason, sourceId, resolution.promptMatchValues[sourceId]),
-      captureScope: captureSelection.captureScope,
-      warnings: captureSelection.warnings
-    };
-  });
-  const primaryCaptureScope =
-    sourcePlans[0]?.captureScope ?? pickCaptureIds(trimmedPrompt, options.availableSources[primarySourceId].capture.items);
   const statement = planningRefinement?.statement ?? trimmedPrompt;
   const desiredOutcome = planningRefinement?.desiredOutcome ?? resolution.desiredOutcome;
   const acceptanceCriteria =
@@ -2446,6 +2616,38 @@ function buildIntentDraft(
           acceptanceCriteria,
           codeSurface
         });
+  const sourcePlans = resolution.sourceIds.map((sourceId) => {
+    const captureSelection = pickCaptureScopeForSource(trimmedPrompt, sourceId, options, resolution);
+    const uiStateRequirements = resolveUiStateRequirements({
+      source: options.availableSources[sourceId],
+      promptText: trimmedPrompt,
+      desiredOutcome,
+      acceptanceCriteria: acceptanceCriteria.map((criterion) => criterion.description)
+    });
+
+    return {
+      sourceId,
+      selectionReason: describeSelectionReason(resolution.selectionReason, sourceId, resolution.promptMatchValues[sourceId]),
+      captureScope: captureSelection.captureScope,
+      warnings: [
+        ...captureSelection.warnings,
+        ...(uiStateRequirements.length > 0
+          ? [
+              `Requested UI states: ${uiStateRequirements
+                .map((requirement) =>
+                  requirement.requestedValue
+                    ? `${requirement.stateId}=${requirement.requestedValue}`
+                    : requirement.stateId
+                )
+                .join(", ")}.`
+            ]
+          : [])
+      ],
+      uiStateRequirements: uiStateRequirements.length > 0 ? uiStateRequirements : undefined
+    };
+  });
+  const primaryCaptureScope =
+    sourcePlans[0]?.captureScope ?? pickCaptureIds(trimmedPrompt, options.availableSources[primarySourceId].capture.items);
   const workItemPlan =
     planningDepth === "scoping"
       ? { workItems: [], warnings: [] }
@@ -2493,6 +2695,14 @@ function buildIntentDraft(
     resumeIssue: options.resumeIssue
   });
   const reviewNotes: string[] = [...workItemPlan.warnings];
+
+  for (const sourcePlan of sourcePlans) {
+    for (const requirement of sourcePlan.uiStateRequirements ?? []) {
+      for (const note of requirement.notes) {
+        reviewNotes.push(`Source ${sourcePlan.sourceId}: ${note}`);
+      }
+    }
+  }
 
   if (resolution.sourceIds.length > 1) {
     reviewNotes.push("This intent will execute as one business run with a separate evidence lane for each applicable source.");

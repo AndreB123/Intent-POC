@@ -46,6 +46,19 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
       "      repoLabel: Intent POC",
       "      notes:",
       "        - Current workspace bootstrap repo",
+      "      verificationNotes:",
+      "        - Theme-sensitive verification must declare the requested UI state before screenshots are trusted.",
+      "      uiStates:",
+      "        - id: theme-mode",
+      "          description: The demo app supports multiple theme states that affect screenshots and contrast.",
+      "          activation:",
+      "            - type: ui-control",
+      "              target: \"[data-testid='theme-toggle']\"",
+      "              values:",
+      "                light: \"false\"",
+      "                dark: \"true\"",
+      "          verificationStrategies:",
+      "            - ui-interaction-playwright",
       "    studio:",
       "      displayName: Current app",
       "    source:",
@@ -104,6 +117,12 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.linear.defaultStateIds.started, undefined);
   assert.equal(loaded.config.sources.s1.planning.repoId, "intent-poc");
   assert.deepEqual(loaded.config.sources.s1.planning.notes, ["Current workspace bootstrap repo"]);
+  assert.deepEqual(loaded.config.sources.s1.planning.verificationNotes, [
+    "Theme-sensitive verification must declare the requested UI state before screenshots are trusted."
+  ]);
+  assert.equal(loaded.config.sources.s1.planning.uiStates[0]?.id, "theme-mode");
+  assert.equal(loaded.config.sources.s1.planning.uiStates[0]?.activation[0]?.type, "ui-control");
+  assert.equal(loaded.config.sources.s1.planning.uiStates[0]?.verificationStrategies[0], "ui-interaction-playwright");
   assert.equal(loaded.config.sources.s1.studio.displayName, "Current app");
   assert.equal(loaded.config.sources.s1.app.reuseExistingServer, false);
   assert.equal(loaded.config.sources.s1.testing.playwright.outputDir, "tests/intent");

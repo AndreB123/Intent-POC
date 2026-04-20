@@ -622,3 +622,213 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
     await fs.rm(rootDir, { recursive: true, force: true });
   }
 });
+
+test("writeGeneratedPlaywrightTests Given required UI states When specs are generated Then the spec emits reusable UI state helpers", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-ui-state-"));
+
+  try {
+    const source = {
+      ...buildDemoCatalogBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent = normalizeIntent({
+      rawPrompt: "Compare the demo evidence in dark mode so the theme styling is reviewable.",
+      defaultSourceId: "demo-catalog",
+      continueOnCaptureError: false,
+      availableSources: {
+        "demo-catalog": {
+          aliases: ["demo", "demo-catalog"],
+          planning: {
+            repoId: "intent-poc",
+            repoLabel: "Intent POC",
+            role: "controller-and-demo-source",
+            notes: [],
+            verificationNotes: ["Verify the requested UI state before trusting screenshot evidence."],
+            uiStates: [
+              {
+                id: "theme-mode",
+                label: "Theme mode",
+                description: "The demo catalog supports light and dark theme states.",
+                activation: [
+                  {
+                    type: "ui-control",
+                    target: "[data-testid='theme-toggle']",
+                    values: {
+                      light: "false",
+                      dark: "true"
+                    },
+                    notes: []
+                  }
+                ],
+                verificationStrategies: ["ui-interaction-playwright"],
+                notes: []
+              }
+            ]
+          },
+          source: {
+            type: "local",
+            localPath: rootDir
+          },
+          capture: {
+            basePathPrefix: "",
+            publishToLibrary: false,
+            waitAfterLoadMs: 0,
+            injectCss: [],
+            defaultFullPage: false,
+            items: [
+              {
+                id: "component-button-primary",
+                name: "Demo Primary Button",
+                path: "/library/component-button-primary",
+                locator: "[data-testid='component-button-primary']",
+                waitForSelector: "[data-testid='component-button-primary']",
+                maskSelectors: [],
+                delayMs: 0
+              }
+            ]
+          }
+        }
+      }
+    });
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "demo-catalog",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "demo-catalog"
+    });
+
+    const specPath = result?.files.find((filePath) => filePath.includes("demo-catalog"));
+    assert.ok(specPath);
+
+    const generatedContent = await fs.readFile(specPath!, "utf8");
+    assert.equal(generatedContent.includes("const requiredUiStates = ["), true);
+    assert.equal(
+      generatedContent.includes("function buildUrlWithUiStates(routePath: string, requirements: typeof requiredUiStates): string {"),
+      true
+    );
+    assert.equal(
+      generatedContent.includes("async function applyUiStateRequirements(page: Page, requirements: typeof requiredUiStates): Promise<void> {"),
+      true
+    );
+    assert.equal(generatedContent.includes("await applyUiStateRequirements(page, requiredUiStates);"), true);
+    assert.equal(generatedContent.includes("[data-testid='theme-toggle']"), true);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("writeGeneratedPlaywrightTests Given query-param UI states When specs are generated Then the spec carries route-based state activation", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-query-state-"));
+
+  try {
+    const source = {
+      ...buildDemoCatalogBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent = normalizeIntent({
+      rawPrompt: "Compare the demo evidence in compact density mode so spacing is reviewable.",
+      defaultSourceId: "demo-catalog",
+      continueOnCaptureError: false,
+      availableSources: {
+        "demo-catalog": {
+          aliases: ["demo", "demo-catalog"],
+          planning: {
+            repoId: "intent-poc",
+            repoLabel: "Intent POC",
+            role: "controller-and-demo-source",
+            notes: [],
+            verificationNotes: ["Verify the requested UI state before trusting screenshot evidence."],
+            uiStates: [
+              {
+                id: "density-mode",
+                label: "Density mode",
+                description: "The demo catalog supports compact and comfortable density modes.",
+                activation: [
+                  {
+                    type: "query-param",
+                    target: "density",
+                    values: {
+                      compact: "compact",
+                      comfortable: "comfortable"
+                    },
+                    notes: []
+                  }
+                ],
+                verificationStrategies: ["query-param-playwright"],
+                notes: []
+              }
+            ]
+          },
+          source: {
+            type: "local",
+            localPath: rootDir
+          },
+          capture: {
+            basePathPrefix: "",
+            publishToLibrary: false,
+            waitAfterLoadMs: 0,
+            injectCss: [],
+            defaultFullPage: false,
+            items: [
+              {
+                id: "component-button-primary",
+                name: "Demo Primary Button",
+                path: "/library/component-button-primary",
+                locator: "[data-testid='component-button-primary']",
+                waitForSelector: "[data-testid='component-button-primary']",
+                maskSelectors: [],
+                delayMs: 0
+              }
+            ]
+          }
+        }
+      }
+    });
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "demo-catalog",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "demo-catalog"
+    });
+
+    const specPath = result?.files.find((filePath) => filePath.includes("demo-catalog"));
+    assert.ok(specPath);
+
+    const generatedContent = await fs.readFile(specPath!, "utf8");
+    assert.equal(generatedContent.includes('"stateId": "density-mode"'), true);
+    assert.equal(generatedContent.includes('"type": "query-param"'), true);
+    assert.equal(generatedContent.includes('"target": "density"'), true);
+    assert.equal(
+      generatedContent.includes('await page.goto(buildUrlWithUiStates("/library/component-button-primary", requiredUiStates), { waitUntil: "load" });'),
+      true
+    );
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});

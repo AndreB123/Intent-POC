@@ -195,8 +195,8 @@ export function renderSurfaceFrame(input: {
       }
       .dark-mode .input-field {
         color: #ffffff;
-        border-color: #444;
-        background: #2a2a2a;
+        border-color: #666;
+        background: #333;
       }
       button {
         border: none;

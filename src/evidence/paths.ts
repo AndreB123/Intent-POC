@@ -35,6 +35,20 @@ export interface RunPaths {
   sourceRuns: Record<string, SourceRunPaths>;
 }
 
+async function removeTransientRunArtifacts(loadedConfig: LoadedConfig, sourceIds: string[]): Promise<void> {
+  const artifactRoot = loadedConfig.config.artifacts.root;
+  const transientDirectories = [
+    path.join(artifactRoot, "runs"),
+    path.join(artifactRoot, "logs"),
+    ...sourceIds.flatMap((sourceId) => [
+      path.join(artifactRoot, "sources", sourceId, "attempts"),
+      path.join(artifactRoot, "sources", sourceId, "logs")
+    ])
+  ];
+
+  await Promise.all(transientDirectories.map((directoryPath) => removeDirectory(directoryPath)));
+}
+
 export async function createRunPaths(
   loadedConfig: LoadedConfig,
   sourceIds: string[]
@@ -49,9 +63,7 @@ export async function createRunPaths(
   const logsDir = path.join(artifactRoot, "logs");
 
   if (loadedConfig.config.artifacts.cleanBeforeRun) {
-    await removeDirectory(runDir);
-    await removeDirectory(sourcesDir);
-    await removeDirectory(logsDir);
+    await removeTransientRunArtifacts(loadedConfig, sourceIds);
   }
 
   const sourceRuns = Object.fromEntries(

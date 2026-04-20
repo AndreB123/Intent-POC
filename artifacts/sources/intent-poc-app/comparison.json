@@ -1,10 +1,10 @@
 {
-  "runId": "2026-04-20T20-22-07-275Z-intent-poc-app",
+  "runId": "2026-04-20T21-11-28-236Z-intent-poc-app",
   "sourceId": "intent-poc-app",
   "status": "completed",
   "businessIntent": {
-    "statement": "Create a baseline for the deterministic screenshot library for the built-in demo surface catalog.",
-    "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
+    "statement": "Fix the contrast issue in the dark mode input field where both the background and text color are light, making user input unreadable.",
+    "desiredOutcome": "The input field in dark mode must have a high-contrast text color against the background, ensuring readability.",
     "sourceIds": [
       "intent-poc-app"
     ],
@@ -25,9 +25,11 @@
   },
   "captureCoverage": {
     "configuredCaptureCount": 47,
-    "executedCaptureCount": 47,
-    "scopeMode": "all",
-    "scopeCaptureIds": []
+    "executedCaptureCount": 1,
+    "scopeMode": "subset",
+    "scopeCaptureIds": [
+      "primitive-input-field"
+    ]
   },
   "warnings": [],
   "comparisonIssues": [],

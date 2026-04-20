@@ -36,15 +36,35 @@ const geminiAgent = {
   fallbackToRules: true
 };
 
+function buildPlanningFixture(overrides: {
+  repoId?: string;
+  repoLabel?: string;
+  role?: string;
+  summary?: string;
+  notes: string[];
+  verificationNotes?: string[];
+  uiStates?: SourceConfig["planning"]["uiStates"];
+}): SourceConfig["planning"] {
+  return {
+    repoId: overrides.repoId,
+    repoLabel: overrides.repoLabel,
+    role: overrides.role,
+    summary: overrides.summary,
+    notes: overrides.notes,
+    verificationNotes: overrides.verificationNotes ?? [],
+    uiStates: overrides.uiStates ?? []
+  };
+}
+
 const availableSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
   "client-systems-roach-admin": {
     aliases: ["client-systems", "roach"],
-    planning: {
+    planning: buildPlanningFixture({
       repoId: "client-systems",
       repoLabel: "Client Systems",
       role: "primary product repo",
       notes: ["Bootstrapped from the current source shortlist."]
-    },
+    }),
     source: {
       type: "git",
       gitUrl: "https://example.com/client-systems.git",
@@ -70,12 +90,12 @@ const availableSources: Record<string, Pick<SourceConfig, "aliases" | "capture" 
   },
   "docs-portal": {
     aliases: ["docs", "documentation"],
-    planning: {
+    planning: buildPlanningFixture({
       repoId: "docs-portal",
       repoLabel: "Docs Portal",
       role: "documentation",
       notes: []
-    },
+    }),
     source: {
       type: "local",
       localPath: "/tmp/docs-portal"
@@ -94,12 +114,12 @@ const availableSources: Record<string, Pick<SourceConfig, "aliases" | "capture" 
 const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
   "demo-catalog": {
     aliases: ["demo-catalog", "catalog"],
-    planning: {
+    planning: buildPlanningFixture({
       repoId: "intent-poc",
       repoLabel: "Intent POC",
       role: "controller-and-demo-source",
       notes: []
-    },
+    }),
     source: {
       type: "local",
       localPath: "/tmp/intent-poc"
@@ -115,12 +135,12 @@ const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "captu
   },
   "example-storybook": {
     aliases: ["storybook", "demo"],
-    planning: {
+    planning: buildPlanningFixture({
       repoId: "target-app",
       repoLabel: "Example Storybook",
       role: "example target app",
       notes: []
-    },
+    }),
     source: {
       type: "local",
       localPath: "/tmp/target-app"
@@ -139,12 +159,12 @@ const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "captu
 const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
   "demo-catalog": {
     aliases: ["demo", "demo-app", "demo-catalog"],
-    planning: {
+    planning: buildPlanningFixture({
       repoId: "intent-poc",
       repoLabel: "Intent POC",
       role: "controller-and-demo-source",
       notes: []
-    },
+    }),
     source: {
       type: "local",
       localPath: "/tmp/intent-poc"
@@ -179,12 +199,33 @@ const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture
 const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
   "intent-poc-app": {
     aliases: ["intent-poc-app", "demo", "demo-app", "demo-catalog", "demo-components", "components", "surface-catalog"],
-    planning: {
+    planning: buildPlanningFixture({
       repoId: "intent-poc",
       repoLabel: "Intent POC",
       role: "controller-and-demo-source",
-      notes: []
-    },
+      notes: [],
+      verificationNotes: ["Verify the requested UI state before trusting screenshot evidence."],
+      uiStates: [
+        {
+          id: "theme-mode",
+          label: "Theme mode",
+          description: "The demo app supports light and dark theme states that affect visual evidence.",
+          activation: [
+            {
+              type: "ui-control",
+              target: "[data-testid='theme-toggle']",
+              values: {
+                light: "false",
+                dark: "true"
+              },
+              notes: []
+            }
+          ],
+          verificationStrategies: ["ui-interaction-playwright"],
+          notes: ["Do not trust screenshots until the requested theme state is active."]
+        }
+      ]
+    }),
     source: {
       type: "local",
       localPath: "/tmp/intent-poc"
@@ -219,15 +260,88 @@ const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "captur
   }
 };
 
+const uiStateRichSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
+  "stateful-demo": {
+    aliases: ["stateful-demo", "demo"],
+    planning: buildPlanningFixture({
+      repoId: "intent-poc",
+      repoLabel: "Intent POC",
+      role: "controller-and-demo-source",
+      notes: [],
+      verificationNotes: ["Requested UI states must be activated before screenshot evidence is trusted."],
+      uiStates: [
+        {
+          id: "theme-mode",
+          label: "Theme mode",
+          description: "The demo supports light and dark theme states.",
+          activation: [
+            {
+              type: "ui-control",
+              target: "[data-testid='theme-toggle']",
+              values: {
+                light: "false",
+                dark: "true"
+              },
+              notes: []
+            }
+          ],
+          verificationStrategies: ["ui-interaction-playwright"],
+          notes: ["Theme changes must be applied before capture."]
+        },
+        {
+          id: "density-mode",
+          label: "Density mode",
+          description: "The demo supports compact and comfortable density presets.",
+          activation: [
+            {
+              type: "query-param",
+              target: "density",
+              values: {
+                compact: "compact",
+                comfortable: "comfortable"
+              },
+              notes: []
+            }
+          ],
+          verificationStrategies: ["query-param-playwright"],
+          notes: ["Density is route-driven for deterministic verification."]
+        }
+      ]
+    }),
+    source: {
+      type: "local",
+      localPath: "/tmp/stateful-demo"
+    },
+    capture: {
+      basePathPrefix: "",
+      publishToLibrary: false,
+      waitAfterLoadMs: 500,
+      injectCss: [],
+      defaultFullPage: false,
+      items: [
+        {
+          id: "component-button-primary",
+          name: "Demo Primary Button",
+          path: "/library/component-button-primary",
+          locator: "[data-testid='component-button-primary']",
+          waitForSelector: "[data-testid='component-button-primary']",
+          maskSelectors: [],
+          delayMs: 0
+        }
+      ]
+    }
+  }
+};
+
 const reportingFixtureSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
   "reporting-fixture": {
     aliases: ["reporting-demo", "demo"],
-    planning: {
+    planning: buildPlanningFixture({
       repoId: "intent-poc",
       repoLabel: "Intent POC",
       role: "reporting-fixture",
       notes: []
-    },
+    }),
     source: {
       type: "local",
       localPath: "/tmp/reporting-fixture"
@@ -909,6 +1023,76 @@ test("normalizeIntentWithAgent preserves full demo-catalog capture scope when Ge
     normalized.executionPlan.sources[0]?.warnings[0]?.includes(
       "Gemini suggested narrowing demo-catalog captures to library-index"
     )
+  );
+});
+
+test("normalizeIntent resolves source-level UI state requirements into the plan and Playwright specs", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Compare the demo-catalog evidence in dark mode so we can verify the theme styling.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: intentPocAppSources
+  });
+
+  const sourcePlan = normalized.executionPlan.sources[0];
+  assert.equal(sourcePlan?.sourceId, "intent-poc-app");
+  assert.equal(sourcePlan?.uiStateRequirements?.[0]?.stateId, "theme-mode");
+  assert.equal(sourcePlan?.uiStateRequirements?.[0]?.requestedValue, "dark");
+  assert.ok(sourcePlan?.warnings.some((warning) => warning.includes("Requested UI states: theme-mode=dark")));
+  assert.ok(
+    normalized.executionPlan.reviewNotes.some((note) =>
+      note.includes("Verify the requested UI state before trusting screenshot evidence")
+    )
+  );
+
+  const firstSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
+  assert.equal(firstSpec?.requiredUiStates?.[0]?.stateId, "theme-mode");
+  assert.equal(firstSpec?.checkpoints[0]?.requiredUiStates?.[0]?.requestedValue, "dark");
+});
+
+test("normalizeIntent resolves query-param UI states from prompt language", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Compare the stateful demo in compact density mode so spacing stays reviewable.",
+    defaultSourceId: "stateful-demo",
+    continueOnCaptureError: false,
+    availableSources: uiStateRichSources
+  });
+
+  const sourcePlan = normalized.executionPlan.sources[0];
+  assert.equal(sourcePlan?.uiStateRequirements?.[0]?.stateId, "density-mode");
+  assert.equal(sourcePlan?.uiStateRequirements?.[0]?.requestedValue, "compact");
+  assert.ok(
+    normalized.executionPlan.reviewNotes.some((note) =>
+      note.includes("Requested UI states must be activated before screenshot evidence is trusted")
+    )
+  );
+
+  const firstSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
+  assert.equal(firstSpec?.requiredUiStates?.[0]?.stateId, "density-mode");
+  assert.equal(firstSpec?.checkpoints[0]?.requiredUiStates?.[0]?.requestedValue, "compact");
+});
+
+test("normalizeIntent resolves multiple UI states when the prompt requests more than one active state", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Compare the stateful demo in dark mode with compact density so both theme and spacing are reviewable.",
+    defaultSourceId: "stateful-demo",
+    continueOnCaptureError: false,
+    availableSources: uiStateRichSources
+  });
+
+  const requirements = normalized.executionPlan.sources[0]?.uiStateRequirements ?? [];
+  assert.deepEqual(
+    requirements.map((requirement) => [requirement.stateId, requirement.requestedValue]),
+    [
+      ["theme-mode", "dark"],
+      ["density-mode", "compact"]
+    ]
+  );
+
+  const firstSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
+  assert.deepEqual(
+    firstSpec?.requiredUiStates?.map((requirement) => requirement.stateId),
+    ["theme-mode", "density-mode"]
   );
 });
 

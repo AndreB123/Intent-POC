@@ -18,7 +18,15 @@ interface BehaviorTestConfigOptions {
 interface BehaviorSourceInput {
   rootDir: string;
   aliases: string[];
-  planning: SourceConfig["planning"];
+  planning: {
+    repoId?: string;
+    repoLabel?: string;
+    role?: string;
+    summary?: string;
+    notes: string[];
+    verificationNotes?: string[];
+    uiStates?: SourceConfig["planning"]["uiStates"];
+  };
   studio?: Partial<SourceConfig["studio"]>;
   startCommand: string;
   baseUrl: string;
@@ -40,7 +48,15 @@ type CapturedOutcome = CaptureOutcome & {
 export function buildBehaviorSource(input: BehaviorSourceInput): SourceConfig {
   return {
     aliases: input.aliases,
-    planning: input.planning,
+    planning: {
+      repoId: input.planning.repoId,
+      repoLabel: input.planning.repoLabel,
+      role: input.planning.role,
+      summary: input.planning.summary,
+      notes: input.planning.notes,
+      verificationNotes: input.planning.verificationNotes ?? [],
+      uiStates: input.planning.uiStates ?? []
+    },
     studio: {
       ...input.studio
     },

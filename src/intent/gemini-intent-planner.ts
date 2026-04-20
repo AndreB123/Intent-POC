@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
 import { createGeminiClient } from "./gemini-client";
 import { PromptNormalizerSourceDescriptor } from "./gemini-prompt-normalizer";
+import { buildGeminiSourceSummary } from "./gemini-source-summary";
 
 export interface GeminiIntentPlanningInput {
   rawPrompt: string;
@@ -115,26 +116,6 @@ const planningRefinementResponseJsonSchema = {
   }
 } as const;
 
-function buildSourceSummary(availableSources: Record<string, PromptNormalizerSourceDescriptor>): string {
-  return JSON.stringify(
-    Object.entries(availableSources).map(([sourceId, source]) => ({
-      sourceId,
-      aliases: source.aliases,
-      repoId: source.planning.repoId,
-      repoLabel: source.planning.repoLabel,
-      role: source.planning.role,
-      sourceType: source.source.type,
-      captures: source.capture.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        path: item.path
-      }))
-    })),
-    null,
-    2
-  );
-}
-
 function buildPlanningPrompt(input: GeminiIntentPlanningInput): string {
   return [
     "You are refining a bounded intent-driven development plan for a single behavior-change workflow.",
@@ -151,7 +132,7 @@ function buildPlanningPrompt(input: GeminiIntentPlanningInput): string {
       ? [`Requested source scope: ${input.requestedSourceIds.join(", ")}`]
       : []),
     "Available sources:",
-    buildSourceSummary(input.availableSources),
+    buildGeminiSourceSummary(input.availableSources),
     "Current draft plan:",
     JSON.stringify(input.draftPlan, null, 2),
     "User prompt:",

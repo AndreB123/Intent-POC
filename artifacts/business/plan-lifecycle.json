@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "runId": "2026-04-20T20-22-07-275Z-intent-poc-app",
-  "updatedAt": "2026-04-20T20:22:58.205Z",
-  "intentId": "2026-04-20T20-22-07-274Z-change-behavior-for-intent-poc-app",
+  "runId": "2026-04-20T21-11-28-236Z-intent-poc-app",
+  "updatedAt": "2026-04-20T21:11:42.758Z",
+  "intentId": "2026-04-20T21-11-28-236Z-change-behavior-for-intent-poc-app",
   "summary": "change behavior for intent-poc-app",
   "planning": {
     "repoCandidates": [
       {
         "repoId": "intent-poc",
-        "label": "Intent POC",
+        "label": "Intent Driven Development POC",
         "role": "controller-and-demo-source",
         "sourceIds": [
           "intent-poc-app"
@@ -52,9 +52,10 @@
     }
   },
   "normalizationMeta": {
-    "source": "rules",
+    "source": "llm",
     "warnings": [
-      "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
+      "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on.",
+      "Ensure that changes do not negatively impact light mode input field styles."
     ],
     "requestedPlanningDepth": "full",
     "effectivePlanningDepth": "full",
@@ -67,55 +68,71 @@
         "stageId": "promptNormalization",
         "label": "Prompt Interpretation",
         "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
-        "status": "skipped",
-        "source": "skipped",
+        "status": "completed",
+        "source": "llm",
         "warnings": []
       },
       {
         "stageId": "linearScoping",
         "label": "Linear Scoping",
         "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
         "source": "rules",
-        "warnings": []
+        "warnings": [
+          "Linear Scoping does not yet support provider-backed execution, so deterministic Linear lane scoping was used."
+        ]
       },
       {
         "stageId": "bddPlanning",
         "label": "BDD Planning",
         "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
-        "source": "rules",
-        "warnings": []
+        "source": "llm",
+        "warnings": [
+          "Ensure that changes do not negatively impact light mode input field styles."
+        ]
       },
       {
         "stageId": "tddPlanning",
         "label": "TDD Planning",
         "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
         "source": "rules",
-        "warnings": []
+        "warnings": [
+          "TDD Planning does not yet support provider-backed execution, so deterministic Playwright spec generation was used."
+        ]
       },
       {
         "stageId": "implementation",
         "label": "Implementation",
         "description": "Apply the planned changes against the scoped source workspace.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
-        "warnings": []
+        "warnings": [
+          "Implementation stage configuration is recorded and executes during source runs before QA verification."
+        ]
       },
       {
         "stageId": "qaVerification",
         "label": "QA Verification",
         "description": "Verify implementation output, tests, and evidence before completion or retry.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
-        "warnings": []
+        "warnings": [
+          "QA verification configuration is recorded and executes during source runs after implementation completes."
+        ]
       }
     ]
   },
@@ -130,8 +147,26 @@
       "status": "completed",
       "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
       "linearIssue": null,
-      "attemptCount": 0,
-      "attempts": []
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "status": "completed",
+          "targetedWorkItemIds": [
+            "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
+          ],
+          "completedInAttemptWorkItemIds": [
+            "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
+          ],
+          "pendingTargetedWorkItemIds": [],
+          "completedWorkItemIds": [
+            "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
+          ],
+          "remainingWorkItemIds": [],
+          "implementation": "completed",
+          "qaVerification": "completed"
+        }
+      ]
     }
   ]
 }

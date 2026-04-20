@@ -44,12 +44,37 @@ function buildSpecScreenshotDirectory(spec: PlaywrightSpecArtifact): string {
   return sanitizeFileSegment(normalized) || sanitizeFileSegment(spec.testName) || "generated-spec";
 }
 
-function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, screenshotDirectory: string): string[] {
+function collectRequiredUiStates(spec: PlaywrightSpecArtifact): NonNullable<PlaywrightSpecArtifact["requiredUiStates"]> {
+  const requirements = [
+    ...(spec.requiredUiStates ?? []),
+    ...spec.checkpoints.flatMap((checkpoint) => checkpoint.requiredUiStates ?? [])
+  ];
+  const dedupedRequirements = new Map<string, (typeof requirements)[number]>();
+
+  for (const requirement of requirements) {
+    const dedupeKey = `${requirement.stateId}:${requirement.requestedValue ?? ""}`;
+    if (!dedupedRequirements.has(dedupeKey)) {
+      dedupedRequirements.set(dedupeKey, requirement);
+    }
+  }
+
+  return Array.from(dedupedRequirements.values());
+}
+
+function buildCheckpointLines(
+  checkpoint: PlaywrightCheckpoint,
+  index: number,
+  screenshotDirectory: string,
+  hasRequiredUiStates: boolean
+): string[] {
   const screenshotName = sanitizeOutputFileName(checkpoint.screenshotId, `checkpoint-${index + 1}`);
   const screenshotPathExpression = `path.join(screenshotRoot, ${quote(screenshotDirectory)}, ${quote(screenshotName)})`;
   const lines = [
     `    await test.step(${quote(checkpoint.label)}, async () => {`
   ];
+  const urlExpression = hasRequiredUiStates
+    ? `buildUrlWithUiStates(${quote(checkpoint.path ?? "/")}, requiredUiStates)`
+    : `new URL(${quote(checkpoint.path ?? "/")}, baseUrl).toString()`;
 
   if (checkpoint.action === "mock-studio-state") {
     lines.push(
@@ -71,12 +96,16 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
 
     if (checkpoint.path) {
       lines.push(
-        `      await page.goto(new URL(${quote(checkpoint.path)}, baseUrl).toString(), { waitUntil: ${quote(checkpoint.waitUntil ?? "domcontentloaded")} });`
+        `      await page.goto(${hasRequiredUiStates ? `buildUrlWithUiStates(${quote(checkpoint.path)}, requiredUiStates)` : `new URL(${quote(checkpoint.path)}, baseUrl).toString()`}, { waitUntil: ${quote(checkpoint.waitUntil ?? "domcontentloaded")} });`
       );
     }
 
     if (checkpoint.waitForSelector) {
       lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
+    }
+
+    if (hasRequiredUiStates && checkpoint.path) {
+      lines.push("      await applyUiStateRequirements(page, requiredUiStates);");
     }
 
     lines.push(`      const screenshotPath = ${screenshotPathExpression};`);
@@ -88,7 +117,7 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
 
   if (checkpoint.action === "goto") {
     lines.push(
-      `      await page.goto(new URL(${quote(checkpoint.path ?? "/")}, baseUrl).toString(), { waitUntil: ${quote(checkpoint.waitUntil ?? "networkidle")} });`
+      `      await page.goto(${urlExpression}, { waitUntil: ${quote(checkpoint.waitUntil ?? "networkidle")} });`
     );
   }
 
@@ -98,6 +127,10 @@ function buildCheckpointLines(checkpoint: PlaywrightCheckpoint, index: number, s
     } else {
       lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
     }
+  }
+
+  if (hasRequiredUiStates && checkpoint.action === "goto") {
+    lines.push("      await applyUiStateRequirements(page, requiredUiStates);");
   }
 
   if (checkpoint.action === "assert-below") {
@@ -174,10 +207,12 @@ function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshot
   const screenshotCategory = inferScreenshotCategory(spec);
   const screenshotDirectory = path.join(screenshotCategory, buildSpecScreenshotDirectory(spec));
   const usesBelowAssertion = spec.checkpoints.some((checkpoint) => checkpoint.action === "assert-below");
+  const requiredUiStates = collectRequiredUiStates(spec);
+  const usesUiStateRequirements = requiredUiStates.length > 0;
   const lines = [
     'import { mkdir } from "node:fs/promises";',
     'import path from "node:path";',
-    usesBelowAssertion
+    usesBelowAssertion || usesUiStateRequirements
       ? "import { expect, test, type Page } from \"playwright/test\";"
       : "import { expect, test } from \"playwright/test\";",
     "",
@@ -185,6 +220,56 @@ function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshot
     `const baseUrl = process.env.INTENT_POC_BASE_URL ?? ${quote(baseUrl)};`,
     `const screenshotRoot = process.env.INTENT_POC_E2E_SCREENSHOT_ROOT ?? ${quote(screenshotRoot)};`,
     "",
+    ...(usesUiStateRequirements ? [`const requiredUiStates = ${JSON.stringify(requiredUiStates, null, 2)} as const;`, ""] : []),
+    ...(usesUiStateRequirements
+      ? [
+          "function buildUrlWithUiStates(routePath: string, requirements: typeof requiredUiStates): string {",
+          "  const url = new URL(routePath, baseUrl);",
+          "  for (const requirement of requirements) {",
+          "    if (!requirement.requestedValue) {",
+          "      continue;",
+          "    }",
+          "",
+          "    for (const activation of requirement.activation) {",
+          "      if (activation.type !== \"query-param\" || !activation.target) {",
+          "        continue;",
+          "      }",
+          "",
+          "      const activationValue = activation.values[requirement.requestedValue];",
+          "      if (typeof activationValue === \"string\" && activationValue.length > 0) {",
+          "        url.searchParams.set(activation.target, activationValue);",
+          "      }",
+          "    }",
+          "  }",
+          "",
+          "  return url.toString();",
+          "}",
+          "",
+          "async function applyUiStateRequirements(page: Page, requirements: typeof requiredUiStates): Promise<void> {",
+          "  for (const requirement of requirements) {",
+          "    if (!requirement.requestedValue) {",
+          "      continue;",
+          "    }",
+          "",
+          "    for (const activation of requirement.activation) {",
+          "      if (activation.type !== \"ui-control\" || !activation.target) {",
+          "        continue;",
+          "      }",
+          "",
+          "      const activationValue = activation.values[requirement.requestedValue];",
+          "      if (!activationValue || !/^(true|1|on|enabled|active)$/i.test(activationValue)) {",
+          "        continue;",
+          "      }",
+          "",
+          "      const control = page.locator(activation.target).first();",
+          "      await expect(control, `${requirement.label ?? requirement.stateId} control should be visible before activation.`).toBeVisible();",
+          "      await control.click();",
+          "    }",
+          "  }",
+          "}",
+          ""
+        ]
+      : []),
     ...(usesBelowAssertion
       ? [
           "async function assertLocatorBelow(page: Page, targetSelector: string, referenceSelector: string, message: string): Promise<void> {",
@@ -207,7 +292,7 @@ function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshot
   ];
 
   for (const [index, checkpoint] of spec.checkpoints.entries()) {
-    lines.push(...buildCheckpointLines(checkpoint, index, screenshotDirectory));
+    lines.push(...buildCheckpointLines(checkpoint, index, screenshotDirectory, usesUiStateRequirements));
   }
 
   lines.push("  });");

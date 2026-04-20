@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { SourceConfig } from "../config/schema";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
 import { CODE_SURFACE_IDS, CodeSurfaceId } from "./code-surface";
 import { createGeminiClient } from "./gemini-client";
+import { buildGeminiSourceSummary, GeminiSourceDescriptor } from "./gemini-source-summary";
 
-export type PromptNormalizerSourceDescriptor = Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">;
+export type PromptNormalizerSourceDescriptor = GeminiSourceDescriptor;
 
 export interface GeminiPromptNormalizationInput {
   rawPrompt: string;
@@ -136,24 +136,6 @@ const promptNormalizationResponseJsonSchema = {
   }
 } as const;
 
-function buildSourceSummary(availableSources: Record<string, PromptNormalizerSourceDescriptor>): string {
-  const summaries = Object.entries(availableSources).map(([sourceId, source]) => ({
-    sourceId,
-    aliases: source.aliases,
-    sourceType: source.source.type,
-    repoId: source.planning.repoId,
-    repoLabel: source.planning.repoLabel,
-    role: source.planning.role,
-    captures: source.capture.items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      path: item.path
-    }))
-  }));
-
-  return JSON.stringify(summaries, null, 2);
-}
-
 function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string {
   return [
     "You are selecting bounded planning hints for an intent-driven visual evidence runner.",
@@ -173,7 +155,7 @@ function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string
       : []),
     `Configured default source id: ${input.defaultSourceId}`,
     "Configured sources:",
-    buildSourceSummary(input.availableSources),
+    buildGeminiSourceSummary(input.availableSources),
     "User prompt:",
     input.rawPrompt
   ].join("\n\n");

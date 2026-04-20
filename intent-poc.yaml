@@ -39,6 +39,26 @@ sources:
       notes:
         - Use this source for prompt-planning, Studio changes, and built-in demo surface evidence.
         - Demo screenshot regeneration routes through this source with an explicit library publish opt-in.
+      verificationNotes:
+        - Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.
+        - Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.
+      uiStates:
+        - id: theme-mode
+          label: Theme mode
+          description: The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.
+          activation:
+            - type: ui-control
+              target: "[data-testid='theme-toggle']"
+              values:
+                light: "false"
+                dark: "true"
+              notes:
+                - The shared demo surfaces and Intent Studio expose a theme toggle that must be activated deliberately.
+          verificationStrategies:
+            - ui-interaction-playwright
+          notes:
+            - Verify the active theme state before trusting screenshot comparisons.
+            - Until a stable route contract exists, do not assume a catalog URL alone implies dark mode.
     studio:
       displayName: Current app
     testing:

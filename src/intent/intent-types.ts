@@ -1,5 +1,6 @@
 import type { AgentStageId } from "./agent-stage-config";
 import type { CodeSurfaceSelection } from "./code-surface";
+import type { SourceConfig } from "../config/schema";
 
 export type IntentType = "change-behavior";
 export type IntentPlanningDepth = "scoping" | "full";
@@ -38,6 +39,17 @@ export type PlaywrightCheckpointAction =
   | "mock-studio-state"
   | "assert-attribute-contains";
 
+export interface ResolvedUiStateRequirement {
+  stateId: SourceConfig["planning"]["uiStates"][number]["id"];
+  label?: string;
+  description: string;
+  requestedValue?: string;
+  activation: SourceConfig["planning"]["uiStates"][number]["activation"];
+  verificationStrategies: string[];
+  notes: string[];
+  reason: string;
+}
+
 export interface PlaywrightCheckpoint {
   id: string;
   label: string;
@@ -55,6 +67,7 @@ export interface PlaywrightCheckpoint {
   waitForSelector?: string;
   waitUntil?: "load" | "domcontentloaded" | "networkidle";
   mockStudioState?: Record<string, unknown>;
+  requiredUiStates?: ResolvedUiStateRequirement[];
 }
 
 export interface WorkItemExecutionPlan {
@@ -72,6 +85,7 @@ export interface PlaywrightSpecArtifact {
   testName: string;
   scenarioIds: string[];
   checkpoints: PlaywrightCheckpoint[];
+  requiredUiStates?: ResolvedUiStateRequirement[];
 }
 
 export interface AcceptanceCriterion {
@@ -128,6 +142,7 @@ export interface ExecutionSourcePlan {
     captureIds: string[];
   };
   warnings: string[];
+  uiStateRequirements?: ResolvedUiStateRequirement[];
 }
 
 export interface ExecutionDestinationPlan {
