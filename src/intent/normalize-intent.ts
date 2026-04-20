@@ -52,7 +52,6 @@ interface SourceSelection {
 }
 
 interface NormalizationResolution {
-  intentType: NormalizedIntent["intentType"];
   sourceIds: string[];
   selectionReason: SourceSelectionReason;
   promptMatchValues: Record<string, string>;
@@ -139,22 +138,6 @@ interface SanitizedIdSelection {
 
 const businessWideIntentPattern =
   /\b(all targets|all systems|all sources|multiple targets|multiple systems|across\b|business[- ]wide|organization[- ]wide|org[- ]wide|everywhere|cross[- ]target|cross[- ]system)\b/i;
-
-function inferIntentType(prompt: string): NormalizedIntent["intentType"] {
-  if (/refresh|rebuild|maintain|update.+library/i.test(prompt)) {
-    return "refresh-library";
-  }
-
-  if (
-    /\b(orchestrator|planning|planner|run-intent|rerun|state.?reversion|execution plan|step mapping|rollback|revert|lifecycle|qa verification|implementation loop)\b/i.test(
-      prompt
-    )
-  ) {
-    return "change-behavior";
-  }
-
-  return "capture-evidence";
-}
 
 function dedupeValues(values: string[]): string[] {
   return Array.from(new Set(values));
@@ -306,17 +289,10 @@ function describeIgnoredCaptureHint(sourceId: string, captureIds: string[]): str
   return `Gemini suggested narrowing ${sourceId} captures to ${captureIds.join(", ")}, but the prompt did not explicitly name those captures, so all configured captures were preserved.`;
 }
 
-function summarizeIntent(intentType: NormalizedIntent["intentType"], sourceIds: string[]): string {
+function summarizeIntent(sourceIds: string[]): string {
   const scope = sourceIds.length === 1 ? sourceIds[0] : `${sourceIds.length} sources`;
 
-  switch (intentType) {
-    case "refresh-library":
-      return `refresh evidence library for ${scope}`;
-    case "change-behavior":
-      return `change behavior for ${scope}`;
-    default:
-      return `capture evidence for ${scope}`;
-  }
+  return `change behavior for ${scope}`;
 }
 
 function createPlanId(prefix: string, input: string, index: number): string {
@@ -350,7 +326,7 @@ function buildAcceptanceCriteria(
   prompt: string,
   desiredOutcome: string,
   sourceIds: string[],
-  intentType: NormalizedIntent["intentType"]
+  codeSurface?: CodeSurfaceSelection
 ): NormalizedIntent["businessIntent"]["acceptanceCriteria"] {
   const explicitCriteria = extractPromptCriteria(prompt).map((description, index) => ({
     id: createPlanId("ac", description, index),
@@ -362,10 +338,8 @@ function buildAcceptanceCriteria(
     sourceIds.length === 1
       ? `Intent is translated into executable work for ${sourceIds[0]}.`
       : `Intent is translated into executable work across ${sourceIds.length} applicable sources.`,
-    intentType === "refresh-library"
-      ? "Tracked screenshot library artifacts are refreshed and ready for Git review."
-      : intentType === "change-behavior"
-        ? "Behavior changes are implemented and verified through targeted code validation."
+    codeSurface?.id === "orchestrator-and-planning"
+      ? "Behavior changes are implemented and verified through targeted code validation."
       : "Evidence is captured and packaged for review.",
     `Results are packaged so they can be distributed consistently, with the desired outcome of: ${desiredOutcome}.`
   ]
@@ -384,7 +358,7 @@ function buildScenarios(input: {
   desiredOutcome: string;
   sourceIds: string[];
   acceptanceCriteria: NormalizedIntent["businessIntent"]["acceptanceCriteria"];
-  intentType: NormalizedIntent["intentType"];
+  codeSurface?: CodeSurfaceSelection;
 }): NormalizedIntent["businessIntent"]["scenarios"] {
   const criteriaDescriptions = input.acceptanceCriteria.map((criterion) => criterion.description);
 
@@ -403,7 +377,7 @@ function buildScenarios(input: {
       then: criteriaDescriptions.slice(0, Math.min(criteriaDescriptions.length, 2)),
       applicableSourceIds: input.sourceIds
     },
-    input.intentType === "change-behavior"
+    input.codeSurface?.id === "orchestrator-and-planning"
       ? {
           title: "Behavior changes are verified for applicable sources",
           goal: "Define targeted verification that validates the requested behavior changes.",
@@ -425,8 +399,8 @@ function buildScenarios(input: {
           applicableSourceIds: input.sourceIds
         }
       : {
-          title: "QA-runnable visual evidence is defined for applicable sources",
-          goal: "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
+          title: "Behavior is verified visually for applicable sources",
+          goal: "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
           given: [
             input.sourceIds.length === 1
               ? `Source ${input.sourceIds[0]} is available for execution.`
@@ -434,13 +408,13 @@ function buildScenarios(input: {
           ],
           when: [
             "TDD planning prepares Playwright screenshot verification for the applicable sources.",
-            "The runner maps the configured capture surfaces into QA-runnable checkpoints."
+            "The runner maps the requested behavior into QA-runnable visual checkpoints."
           ],
           then: [
             input.sourceIds.length === 1
-              ? `QA can run a Playwright screenshot flow for ${input.sourceIds[0]}.`
-              : `QA can run Playwright screenshot flows for ${input.sourceIds.join(", ")}.`,
-            "Each applicable source has executable visual evidence coverage that captures reviewable screenshots."
+              ? `QA can run a Playwright screenshot flow to verify behavior for ${input.sourceIds[0]}.`
+              : `QA can run Playwright screenshot flows to verify behavior for ${input.sourceIds.join(", ")}.`,
+            "Each applicable source has executable visual verification coverage with reviewable screenshots."
           ],
           applicableSourceIds: input.sourceIds
         },
@@ -1221,7 +1195,7 @@ function buildScenarioNarrativeText(scenario: BDDScenario): string {
 function isGenericScenarioTitle(title: string): boolean {
   return [
     "intent is translated into acceptance-ready work",
-    "qa-runnable visual evidence is defined for applicable sources",
+    "behavior is verified visually for applicable sources",
     "results are distributed consistently"
   ].includes(title.toLowerCase());
 }
@@ -1468,18 +1442,15 @@ function buildWorkItems(input: {
   sourceIds: string[];
   desiredOutcome: string;
   availableSources: Record<string, AvailableSourceDescriptor>;
-  intentType: NormalizedIntent["intentType"];
 }): WorkItemBuildResult {
   const warnings: string[] = [];
-  const orchestratorVerificationMode = input.intentType === "change-behavior"
-    ? resolveOrchestratorBehaviorVerificationMode({
-        codeSurface: input.codeSurface,
-        sourceIds: input.sourceIds,
-        rawPrompt: input.rawPrompt,
-        desiredOutcome: input.desiredOutcome,
-        acceptanceCriteria: input.acceptanceCriteria
-      })
-    : null;
+  const orchestratorVerificationMode = resolveOrchestratorBehaviorVerificationMode({
+    codeSurface: input.codeSurface,
+    sourceIds: input.sourceIds,
+    rawPrompt: input.rawPrompt,
+    desiredOutcome: input.desiredOutcome,
+    acceptanceCriteria: input.acceptanceCriteria
+  });
 
   if (orchestratorVerificationMode === "mocked-state-playwright") {
     return {
@@ -1619,13 +1590,13 @@ function buildWorkItems(input: {
       return [];
     }
 
-    const id = createPlanId("work", `capture-reviewable-evidence-${sourceId}`, scenarioItems.length + index);
+    const id = createPlanId("work", `verify-behavior-visually-${sourceId}`, scenarioItems.length + index);
     const scenarioIds = input.scenarios
       .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
       .map((scenario) => scenario.id);
     if (scenarioIds.length > 0) {
       warnings.push(
-        `Source "${sourceId}" did not have a confidently executable visual scenario, so the planner emitted a bounded generic evidence capture flow.`
+        `Source "${sourceId}" did not have a confidently executable visual scenario, so the planner emitted a bounded visual verification flow.`
       );
     }
     const captureScope = input.sourcePlans.find((sourcePlan) => sourcePlan.sourceId === sourceId)?.captureScope ?? {
@@ -1635,11 +1606,11 @@ function buildWorkItems(input: {
     const playwrightSpecs = buildPlaywrightSpecs({
       codeSurface: input.codeSurface,
       workItemId: id,
-      title: `Capture reviewable evidence for ${sourceId}`,
+      title: `Verify behavior visually for ${sourceId}`,
       promptText: input.rawPrompt,
       scenarioIds,
       sourceIds: [sourceId],
-      desiredOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
+      desiredOutcome: `QA can verify behavior through reviewable screenshots for ${sourceId}.`,
       acceptanceCriteria: [],
       captureScope,
       availableSources: input.availableSources
@@ -1651,12 +1622,12 @@ function buildWorkItems(input: {
         id,
         type: "playwright-spec",
         verificationMode: derivePlaywrightVerificationMode(playwrightSpecs.specs),
-        title: `Capture reviewable evidence for ${sourceId}`,
-        description: `Generate a QA-runnable Playwright screenshot flow for ${sourceId}.`,
+        title: `Verify behavior visually for ${sourceId}`,
+        description: `Generate a QA-runnable Playwright visual verification flow for ${sourceId}.`,
         scenarioIds,
         sourceIds: [sourceId],
-        userVisibleOutcome: `QA can inspect reviewable screenshots for ${sourceId}.`,
-        verification: `A generated Playwright spec captures screenshots for ${sourceId} and can run in the QA stage.`,
+        userVisibleOutcome: `QA can verify behavior through reviewable screenshots for ${sourceId}.`,
+        verification: `A generated Playwright spec verifies behavior for ${sourceId} through reviewable screenshots and can run in the QA stage.`,
         execution: {
           order: scenarioItems.length + index + 1,
           dependsOnWorkItemIds: []
@@ -1784,7 +1755,6 @@ function buildDestinationPlans(input: {
 }
 
 function buildToolPlans(input: {
-  intentType: NormalizedIntent["intentType"];
   linearEnabled: boolean;
   sourceIds: string[];
   planningDepth: PlanningDepth;
@@ -1844,10 +1814,10 @@ function buildToolPlans(input: {
     {
       id: "screenshot-evidence",
       type: "screenshot",
-      label: "Visual evidence capture",
+      label: "Visual verification",
       enabled: input.sourceIds.length > 0,
       reason: input.sourceIds.length > 0
-        ? "Applicable sources currently expose visual capture definitions."
+        ? "Applicable sources currently expose visual checkpoints and capture definitions."
         : "No visual capture sources were selected.",
       details: ["Playwright screenshots remain one execution tool rather than the top-level product model."]
     },
@@ -2092,7 +2062,7 @@ function buildPlanningReviewNotes(input: {
   }
 
   if (input.sourceIds.length > 1) {
-    notes.push("The current executor still applies one capture workflow across all selected repos.");
+    notes.push("The current executor still applies one shared verification workflow across all selected repos.");
   }
 
   return notes;
@@ -2108,7 +2078,6 @@ function buildRulesResolution(trimmedPrompt: string, options: NormalizeIntentOpt
   const sourceSelection = pickApplicableSourceIds(trimmedPrompt, options);
 
   return {
-    intentType: inferIntentType(trimmedPrompt),
     sourceIds: sourceSelection.sourceIds,
     selectionReason: sourceSelection.selectionReason,
     promptMatchValues: sourceSelection.promptMatchValues ?? {},
@@ -2378,7 +2347,6 @@ function buildAgentResolution(
   ];
 
   return {
-    intentType: hints.intentType ?? rulesResolution.intentType,
     sourceIds,
     selectionReason,
     promptMatchValues: selectionReason === rulesResolution.selectionReason ? rulesResolution.promptMatchValues : {},
@@ -2464,7 +2432,7 @@ function buildIntentDraft(
     planningDepth === "scoping"
       ? []
       : planningRefinement?.acceptanceCriteria ??
-        buildAcceptanceCriteria(trimmedPrompt, desiredOutcome, resolution.sourceIds, resolution.intentType);
+        buildAcceptanceCriteria(trimmedPrompt, desiredOutcome, resolution.sourceIds, codeSurface);
   const scenarios =
     planningDepth === "scoping"
       ? []
@@ -2474,7 +2442,7 @@ function buildIntentDraft(
           desiredOutcome,
           sourceIds: resolution.sourceIds,
           acceptanceCriteria,
-          intentType: resolution.intentType
+          codeSurface
         });
   const workItemPlan =
     planningDepth === "scoping"
@@ -2487,8 +2455,7 @@ function buildIntentDraft(
           sourcePlans,
           sourceIds: resolution.sourceIds,
           desiredOutcome,
-          availableSources: options.availableSources,
-          intentType: resolution.intentType
+          availableSources: options.availableSources
         });
   const workItems = workItemPlan.workItems;
 
@@ -2505,7 +2472,6 @@ function buildIntentDraft(
     publishToSourceWorkspace: options.publishToSourceWorkspace ?? false
   });
   const tools = buildToolPlans({
-    intentType: resolution.intentType,
     linearEnabled: options.linearEnabled ?? false,
     sourceIds: resolution.sourceIds,
     planningDepth,
@@ -2552,7 +2518,7 @@ function buildIntentDraft(
     repoCandidates,
     planningReviewNotes,
     reviewNotes,
-    summary: summarizeIntent(resolution.intentType, resolution.sourceIds)
+    summary: summarizeIntent(resolution.sourceIds)
   };
 }
 
@@ -2588,7 +2554,7 @@ function buildNormalizedIntent(
     receivedAt: new Date().toISOString(),
     rawPrompt: trimmedPrompt,
     summary: draft.summary,
-    intentType: resolution.intentType,
+    intentType: "change-behavior",
     codeSurface,
     businessIntent: {
       statement: draft.statement,
@@ -2838,7 +2804,6 @@ export async function normalizeIntentWithAgent(
     try {
       const refinement = await activeDependencies.refineIntentPlanWithGemini({
         rawPrompt: trimmedPrompt,
-        intentType: resolution.intentType,
         sourceIds: resolution.sourceIds,
         requestedSourceIds,
         availableSources: planningStageSources,

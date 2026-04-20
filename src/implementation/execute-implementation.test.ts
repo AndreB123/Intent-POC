@@ -27,7 +27,7 @@ function buildNormalizedIntent(sourceId: string, codeSurface?: CodeSurfaceSelect
     receivedAt: "2026-01-01T00:00:00.000Z",
     rawPrompt: "Add the requested dashboard affordance.",
     summary: "Add the requested dashboard affordance.",
-    intentType: "capture-evidence",
+    intentType: "change-behavior",
     codeSurface,
     businessIntent: {
       statement: "Add the requested dashboard affordance.",

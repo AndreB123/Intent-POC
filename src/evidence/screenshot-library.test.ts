@@ -102,7 +102,7 @@ function buildNormalizedIntent(intentType: NormalizedIntent["intentType"]): Norm
     intentId: "intent-1",
     receivedAt: "2026-04-15T00:00:00.000Z",
     rawPrompt: "Refresh the screenshot library.",
-    summary: "refresh screenshot library",
+    summary: "change behavior for library",
     intentType,
     businessIntent: {
       statement: "Refresh the screenshot library.",
@@ -178,30 +178,29 @@ test("updateScreenshotLibrary writes captured assets for tracked screenshot sour
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-screenshot-library-"));
 
   try {
-    for (const intentType of ["capture-evidence", "refresh-library"] as NormalizedIntent["intentType"][]) {
-      const config = buildConfig(tmpRoot);
-      const stagedRoot = path.join(tmpRoot, `staged-${intentType}`);
-      const capturePath = path.join(stagedRoot, "pages", "home.png");
-      await fs.mkdir(path.dirname(capturePath), { recursive: true });
-      await fs.writeFile(capturePath, `${intentType}-capture`, "utf8");
+    const intentType: NormalizedIntent["intentType"] = "change-behavior";
+    const config = buildConfig(tmpRoot);
+    const stagedRoot = path.join(tmpRoot, `staged-${intentType}`);
+    const capturePath = path.join(stagedRoot, "pages", "home.png");
+    await fs.mkdir(path.dirname(capturePath), { recursive: true });
+    await fs.writeFile(capturePath, `${intentType}-capture`, "utf8");
 
-      const result = await updateScreenshotLibrary({
-        config,
-        sourceId: "library",
-        runId: `run-${intentType}`,
-        captures: [buildCapture(capturePath)],
-        normalizedIntent: buildNormalizedIntent(intentType)
-      });
+    const result = await updateScreenshotLibrary({
+      config,
+      sourceId: "library",
+      runId: `run-${intentType}`,
+      captures: [buildCapture(capturePath)],
+      normalizedIntent: buildNormalizedIntent(intentType)
+    });
 
-      const copiedImagePath = path.join(result.sourceLibraryRoot, "pages", "home.png");
-      const manifestPath = path.join(result.sourceLibraryRoot, "manifest.json");
-      const manifest = await readJsonFile<{ runId: string; captureCount: number; failedCaptureCount: number }>(manifestPath);
+    const copiedImagePath = path.join(result.sourceLibraryRoot, "pages", "home.png");
+    const manifestPath = path.join(result.sourceLibraryRoot, "manifest.json");
+    const manifest = await readJsonFile<{ runId: string; captureCount: number; failedCaptureCount: number }>(manifestPath);
 
-      assert.equal(await fs.readFile(copiedImagePath, "utf8"), `${intentType}-capture`);
-      assert.equal(manifest?.runId, `run-${intentType}`);
-      assert.equal(manifest?.captureCount, 1);
-      assert.equal(manifest?.failedCaptureCount, 0);
-    }
+    assert.equal(await fs.readFile(copiedImagePath, "utf8"), `${intentType}-capture`);
+    assert.equal(manifest?.runId, `run-${intentType}`);
+    assert.equal(manifest?.captureCount, 1);
+    assert.equal(manifest?.failedCaptureCount, 0);
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }

@@ -4,8 +4,8 @@
 - Source: intent-poc-app
 - Status: completed
 - Intent: Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
-- Normalized summary: capture evidence for intent-poc-app
-- Capture workflow: active
+- Normalized summary: change behavior for intent-poc-app
+- Verification workflow: active
 - Linear issue: not created
 - Has drift: no
 - Desired outcome: product and engineering leads can inspect the baseline without reading implementation details
@@ -52,12 +52,12 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 - Then turn the request into acceptance-ready work for the built-in catalog experience
 - Then publish a reviewable evidence package for GitHub and documentation stakeholders
 
-### QA-runnable visual evidence is defined for applicable sources
+### Behavior is verified visually for applicable sources
 - Given Source intent-poc-app is available for execution.
 - When TDD planning prepares Playwright screenshot verification for the applicable sources.
-- When The runner maps the configured capture surfaces into QA-runnable checkpoints.
-- Then QA can run a Playwright screenshot flow for intent-poc-app.
-- Then Each applicable source has executable visual evidence coverage that captures reviewable screenshots.
+- When The runner maps the requested behavior into QA-runnable visual checkpoints.
+- Then QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.
+- Then Each applicable source has executable visual verification coverage with reviewable screenshots.
 
 ### Results are distributed consistently
 - Given Execution produces evidence, summaries, and progress state.
@@ -69,10 +69,10 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 
 ## TDD Work Items
 
-- QA-runnable visual evidence is defined for applicable sources
+- Behavior is verified visually for applicable sources
   - Type: QA-runnable Playwright screenshot spec
-  - Outcome: QA can run a Playwright screenshot flow for intent-poc-app.
-  - Verification: QA can run a Playwright screenshot flow for intent-poc-app.
+  - Outcome: QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.
+  - Verification: QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.
   - Order: 1
   - Depends on: none
   - Playwright specs: 1

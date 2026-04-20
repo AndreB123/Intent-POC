@@ -1974,7 +1974,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
           // 1. Prompt Interpretation
           planIntentText.textContent = activePlan.summary || activePlan.businessIntent.statement;
-          planIntentOutcome.textContent = "Type: " + activePlan.intentType + " • Source: " + formatSourceLabel(state, activePlan.sourceId);
+          planIntentOutcome.textContent = "Workflow: change behavior • Source: " + formatSourceLabel(state, activePlan.sourceId);
           planPlanNotes.textContent = activePlan.planning.reviewNotes.length > 0 ? "Notes: " + activePlan.planning.reviewNotes.join(" ") : "";
 
           // 2. Linear Scoping

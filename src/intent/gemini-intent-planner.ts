@@ -2,11 +2,9 @@ import { z } from "zod";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
 import { createGeminiClient } from "./gemini-client";
 import { PromptNormalizerSourceDescriptor } from "./gemini-prompt-normalizer";
-import { IntentType } from "./intent-types";
 
 export interface GeminiIntentPlanningInput {
   rawPrompt: string;
-  intentType: IntentType;
   sourceIds: string[];
   requestedSourceIds?: string[];
   availableSources: Record<string, PromptNormalizerSourceDescriptor>;
@@ -139,15 +137,15 @@ function buildSourceSummary(availableSources: Record<string, PromptNormalizerSou
 
 function buildPlanningPrompt(input: GeminiIntentPlanningInput): string {
   return [
-    "You are refining a bounded intent-driven development plan for a visual evidence runner.",
+    "You are refining a bounded intent-driven development plan for a single behavior-change workflow.",
     "Return only JSON that matches the provided schema.",
     "Do not invent source ids, capture ids, destinations, or tools.",
     "You may rewrite the business statement, desired outcome, acceptance criteria, and scenarios to make the plan clearer and more execution-ready.",
     "Keep all scenarios within the provided source ids.",
     "If you are unsure, omit the field instead of guessing.",
+    "Every prompt is a behavior-change attempt. Use screenshots, mocked-state checks, or code validation only as verification strategies for that change.",
     "Explicitly map execution steps and define state reversion requirements for the intent lifecycle.",
     "The response must include 'stepMapping' (a record of step IDs to descriptions) and 'reversionState' (a record of state keys to initial values) to support lifecycle-aware execution.",
-    `Intent type: ${input.intentType}`,
     `Selected source ids: ${input.sourceIds.join(", ")}`,
     ...(input.requestedSourceIds && input.requestedSourceIds.length > 0
       ? [`Requested source scope: ${input.requestedSourceIds.join(", ")}`]

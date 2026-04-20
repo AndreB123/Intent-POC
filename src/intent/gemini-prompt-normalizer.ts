@@ -3,7 +3,6 @@ import { SourceConfig } from "../config/schema";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
 import { CODE_SURFACE_IDS, CodeSurfaceId } from "./code-surface";
 import { createGeminiClient } from "./gemini-client";
-import { IntentType } from "./intent-types";
 
 export type PromptNormalizerSourceDescriptor = Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">;
 
@@ -16,7 +15,6 @@ export interface GeminiPromptNormalizationInput {
 }
 
 export interface PromptNormalizationHints {
-  intentType?: IntentType;
   desiredOutcome?: string;
   sourceIds?: string[];
   codeSurfaceId?: CodeSurfaceId;
@@ -26,7 +24,6 @@ export interface PromptNormalizationHints {
 }
 
 const promptNormalizationFieldSchemas = {
-  intentType: z.enum(["capture-evidence", "refresh-library", "change-behavior"]),
   desiredOutcome: z.string().min(1),
   sourceIds: z.array(z.string().min(1)),
   codeSurfaceId: z.enum(CODE_SURFACE_IDS),
@@ -41,8 +38,6 @@ function dedupeValues(values: string[]): string[] {
 
 function buildInvalidHintWarning(fieldName: keyof PromptNormalizationHints): string {
   switch (fieldName) {
-    case "intentType":
-      return "Gemini prompt normalization returned an invalid intentType hint, so it was ignored.";
     case "desiredOutcome":
       return "Gemini prompt normalization returned an invalid desiredOutcome hint, so it was ignored.";
     case "sourceIds":
@@ -103,10 +98,6 @@ const promptNormalizationResponseJsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    intentType: {
-      type: "string",
-      enum: ["capture-evidence", "refresh-library", "change-behavior"]
-    },
     desiredOutcome: {
       type: "string"
     },
@@ -166,6 +157,8 @@ function buildSourceSummary(availableSources: Record<string, PromptNormalizerSou
 function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string {
   return [
     "You are selecting bounded planning hints for an intent-driven visual evidence runner.",
+    "The runner now uses a single workflow model: every prompt is treated as a behavior-change attempt.",
+    "Visual screenshot verification, tracked screenshots, and code validation are downstream verification strategies inside that single workflow.",
     "Return only JSON that matches the provided schema.",
     "Do not invent source ids or capture ids.",
     "If you are unsure about a field, omit it instead of guessing.",
@@ -178,7 +171,6 @@ function buildNormalizationPrompt(input: GeminiPromptNormalizationInput): string
           "Keep any returned sourceIds inside the requested source scope."
         ]
       : []),
-    "The supported intentType values are capture-evidence, refresh-library, and change-behavior.",
     `Configured default source id: ${input.defaultSourceId}`,
     "Configured sources:",
     buildSourceSummary(input.availableSources),

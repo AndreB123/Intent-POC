@@ -259,7 +259,7 @@ const reportingFixtureSources: Record<string, Pick<SourceConfig, "aliases" | "ca
   }
 };
 
-test("normalizeIntent infers baseline mode from free-text prompt", () => {
+test("normalizeIntent uses the unified behavior-change workflow for free-text prompts", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Create baseline screenshots for client-systems roach pages",
     defaultSourceId: "client-systems-roach-admin",
@@ -267,7 +267,7 @@ test("normalizeIntent infers baseline mode from free-text prompt", () => {
     availableSources
   });
 
-  assert.equal(normalized.intentType, "capture-evidence");
+  assert.equal(normalized.intentType, "change-behavior");
   assert.equal(normalized.sourceId, "client-systems-roach-admin");
   assert.equal(normalized.executionPlan.primarySourceId, "client-systems-roach-admin");
   assert.equal(normalized.executionPlan.sources.length, 1);
@@ -359,7 +359,7 @@ test("normalizeIntent can plan across multiple sources for business-wide intent"
     ["client-systems-roach-admin", "docs-portal"]
   );
   assert.ok(
-    normalized.planning.reviewNotes.some((note) => note.includes("capture workflow"))
+    normalized.planning.reviewNotes.some((note) => note.includes("shared verification workflow"))
   );
 });
 
@@ -737,7 +737,6 @@ test("normalizeIntentWithAgent still generates Playwright specs for Intent Studi
     },
     {
       normalizePromptWithGemini: async () => ({
-        intentType: "change-behavior",
         sourceIds: ["intent-poc-app"],
         codeSurfaceId: "intent-studio"
       })
@@ -780,7 +779,6 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     },
     {
       normalizePromptWithGemini: async () => ({
-        intentType: "capture-evidence",
         desiredOutcome: "The documentation screenshots are reviewable by stakeholders.",
         sourceIds: ["docs-portal"],
         codeSurfaceId: "capture-and-evidence",
@@ -792,7 +790,7 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     }
   );
 
-  assert.equal(normalized.intentType, "capture-evidence");
+  assert.equal(normalized.intentType, "change-behavior");
   assert.equal(normalized.sourceId, "docs-portal");
   assert.equal(normalized.codeSurface?.id, "capture-and-evidence");
   assert.deepEqual(normalized.captureScope, {
@@ -1116,6 +1114,7 @@ test("normalizeIntentWithAgent keeps reporting-style evidence review prompts at 
   );
 
   assert.ok(reportingWorkItem);
+  assert.equal(normalized.intentType, "change-behavior");
   assert.deepEqual(
     reportingWorkItem?.playwright.specs[0]?.checkpoints.map((checkpoint) => checkpoint.captureId).filter(Boolean),
     ["library-index", "view-dashboard-summary", "page-analytics-overview"]

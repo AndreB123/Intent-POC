@@ -3,7 +3,7 @@
   "runId": "<generated-run-id>",
   "updatedAt": "<generated-timestamp>",
   "intentId": "<generated-intent-id>",
-  "summary": "capture evidence for intent-poc-app",
+  "summary": "change behavior for intent-poc-app",
   "planning": {
     "repoCandidates": [
       {

@@ -1,7 +1,7 @@
 import type { AgentStageId } from "./agent-stage-config";
 import type { CodeSurfaceSelection } from "./code-surface";
 
-export type IntentType = "capture-evidence" | "refresh-library" | "change-behavior";
+export type IntentType = "change-behavior";
 export type IntentPlanningDepth = "scoping" | "full";
 export type NormalizationSource = "llm" | "rules" | "fallback";
 export type AgentStageSource = NormalizationSource | "skipped";

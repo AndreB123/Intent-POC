@@ -114,8 +114,8 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
       intentId: "intent-hidden-checkpoint",
       receivedAt: new Date().toISOString(),
       rawPrompt: "Collapse the optional configuration section in Intent Studio.",
-      summary: "capture evidence for demo-catalog",
-      intentType: "capture-evidence",
+      summary: "change behavior for demo-catalog",
+      intentType: "change-behavior",
       businessIntent: {
         statement: "Collapse the optional configuration section in Intent Studio.",
         desiredOutcome: "The optional configuration section can be collapsed.",
@@ -267,8 +267,8 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
       intentId: "intent-layout-checkpoint",
       receivedAt: new Date().toISOString(),
       rawPrompt: "Keep the run intent button directly below the prompt input.",
-      summary: "capture evidence for demo-catalog",
-      intentType: "capture-evidence",
+      summary: "change behavior for demo-catalog",
+      intentType: "change-behavior",
       businessIntent: {
         statement: "Keep the run intent button directly below the prompt input.",
         desiredOutcome: "The run intent button remains directly below the prompt input.",
@@ -419,8 +419,8 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
       intentId: "intent-studio-results-links",
       receivedAt: new Date().toISOString(),
       rawPrompt: "Verify that screenshots at the bottom of the results page link to the actual images.",
-      summary: "capture evidence for demo-catalog",
-      intentType: "capture-evidence",
+      summary: "change behavior for demo-catalog",
+      intentType: "change-behavior",
       businessIntent: {
         statement: "Verify that screenshots at the bottom of the results page link to the actual images.",
         desiredOutcome: "The results page capture previews link to the generated images.",

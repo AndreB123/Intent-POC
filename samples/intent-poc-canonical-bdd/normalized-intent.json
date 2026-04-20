@@ -2,8 +2,8 @@
   "intentId": "<generated-intent-id>",
   "receivedAt": "<generated-timestamp>",
   "rawPrompt": "Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.",
-  "summary": "capture evidence for intent-poc-app",
-  "intentType": "capture-evidence",
+  "summary": "change behavior for intent-poc-app",
+  "intentType": "change-behavior",
   "codeSurface": {
     "sourceId": "intent-poc-app",
     "id": "surface-catalog",
@@ -80,19 +80,19 @@
         ]
       },
       {
-        "id": "scenario-2-qa-runnable-visual-evidence-is-defined-for-applicable-sources",
-        "title": "QA-runnable visual evidence is defined for applicable sources",
-        "goal": "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
+        "id": "scenario-2-behavior-is-verified-visually-for-applicable-sources",
+        "title": "Behavior is verified visually for applicable sources",
+        "goal": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
         "given": [
           "Source intent-poc-app is available for execution."
         ],
         "when": [
           "TDD planning prepares Playwright screenshot verification for the applicable sources.",
-          "The runner maps the configured capture surfaces into QA-runnable checkpoints."
+          "The runner maps the requested behavior into QA-runnable visual checkpoints."
         ],
         "then": [
-          "QA can run a Playwright screenshot flow for intent-poc-app.",
-          "Each applicable source has executable visual evidence coverage that captures reviewable screenshots."
+          "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
+          "Each applicable source has executable visual verification coverage with reviewable screenshots."
         ],
         "applicableSourceIds": [
           "intent-poc-app"
@@ -121,19 +121,19 @@
     ],
     "workItems": [
       {
-        "id": "work-1-qa-runnable-visual-evidence-is-defined-for-applicable-sources-intent-poc-app",
+        "id": "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
         "type": "playwright-spec",
         "verificationMode": "tracked-playwright",
-        "title": "QA-runnable visual evidence is defined for applicable sources",
-        "description": "Define Playwright screenshot verification that QA can execute for each source involved in the intent.",
+        "title": "Behavior is verified visually for applicable sources",
+        "description": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
         "scenarioIds": [
-          "scenario-2-qa-runnable-visual-evidence-is-defined-for-applicable-sources"
+          "scenario-2-behavior-is-verified-visually-for-applicable-sources"
         ],
         "sourceIds": [
           "intent-poc-app"
         ],
-        "userVisibleOutcome": "QA can run a Playwright screenshot flow for intent-poc-app.",
-        "verification": "QA can run a Playwright screenshot flow for intent-poc-app.",
+        "userVisibleOutcome": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
+        "verification": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
         "execution": {
           "order": 1,
           "dependsOnWorkItemIds": []
@@ -144,11 +144,11 @@
             {
               "framework": "playwright",
               "sourceId": "intent-poc-app",
-              "relativeSpecPath": "intent-poc-app/work-1-qa-runnable-visual-evidence-is-defined-for-applicable-sources-intent-poc-.spec.ts",
+              "relativeSpecPath": "intent-poc-app/work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.spec.ts",
               "suiteName": "Intent-driven flow for intent-poc-app",
-              "testName": "QA-runnable visual evidence is defined for applicable sources",
+              "testName": "Behavior is verified visually for applicable sources",
               "scenarioIds": [
-                "scenario-2-qa-runnable-visual-evidence-is-defined-for-applicable-sources"
+                "scenario-2-behavior-is-verified-visually-for-applicable-sources"
               ],
               "checkpoints": [
                 {
@@ -355,9 +355,9 @@
       {
         "id": "screenshot-evidence",
         "type": "screenshot",
-        "label": "Visual evidence capture",
+        "label": "Visual verification",
         "enabled": true,
-        "reason": "Applicable sources currently expose visual capture definitions.",
+        "reason": "Applicable sources currently expose visual checkpoints and capture definitions.",
         "details": [
           "Playwright screenshots remain one execution tool rather than the top-level product model."
         ]

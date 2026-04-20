@@ -58,11 +58,11 @@ const acceptanceCriteria = [
 
 const scenarioTitles = [
   "Intent is translated into acceptance-ready work",
-  "QA-runnable visual evidence is defined for applicable sources",
+  "Behavior is verified visually for applicable sources",
   "Results are distributed consistently"
 ];
 
-const workItemTitles = ["QA-runnable visual evidence is defined for applicable sources"];
+const workItemTitles = ["Behavior is verified visually for applicable sources"];
 
 const destinationStatuses: IntentPocBddSampleExpectation["destinationStatuses"] = [
   { label: "Controller artifacts", status: "active" },
@@ -77,7 +77,7 @@ const toolStates: IntentPocBddSampleExpectation["toolStates"] = [
   { label: "Linear-first scoping", enabled: true },
   { label: "BDD planning", enabled: true },
   { label: "Playwright TDD generation", enabled: true },
-  { label: "Visual evidence capture", enabled: true },
+  { label: "Visual verification", enabled: true },
   { label: "Environment deployment", enabled: false },
   { label: "Implementation loop", enabled: false },
   { label: "QA verification", enabled: false },
@@ -90,9 +90,9 @@ export const INTENT_POC_BDD_SAMPLE = {
   title: "Intent POC canonical BDD sample",
   prompt,
   expected: {
-    intentType: "capture-evidence",
+    intentType: "change-behavior",
     sourceId: "intent-poc-app",
-    summary: "capture evidence for intent-poc-app",
+    summary: "change behavior for intent-poc-app",
     desiredOutcome,
     selectionReason: "Source intent-poc-app matched the prompt alias 'demo-catalog'.",
     orchestrationStrategy: "single-source",
@@ -120,12 +120,14 @@ export const INTENT_POC_BDD_SAMPLE = {
       "- Sources: intent-poc-app",
       `- Given A business intent has been captured: ${prompt}`,
       "## TDD Work Items",
-      "- QA-runnable visual evidence is defined for applicable sources",
+      "- Behavior is verified visually for applicable sources",
       "  - Type: QA-runnable Playwright screenshot spec",
+      "  - Outcome: QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
+      "  - Verification: QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
       "  - Playwright specs: 1",
       "  - Checkpoints: 3",
       "- Destinations: Controller artifacts [active], Linear parent issue [planned], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]",
-      "- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual evidence capture [enabled], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]"
+      "- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual verification [enabled], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]"
     ]
   }
 } satisfies IntentPocBddSampleContract;

@@ -223,6 +223,7 @@ interface QAFallbackPathGroup {
 const MAX_SOURCE_ATTEMPTS = 3;
 const QA_COMMAND_TIMEOUT_MS = 600_000;
 type RunningAppHandle = Awaited<ReturnType<typeof startApp>>;
+type SourceAppLaunchReason = "qa-verification" | "visual-verification";
 
 function formatProcessExitSummary(exit: { exitCode: number | null; signal: NodeJS.Signals | null }): string {
   if (typeof exit.exitCode === "number") {
@@ -234,6 +235,10 @@ function formatProcessExitSummary(exit: { exitCode: number | null; signal: NodeJ
   }
 
   return "unknown exit status";
+}
+
+export function resolveSourceAppLaunchReason(qaVerificationEnabled: boolean): SourceAppLaunchReason {
+  return qaVerificationEnabled ? "qa-verification" : "visual-verification";
 }
 
 export async function waitForSourceAppReady(input: {
@@ -764,7 +769,7 @@ async function startReadySourceApp(input: {
   sourcePaths: SourceRunPaths;
   runPaths: RunPaths;
   options: RunIntentOptions;
-  reason: "qa-verification" | "evidence-capture";
+  reason: SourceAppLaunchReason;
   attemptNumber?: number;
 }): Promise<RunningAppHandle> {
   if (await canReuseRunningSourceApp({ config: input.config, workspace: input.workspace })) {
@@ -1130,7 +1135,7 @@ function buildLinearScopingSourceIssueDescription(input: {
     `## Source Lane`,
     "",
     `- Source: ${input.sourceId}`,
-    `- Capture workflow: ${sourcePlan ? "configured" : "default"}`,
+    `- Visual verification: ${sourcePlan ? "configured" : "default"}`,
     `- Capture scope: ${describeSourceCaptureScope(sourcePlan)}`,
     `- Selection reason: ${sourcePlan?.selectionReason ?? "not recorded"}`,
     repoContext ? `- Repo context: ${repoContext.label} (${repoContext.repoId})` : `- Repo context: not linked`,
@@ -1258,7 +1263,7 @@ function buildSourceIssueDescription(input: {
     `## Source Lane`,
     "",
     `- Source: ${input.sourceId}`,
-    `- Capture workflow: ${sourcePlan ? "configured" : "default"}`,
+    `- Visual verification: ${sourcePlan ? "configured" : "default"}`,
     `- Capture scope: ${describeSourceCaptureScope(sourcePlan)}`,
     `- Selection reason: ${sourcePlan?.selectionReason ?? "not recorded"}`,
     repoContext ? `- Repo context: ${repoContext.label} (${repoContext.repoId})` : `- Repo context: not linked`,
@@ -1593,7 +1598,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
       task: async () => {
         await input.linearClient!.createComment(
           input.parentIssue!.id,
-          `Source lane started for '${input.sourcePlan.sourceId}' in the capture workflow.`
+          `Source lane started for '${input.sourcePlan.sourceId}' in the verification workflow.`
         );
       }
     });
@@ -1709,7 +1714,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
               sourcePaths: input.sourcePaths,
               runPaths: input.runPaths,
               options: input.options,
-              reason: qaVerificationStage.enabled ? "qa-verification" : "evidence-capture",
+              reason: resolveSourceAppLaunchReason(qaVerificationStage.enabled),
               attemptNumber
             });
 
@@ -1887,7 +1892,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
         sourcePaths: input.sourcePaths,
         runPaths: input.runPaths,
         options: input.options,
-        reason: "evidence-capture"
+        reason: resolveSourceAppLaunchReason(false)
       });
     }
 

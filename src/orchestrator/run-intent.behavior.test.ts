@@ -20,6 +20,7 @@ import {
   buildQAVerificationExecutionPlan,
   canReuseRunningSourceApp,
   createRunIntentRunner,
+  resolveSourceAppLaunchReason,
   runSourceAttemptLoop,
   waitForSourceAppReady
 } from "./run-intent";
@@ -45,6 +46,14 @@ function buildLoopWorkItem(id: string, order: number, dependsOnWorkItemIds: stri
     }
   };
 }
+
+test("resolveSourceAppLaunchReason Given QA verification is enabled When launch planning runs Then it keeps the QA verification reason", () => {
+  assert.equal(resolveSourceAppLaunchReason(true), "qa-verification");
+});
+
+test("resolveSourceAppLaunchReason Given QA verification is disabled When launch planning runs Then it uses the visual verification reason", () => {
+  assert.equal(resolveSourceAppLaunchReason(false), "visual-verification");
+});
 
 test("runSourceAttemptLoop Given a retryable QA failure When a later attempt passes Then it records both attempts and returns the successful resource", async () => {
   const retries: number[] = [];
