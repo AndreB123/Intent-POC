@@ -1,7 +1,8 @@
 {
-  "runId": "2026-04-21T04-01-52-274Z-intent-poc-app",
+  "runId": "2026-04-21T06-35-05-259Z-intent-poc-app",
   "sourceId": "intent-poc-app",
-  "status": "completed",
+  "status": "failed",
+  "error": "QA verification failed for source 'intent-poc-app' on attempt 1: Command failed (1). Progress: completed 0/1 targeted work items; pending work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.",
   "businessIntent": {
     "statement": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
     "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
@@ -24,8 +25,8 @@
     "diff-error": 0
   },
   "captureCoverage": {
-    "configuredCaptureCount": 47,
-    "executedCaptureCount": 47,
+    "configuredCaptureCount": 48,
+    "executedCaptureCount": 0,
     "scopeMode": "all",
     "scopeCaptureIds": []
   },

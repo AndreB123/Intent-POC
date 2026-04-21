@@ -88,7 +88,9 @@ test("writeGeneratedPlaywrightTests preserves unrelated tracked specs while refr
   assert.equal(generatedContent.includes('import { expect, test } from "playwright/test";'), true);
   assert.equal(generatedContent.includes('const baseUrl = process.env.INTENT_POC_BASE_URL ?? "http://127.0.0.1:3000";'), true);
   assert.equal(
-    generatedContent.includes(`const screenshotRoot = process.env.INTENT_POC_E2E_SCREENSHOT_ROOT ?? ${JSON.stringify(path.join(rootDir, "artifacts", "library"))};`),
+    generatedContent.includes(
+      `const screenshotRoot = process.env.INTENT_POC_E2E_SCREENSHOT_ROOT ?? ${JSON.stringify(path.join(rootDir, "artifacts", "library", "demo-source"))};`
+    ),
     true
   );
   assert.equal(generatedContent.includes("await mkdir(path.dirname(screenshotPath), { recursive: true });"), true);
@@ -715,6 +717,7 @@ test("writeGeneratedPlaywrightTests Given required UI states When specs are gene
 
     const generatedContent = await fs.readFile(specPath!, "utf8");
     assert.equal(generatedContent.includes("const requiredUiStates = ["), true);
+    assert.equal(generatedContent.includes("const lightModeUiStates = buildOverriddenUiStateRequirements(requiredUiStates, { \"theme-mode\": \"light\" });"), true);
     assert.equal(
       generatedContent.includes("function buildUrlWithUiStates(routePath: string, requirements: typeof requiredUiStates): string {"),
       true
@@ -940,10 +943,20 @@ test("writeGeneratedPlaywrightTests Given a dark-mode input verification flow Wh
 
     const generatedContent = await fs.readFile(specPath!, "utf8");
     assert.equal(generatedContent.includes('const requiredUiStates = ['), true);
+    assert.equal(generatedContent.includes('const lightModeUiStates = buildOverriddenUiStateRequirements(requiredUiStates, { "theme-mode": "light" });'), true);
     assert.equal(generatedContent.includes('function isUiStateRouteSatisfied(page: Page, requirement: (typeof requiredUiStates)[number]): boolean {'), true);
     assert.equal(generatedContent.includes('if (isUiStateRouteSatisfied(page, requirement)) {'), true);
     assert.equal(generatedContent.includes('if ((await control.count()) === 0) {'), true);
     assert.equal(generatedContent.includes('await applyUiStateRequirements(page, requiredUiStates);'), true);
+    assert.equal(generatedContent.includes('await applyUiStateRequirements(page, lightModeUiStates);'), true);
+    assert.equal(generatedContent.includes('Input Field Ready For Text Entry (Light Mode)'), true);
+    assert.equal(generatedContent.includes('Input Field Ready For Text Entry (Dark Mode)'), true);
+    assert.equal(generatedContent.includes('input-field-ready-for-text-entry-light.png'), true);
+    assert.equal(generatedContent.includes('input-field-ready-for-text-entry-dark.png'), true);
+    assert.equal(generatedContent.includes('typed-input-text-visible-light.png'), true);
+    assert.equal(generatedContent.includes('typed-input-text-visible-dark.png'), true);
+    assert.equal(generatedContent.includes('shot-1-'), false);
+    assert.equal(generatedContent.includes('shot-2-'), false);
     assert.equal(generatedContent.includes('const target = page.locator("[data-testid=\'primitive-input-field\'] input");'), true);
     assert.equal(generatedContent.includes('await target.fill("Readable dark mode sample text");'), true);
   } finally {

@@ -28,6 +28,7 @@ export const SURFACE_CATALOG: SurfaceDefinition[] = [
   { id: "component-toast-error", title: "Error Toast", testId: "component-toast-error", layer: "component", changesInV2: true },
   { id: "component-form-section", title: "Form Section", testId: "component-form-section", layer: "component", changesInV2: true },
   { id: "component-user-list-item", title: "User List Item", testId: "component-user-list-item", layer: "component", changesInV2: true },
+  { id: "component-activity-timeline", title: "Activity Timeline", testId: "component-activity-timeline", layer: "component", changesInV2: true },
 
   { id: "view-dashboard-summary", title: "Dashboard Summary View", testId: "view-dashboard-summary", layer: "view", changesInV2: true },
   { id: "view-list-overview", title: "List Overview View", testId: "view-list-overview", layer: "view", changesInV2: true },

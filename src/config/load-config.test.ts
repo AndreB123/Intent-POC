@@ -213,3 +213,66 @@ test("loadConfig expands the built-in surface library capture set for the unifie
 
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
+
+test("loadConfig rejects legacy artifacts runRoot and retainRuns keys", async () => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-config-legacy-artifacts-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await fs.writeFile(
+    configPath,
+    [
+      "version: 1",
+      "linear:",
+      "  enabled: false",
+      "  apiKeyEnv: LINEAR_API_KEY",
+      "  teamId: ENG",
+      "agent:",
+      "  mode: bounded-runner",
+      "sources:",
+      "  s1:",
+      "    source:",
+      "      type: local",
+      `      localPath: ${JSON.stringify(tmpDir)}`,
+      "    workspace:",
+      "      checkoutMode: existing",
+      "    app:",
+      "      workdir: .",
+      "      startCommand: echo start",
+      "      baseUrl: http://127.0.0.1:3000",
+      "      readiness:",
+      "        type: http",
+      "        url: http://127.0.0.1:3000",
+      "    capture:",
+      "      items:",
+      "        - id: one",
+      "          path: /",
+      "playwright:",
+      "  browser: chromium",
+      "artifacts:",
+      "  storageMode: controller",
+      "  root: ./artifacts",
+      "  runRoot: ./artifacts/runs",
+      "  retainRuns: 5",
+      "comparison:",
+      "  hashAlgorithm: sha256",
+      "run:",
+      "  sourceId: s1",
+      "  captureIds: []",
+      "  continueOnCaptureError: false",
+      "  metadata: {}",
+      "  dryRun: true"
+    ].join("\n"),
+    "utf8"
+  );
+
+  await assert.rejects(
+    () => loadConfig(configPath),
+    (error: unknown) => {
+      assert.match(String(error), /Configuration validation failed/);
+      assert.match(String(error), /artifacts: Unrecognized key\(s\) in object: 'runRoot', 'retainRuns'/);
+      return true;
+    }
+  );
+
+  await fs.rm(tmpDir, { recursive: true, force: true });
+});

@@ -351,13 +351,19 @@ function buildScenarioContext(scenarios: BDDScenario[]): ImplementationScenarioC
 
 function buildVerificationNotes(workItem: TDDWorkItem): string[] {
   const requiredUiStates = collectWorkItemRequiredUiStates(workItem);
+  const requiresPairedThemeEvidence = requiredUiStates.some(
+    (requirement) => requirement.stateId === "theme-mode" && requirement.requestedValue === "dark"
+  );
 
   return [
     ...workItem.playwright.specs.map(
     (spec) =>
       `${spec.framework} coverage \"${spec.suiteName}\" / \"${spec.testName}\" is a tracked read-only verification asset during implementation.`
     ),
-    ...requiredUiStates.map((requirement) => `Downstream verification must preserve ${formatDetailedUiStateRequirement(requirement)}`)
+    ...requiredUiStates.map((requirement) => `Downstream verification must preserve ${formatDetailedUiStateRequirement(requirement)}`),
+    ...(requiresPairedThemeEvidence
+      ? ["Theme-related UI fixes are not complete until downstream verification captures paired light-mode and dark-mode screenshots."]
+      : [])
   ];
 }
 

@@ -145,3 +145,72 @@ test("buildRuntimeRunIntentOptions respects an explicit publish-to-library overr
   assert.equal(options.publishToLibrary, true);
   assert.deepEqual(options.sourceIds, ["app"]);
 });
+
+test("buildRuntimeRunIntentOptions rejects legacy artifact keys during config load", async (t) => {
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-runtime-policy-legacy-"));
+  const configPath = path.join(tmpRoot, "intent-poc.yaml");
+
+  await fs.writeFile(
+    configPath,
+    [
+      "version: 1",
+      "linear:",
+      "  enabled: false",
+      "  apiKeyEnv: LINEAR_API_KEY",
+      "  teamId: ENG",
+      "agent:",
+      "  mode: bounded-runner",
+      "sources:",
+      "  app:",
+      "    source:",
+      "      type: local",
+      "      localPath: .",
+      "    workspace:",
+      "      checkoutMode: existing",
+      "    app:",
+      "      workdir: .",
+      "      startCommand: echo app",
+      "      baseUrl: http://127.0.0.1:3002",
+      "      readiness:",
+      "        type: http",
+      "        url: http://127.0.0.1:3002/health",
+      "    capture:",
+      "      items:",
+      "        - id: app-home",
+      "          path: /",
+      "playwright:",
+      "  browser: chromium",
+      "artifacts:",
+      "  storageMode: controller",
+      "  root: ./artifacts",
+      "  runRoot: ./artifacts/runs",
+      "comparison:",
+      "  hashAlgorithm: sha256",
+      "run:",
+      "  sourceId: app",
+      "  intent: Test runtime policy",
+      "  captureIds: []",
+      "  continueOnCaptureError: false",
+      "  metadata: {}",
+      "  dryRun: true"
+    ].join("\n"),
+    "utf8"
+  );
+
+  t.after(async () => {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () =>
+      buildRuntimeRunIntentOptions({
+        configPath,
+        intent: "Run with legacy keys"
+      }),
+    (error: unknown) => {
+      assert.match(String(error), /Configuration validation failed/);
+      assert.match(String(error), /artifacts: Unrecognized key\(s\) in object: 'runRoot'/);
+      return true;
+    }
+  );
+});

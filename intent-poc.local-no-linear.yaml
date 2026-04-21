@@ -55,6 +55,42 @@ sources:
       notes:
         - Use this source for prompt-planning, Studio changes, and built-in surface library evidence.
         - Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.
+      verificationNotes:
+        - Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.
+        - Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.
+        - Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.
+      uiStates:
+        - id: theme-mode
+          label: Theme mode
+          description: The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.
+          activation:
+            - type: query-param
+              target: dark
+              values:
+                light: "false"
+                dark: "true"
+              notes:
+                - The demo app now honors the dark query parameter across Studio and library routes for deterministic verification.
+            - type: ui-control
+              target: "[data-testid='theme-toggle']"
+              values:
+                light: "false"
+                dark: "true"
+              notes:
+                - The library surface toggle remains available for manual verification flows.
+            - type: ui-control
+              target: "#dark-mode-toggle"
+              values:
+                light: "false"
+                dark: "true"
+              notes:
+                - Intent Studio keeps an explicit toggle for interactive review during manual sessions.
+          verificationStrategies:
+            - ui-interaction-playwright
+          notes:
+            - Verify the active theme state before trusting screenshot comparisons.
+            - Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.
+            - Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.
     studio:
       displayName: Current app
     testing:

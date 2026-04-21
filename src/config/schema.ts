@@ -155,15 +155,17 @@ const agentStageSchema = z.object({
   fallbackToRules: z.boolean().optional()
 });
 
-const artifactsSchema = z.object({
-  storageMode: z.enum(["controller", "both"]).default("controller"),
-  root: z.string().min(1).default("./artifacts"),
-  libraryRoot: z.string().min(1).optional(),
-  copyToSourcePath: z.string().optional(),
-  writeMarkdownSummary: z.boolean().default(true),
-  writeJsonSummary: z.boolean().default(true),
-  cleanBeforeRun: z.boolean().default(true)
-});
+const artifactsSchema = z
+  .object({
+    storageMode: z.enum(["controller", "both"]).default("controller"),
+    root: z.string().min(1).default("./artifacts"),
+    libraryRoot: z.string().min(1).optional(),
+    copyToSourcePath: z.string().optional(),
+    writeMarkdownSummary: z.boolean().default(true),
+    writeJsonSummary: z.boolean().default(true),
+    cleanBeforeRun: z.boolean().default(true)
+  })
+  .strict();
 
 const runSchema = z.object({
   sourceId: z.string().min(1),

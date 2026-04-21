@@ -17,6 +17,10 @@ function sanitizeOutputFileName(input: string, fallback: string): string {
   return `${sanitizeFileSegment(input) || fallback}.png`;
 }
 
+function stripLegacyScreenshotPrefix(value: string): string {
+  return value.replace(/^shot-\d+-/, "").replace(/^checkpoint-\d+-/, "");
+}
+
 function inferScreenshotCategory(spec: PlaywrightSpecArtifact): "components" | "views" | "pages" | "bdd" | "userflows" {
   const checkpointCaptureIds = spec.checkpoints
     .map((checkpoint) => checkpoint.captureId?.toLowerCase() ?? "")
@@ -39,9 +43,62 @@ function inferScreenshotCategory(spec: PlaywrightSpecArtifact): "components" | "
 
 function buildSpecScreenshotDirectory(spec: PlaywrightSpecArtifact): string {
   const parsed = path.parse(spec.relativeSpecPath);
-  const relativeWithoutExtension = path.join(parsed.dir, parsed.name);
-  const normalized = relativeWithoutExtension.replace(/\\/g, "/");
-  return sanitizeFileSegment(normalized) || sanitizeFileSegment(spec.testName) || "generated-spec";
+  return sanitizeFileSegment(parsed.name) || sanitizeFileSegment(spec.testName) || "generated-spec";
+}
+
+function buildCheckpointScreenshotStemCandidates(checkpoint: PlaywrightCheckpoint): string[] {
+  const labelSegment = sanitizeFileSegment(checkpoint.label);
+  const captureSegment = sanitizeFileSegment(checkpoint.captureId ?? "");
+  const targetSegment = sanitizeFileSegment(checkpoint.target ?? checkpoint.locator ?? checkpoint.referenceTarget ?? "");
+  const attributeSegment = sanitizeFileSegment(checkpoint.attributeName ?? "");
+  const expectedSubstringSegment = sanitizeFileSegment(checkpoint.expectedSubstring ?? "");
+  const screenshotSegment = sanitizeFileSegment(stripLegacyScreenshotPrefix(checkpoint.screenshotId));
+  const idSegment = sanitizeFileSegment(checkpoint.id.replace(/^checkpoint-/, ""));
+  const candidates = [
+    labelSegment,
+    captureSegment && labelSegment && !labelSegment.includes(captureSegment) ? `${captureSegment}-${labelSegment}` : "",
+    labelSegment && targetSegment && !labelSegment.includes(targetSegment) ? `${labelSegment}-${targetSegment}` : "",
+    labelSegment && attributeSegment && !labelSegment.includes(attributeSegment) ? `${labelSegment}-${attributeSegment}` : "",
+    labelSegment && expectedSubstringSegment && !labelSegment.includes(expectedSubstringSegment)
+      ? `${labelSegment}-${expectedSubstringSegment}`
+      : "",
+    screenshotSegment,
+    captureSegment,
+    targetSegment,
+    idSegment
+  ];
+
+  return Array.from(new Set(candidates.filter((candidate) => candidate.length > 0)));
+}
+
+function buildCheckpointScreenshotStems(spec: PlaywrightSpecArtifact): string[] {
+  const usedStems = new Set<string>();
+
+  return spec.checkpoints.map((checkpoint, index) => {
+    const candidates = buildCheckpointScreenshotStemCandidates(checkpoint);
+
+    for (const candidate of candidates) {
+      if (!usedStems.has(candidate)) {
+        usedStems.add(candidate);
+        return candidate;
+      }
+    }
+
+    const fallbackBase = sanitizeFileSegment(stripLegacyScreenshotPrefix(checkpoint.screenshotId))
+      || sanitizeFileSegment(checkpoint.id)
+      || sanitizeFileSegment(checkpoint.action)
+      || `checkpoint-${index + 1}`;
+    let uniqueStem = fallbackBase;
+    let collisionIndex = 2;
+
+    while (usedStems.has(uniqueStem)) {
+      uniqueStem = `${fallbackBase}-${collisionIndex}`;
+      collisionIndex += 1;
+    }
+
+    usedStems.add(uniqueStem);
+    return uniqueStem;
+  });
 }
 
 function collectRequiredUiStates(spec: PlaywrightSpecArtifact): NonNullable<PlaywrightSpecArtifact["requiredUiStates"]> {
@@ -61,19 +118,30 @@ function collectRequiredUiStates(spec: PlaywrightSpecArtifact): NonNullable<Play
   return Array.from(dedupedRequirements.values());
 }
 
+function supportsPairedThemeEvidence(
+  requirements: NonNullable<PlaywrightSpecArtifact["requiredUiStates"]>
+): boolean {
+  return requirements.some((requirement) => requirement.stateId === "theme-mode" && requirement.requestedValue === "dark");
+}
+
 function buildCheckpointLines(
   checkpoint: PlaywrightCheckpoint,
-  index: number,
+  screenshotName: string,
   screenshotDirectory: string,
-  hasRequiredUiStates: boolean
+  input: {
+    hasRequiredUiStates: boolean;
+    uiStateVariableName?: string;
+    labelSuffix?: string;
+  }
 ): string[] {
-  const screenshotName = sanitizeOutputFileName(checkpoint.screenshotId, `checkpoint-${index + 1}`);
   const screenshotPathExpression = `path.join(screenshotRoot, ${quote(screenshotDirectory)}, ${quote(screenshotName)})`;
+  const stepLabel = input.labelSuffix ? `${checkpoint.label} (${input.labelSuffix})` : checkpoint.label;
+  const uiStateVariableName = input.uiStateVariableName ?? "requiredUiStates";
   const lines = [
-    `    await test.step(${quote(checkpoint.label)}, async () => {`
+    `    await test.step(${quote(stepLabel)}, async () => {`
   ];
-  const urlExpression = hasRequiredUiStates
-    ? `buildUrlWithUiStates(${quote(checkpoint.path ?? "/")}, requiredUiStates)`
+  const urlExpression = input.hasRequiredUiStates
+    ? `buildUrlWithUiStates(${quote(checkpoint.path ?? "/")}, ${uiStateVariableName})`
     : `new URL(${quote(checkpoint.path ?? "/")}, baseUrl).toString()`;
 
   if (checkpoint.action === "mock-studio-state") {
@@ -96,7 +164,7 @@ function buildCheckpointLines(
 
     if (checkpoint.path) {
       lines.push(
-        `      await page.goto(${hasRequiredUiStates ? `buildUrlWithUiStates(${quote(checkpoint.path)}, requiredUiStates)` : `new URL(${quote(checkpoint.path)}, baseUrl).toString()`}, { waitUntil: ${quote(checkpoint.waitUntil ?? "domcontentloaded")} });`
+        `      await page.goto(${input.hasRequiredUiStates ? `buildUrlWithUiStates(${quote(checkpoint.path)}, ${uiStateVariableName})` : `new URL(${quote(checkpoint.path)}, baseUrl).toString()`}, { waitUntil: ${quote(checkpoint.waitUntil ?? "domcontentloaded")} });`
       );
     }
 
@@ -104,8 +172,8 @@ function buildCheckpointLines(
       lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
     }
 
-    if (hasRequiredUiStates && checkpoint.path) {
-      lines.push("      await applyUiStateRequirements(page, requiredUiStates);");
+    if (input.hasRequiredUiStates && checkpoint.path) {
+      lines.push(`      await applyUiStateRequirements(page, ${uiStateVariableName});`);
     }
 
     lines.push(`      const screenshotPath = ${screenshotPathExpression};`);
@@ -129,8 +197,8 @@ function buildCheckpointLines(
     }
   }
 
-  if (hasRequiredUiStates && checkpoint.action === "goto") {
-    lines.push("      await applyUiStateRequirements(page, requiredUiStates);");
+  if (input.hasRequiredUiStates && checkpoint.action === "goto") {
+    lines.push(`      await applyUiStateRequirements(page, ${uiStateVariableName});`);
   }
 
   if (checkpoint.action === "assert-below") {
@@ -206,9 +274,11 @@ function buildCheckpointLines(
 function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshotRoot: string): string {
   const screenshotCategory = inferScreenshotCategory(spec);
   const screenshotDirectory = path.join(screenshotCategory, buildSpecScreenshotDirectory(spec));
+  const checkpointScreenshotStems = buildCheckpointScreenshotStems(spec);
   const usesBelowAssertion = spec.checkpoints.some((checkpoint) => checkpoint.action === "assert-below");
   const requiredUiStates = collectRequiredUiStates(spec);
   const usesUiStateRequirements = requiredUiStates.length > 0;
+  const usesPairedThemeEvidence = usesUiStateRequirements && supportsPairedThemeEvidence(requiredUiStates);
   const lines = [
     'import { mkdir } from "node:fs/promises";',
     'import path from "node:path";',
@@ -216,11 +286,27 @@ function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshot
       ? "import { expect, test, type Page } from \"playwright/test\";"
       : "import { expect, test } from \"playwright/test\";",
     "",
-    "// Generated by Intent POC. This tracked Playwright spec is regenerated in place when the same intent path is requested.",
+    "// Generated by Intent POC. The source-scoped screenshot subtree is overwritten in place when this tracked spec is regenerated.",
     `const baseUrl = process.env.INTENT_POC_BASE_URL ?? ${quote(baseUrl)};`,
     `const screenshotRoot = process.env.INTENT_POC_E2E_SCREENSHOT_ROOT ?? ${quote(screenshotRoot)};`,
     "",
     ...(usesUiStateRequirements ? [`const requiredUiStates = ${JSON.stringify(requiredUiStates, null, 2)} as const;`, ""] : []),
+    ...(usesPairedThemeEvidence
+      ? [
+          "function buildOverriddenUiStateRequirements(",
+          "  requirements: typeof requiredUiStates,",
+          '  overrides: Partial<Record<(typeof requiredUiStates)[number]["stateId"], string>>',
+          "): typeof requiredUiStates {",
+          "  return requirements.map((requirement) => ({",
+          "    ...requirement,",
+          "    requestedValue: overrides[requirement.stateId] ?? requirement.requestedValue",
+          "  })) as typeof requiredUiStates;",
+          "}",
+          "",
+          'const lightModeUiStates = buildOverriddenUiStateRequirements(requiredUiStates, { "theme-mode": "light" });',
+          ""
+        ]
+      : []),
     ...(usesUiStateRequirements
       ? [
           "function buildUrlWithUiStates(routePath: string, requirements: typeof requiredUiStates): string {",
@@ -324,8 +410,46 @@ function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshot
     `  test(${quote(spec.testName)}, async ({ page }) => {`
   ];
 
-  for (const [index, checkpoint] of spec.checkpoints.entries()) {
-    lines.push(...buildCheckpointLines(checkpoint, index, screenshotDirectory, usesUiStateRequirements));
+  const checkpointVariants = usesPairedThemeEvidence
+    ? [
+        {
+          labelSuffix: "Light Mode",
+          screenshotSuffix: "-light",
+          uiStateVariableName: "lightModeUiStates"
+        },
+        {
+          labelSuffix: "Dark Mode",
+          screenshotSuffix: "-dark",
+          uiStateVariableName: "requiredUiStates"
+        }
+      ]
+    : [
+        {
+          labelSuffix: "",
+          screenshotSuffix: "",
+          uiStateVariableName: "requiredUiStates"
+        }
+      ];
+
+  for (const variant of checkpointVariants) {
+    for (const [index, checkpoint] of spec.checkpoints.entries()) {
+      const checkpointScreenshotStem = checkpointScreenshotStems[index]
+        ?? sanitizeFileSegment(stripLegacyScreenshotPrefix(checkpoint.screenshotId))
+        ?? sanitizeFileSegment(checkpoint.id)
+        ?? `checkpoint-${index + 1}`;
+      const screenshotName = sanitizeOutputFileName(
+        `${checkpointScreenshotStem}${variant.screenshotSuffix}`,
+        `${checkpointScreenshotStem}${variant.screenshotSuffix}`
+      );
+
+      lines.push(
+        ...buildCheckpointLines(checkpoint, screenshotName, screenshotDirectory, {
+          hasRequiredUiStates: usesUiStateRequirements,
+          uiStateVariableName: variant.uiStateVariableName,
+          labelSuffix: variant.labelSuffix
+        })
+      );
+    }
   }
 
   lines.push("  });");
@@ -381,7 +505,7 @@ export async function writeGeneratedPlaywrightTests(input: {
 
   const outputDir = path.resolve(input.workspace.rootDir, input.workspace.source.testing.playwright.outputDir);
   const sourceDir = path.join(outputDir, sanitizeFileSegment(input.sourceId) || input.sourceId);
-  const screenshotRoot = path.resolve(input.workspace.rootDir, "artifacts", "library");
+  const screenshotRoot = path.resolve(input.workspace.rootDir, "artifacts", "library", sanitizeFileSegment(input.sourceId) || input.sourceId);
 
   await ensureDirectory(sourceDir);
 

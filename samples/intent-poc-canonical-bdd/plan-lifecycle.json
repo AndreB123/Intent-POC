@@ -56,8 +56,10 @@
     "warnings": [
       "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
       "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+      "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
       "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
       "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+      "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.",
       "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
     ],
     "requestedPlanningDepth": "full",
@@ -119,7 +121,9 @@
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
-        "warnings": []
+        "warnings": [
+          "QA verification configuration is recorded and executes during source runs after implementation completes."
+        ]
       }
     ]
   },
@@ -191,8 +195,10 @@
           "notes": [
             "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
             "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+            "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
             "Verify the active theme state before trusting screenshot comparisons.",
-            "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme."
+            "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+            "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
           ],
           "reason": "Prompt requests the Theme mode UI state with value \"dark\"."
         }

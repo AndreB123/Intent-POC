@@ -1,12 +1,14 @@
 {
   "version": 1,
-  "runId": "2026-04-21T04-01-52-274Z-intent-poc-app",
-  "timestamp": "2026-04-21T04:02:37.847Z",
-  "status": "completed",
-  "errors": [],
+  "runId": "2026-04-21T06-35-05-259Z-intent-poc-app",
+  "timestamp": "2026-04-21T06:35:39.767Z",
+  "status": "failed",
+  "errors": [
+    "QA verification failed for source 'intent-poc-app' on attempt 1: Command failed (1). Progress: completed 0/1 targeted work items; pending work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app."
+  ],
   "intent": {
-    "intentId": "2026-04-21T04-01-52-273Z-change-behavior-for-intent-poc-app",
-    "receivedAt": "2026-04-21T04:01:52.273Z",
+    "intentId": "2026-04-21T06-35-05-259Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-21T06:35:05.259Z",
     "rawPrompt": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
     "summary": "change behavior for intent-poc-app",
     "intentType": "change-behavior",
@@ -476,11 +478,24 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-27-view-dashboard-summary",
+                    "id": "checkpoint-27-component-activity-timeline",
+                    "label": "Activity Timeline",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-activity-timeline']' is visible for Activity Timeline.",
+                    "screenshotId": "shot-27-component-activity-timeline",
+                    "path": "/library/component-activity-timeline",
+                    "captureId": "component-activity-timeline",
+                    "locator": "[data-testid='component-activity-timeline']",
+                    "waitForSelector": "[data-testid='component-activity-timeline']",
+                    "target": "[data-testid='component-activity-timeline']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-28-view-dashboard-summary",
                     "label": "Dashboard Summary View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-dashboard-summary']' is visible for Dashboard Summary View.",
-                    "screenshotId": "shot-27-view-dashboard-summary",
+                    "screenshotId": "shot-28-view-dashboard-summary",
                     "path": "/library/view-dashboard-summary",
                     "captureId": "view-dashboard-summary",
                     "locator": "[data-testid='view-dashboard-summary']",
@@ -489,11 +504,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-28-view-list-overview",
+                    "id": "checkpoint-29-view-list-overview",
                     "label": "List Overview View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-list-overview']' is visible for List Overview View.",
-                    "screenshotId": "shot-28-view-list-overview",
+                    "screenshotId": "shot-29-view-list-overview",
                     "path": "/library/view-list-overview",
                     "captureId": "view-list-overview",
                     "locator": "[data-testid='view-list-overview']",
@@ -502,11 +517,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-29-view-settings-panel",
+                    "id": "checkpoint-30-view-settings-panel",
                     "label": "Settings Panel View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-settings-panel']' is visible for Settings Panel View.",
-                    "screenshotId": "shot-29-view-settings-panel",
+                    "screenshotId": "shot-30-view-settings-panel",
                     "path": "/library/view-settings-panel",
                     "captureId": "view-settings-panel",
                     "locator": "[data-testid='view-settings-panel']",
@@ -515,11 +530,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-30-view-empty-results",
+                    "id": "checkpoint-31-view-empty-results",
                     "label": "Empty Results View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-empty-results']' is visible for Empty Results View.",
-                    "screenshotId": "shot-30-view-empty-results",
+                    "screenshotId": "shot-31-view-empty-results",
                     "path": "/library/view-empty-results",
                     "captureId": "view-empty-results",
                     "locator": "[data-testid='view-empty-results']",
@@ -528,11 +543,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-31-view-campaign-table",
+                    "id": "checkpoint-32-view-campaign-table",
                     "label": "Campaign Table View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-campaign-table']' is visible for Campaign Table View.",
-                    "screenshotId": "shot-31-view-campaign-table",
+                    "screenshotId": "shot-32-view-campaign-table",
                     "path": "/library/view-campaign-table",
                     "captureId": "view-campaign-table",
                     "locator": "[data-testid='view-campaign-table']",
@@ -541,11 +556,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-32-view-notifications-center",
+                    "id": "checkpoint-33-view-notifications-center",
                     "label": "Notifications Center View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-notifications-center']' is visible for Notifications Center View.",
-                    "screenshotId": "shot-32-view-notifications-center",
+                    "screenshotId": "shot-33-view-notifications-center",
                     "path": "/library/view-notifications-center",
                     "captureId": "view-notifications-center",
                     "locator": "[data-testid='view-notifications-center']",
@@ -554,11 +569,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-33-view-user-directory",
+                    "id": "checkpoint-34-view-user-directory",
                     "label": "User Directory View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-user-directory']' is visible for User Directory View.",
-                    "screenshotId": "shot-33-view-user-directory",
+                    "screenshotId": "shot-34-view-user-directory",
                     "path": "/library/view-user-directory",
                     "captureId": "view-user-directory",
                     "locator": "[data-testid='view-user-directory']",
@@ -567,11 +582,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-34-view-revenue-kpis",
+                    "id": "checkpoint-35-view-revenue-kpis",
                     "label": "Revenue KPIs View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-revenue-kpis']' is visible for Revenue KPIs View.",
-                    "screenshotId": "shot-34-view-revenue-kpis",
+                    "screenshotId": "shot-35-view-revenue-kpis",
                     "path": "/library/view-revenue-kpis",
                     "captureId": "view-revenue-kpis",
                     "locator": "[data-testid='view-revenue-kpis']",
@@ -580,11 +595,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-35-view-onboarding-checklist",
+                    "id": "checkpoint-36-view-onboarding-checklist",
                     "label": "Onboarding Checklist View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-onboarding-checklist']' is visible for Onboarding Checklist View.",
-                    "screenshotId": "shot-35-view-onboarding-checklist",
+                    "screenshotId": "shot-36-view-onboarding-checklist",
                     "path": "/library/view-onboarding-checklist",
                     "captureId": "view-onboarding-checklist",
                     "locator": "[data-testid='view-onboarding-checklist']",
@@ -593,11 +608,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-36-view-approval-queue",
+                    "id": "checkpoint-37-view-approval-queue",
                     "label": "Approval Queue View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-approval-queue']' is visible for Approval Queue View.",
-                    "screenshotId": "shot-36-view-approval-queue",
+                    "screenshotId": "shot-37-view-approval-queue",
                     "path": "/library/view-approval-queue",
                     "captureId": "view-approval-queue",
                     "locator": "[data-testid='view-approval-queue']",
@@ -606,11 +621,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-37-view-audit-log",
+                    "id": "checkpoint-38-view-audit-log",
                     "label": "Audit Log View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-audit-log']' is visible for Audit Log View.",
-                    "screenshotId": "shot-37-view-audit-log",
+                    "screenshotId": "shot-38-view-audit-log",
                     "path": "/library/view-audit-log",
                     "captureId": "view-audit-log",
                     "locator": "[data-testid='view-audit-log']",
@@ -619,11 +634,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-38-view-billing-overview",
+                    "id": "checkpoint-39-view-billing-overview",
                     "label": "Billing Overview View",
                     "action": "goto",
                     "assertion": "The target '[data-testid='view-billing-overview']' is visible for Billing Overview View.",
-                    "screenshotId": "shot-38-view-billing-overview",
+                    "screenshotId": "shot-39-view-billing-overview",
                     "path": "/library/view-billing-overview",
                     "captureId": "view-billing-overview",
                     "locator": "[data-testid='view-billing-overview']",
@@ -632,11 +647,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-39-page-analytics-overview",
+                    "id": "checkpoint-40-page-analytics-overview",
                     "label": "Analytics Overview",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-analytics-overview']' is visible for Analytics Overview.",
-                    "screenshotId": "shot-39-page-analytics-overview",
+                    "screenshotId": "shot-40-page-analytics-overview",
                     "path": "/library/page-analytics-overview",
                     "captureId": "page-analytics-overview",
                     "locator": "[data-testid='page-analytics-overview']",
@@ -645,11 +660,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-40-page-account-list",
+                    "id": "checkpoint-41-page-account-list",
                     "label": "Account List Page",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-account-list']' is visible for Account List Page.",
-                    "screenshotId": "shot-40-page-account-list",
+                    "screenshotId": "shot-41-page-account-list",
                     "path": "/library/page-account-list",
                     "captureId": "page-account-list",
                     "locator": "[data-testid='page-account-list']",
@@ -658,11 +673,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-41-page-campaign-editor",
+                    "id": "checkpoint-42-page-campaign-editor",
                     "label": "Campaign Editor Page",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-campaign-editor']' is visible for Campaign Editor Page.",
-                    "screenshotId": "shot-41-page-campaign-editor",
+                    "screenshotId": "shot-42-page-campaign-editor",
                     "path": "/library/page-campaign-editor",
                     "captureId": "page-campaign-editor",
                     "locator": "[data-testid='page-campaign-editor']",
@@ -671,11 +686,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-42-page-system-settings",
+                    "id": "checkpoint-43-page-system-settings",
                     "label": "System Settings Page",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-system-settings']' is visible for System Settings Page.",
-                    "screenshotId": "shot-42-page-system-settings",
+                    "screenshotId": "shot-43-page-system-settings",
                     "path": "/library/page-system-settings",
                     "captureId": "page-system-settings",
                     "locator": "[data-testid='page-system-settings']",
@@ -684,11 +699,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-43-page-operations-center",
+                    "id": "checkpoint-44-page-operations-center",
                     "label": "Operations Center Page",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-operations-center']' is visible for Operations Center Page.",
-                    "screenshotId": "shot-43-page-operations-center",
+                    "screenshotId": "shot-44-page-operations-center",
                     "path": "/library/page-operations-center",
                     "captureId": "page-operations-center",
                     "locator": "[data-testid='page-operations-center']",
@@ -697,11 +712,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-44-page-user-management",
+                    "id": "checkpoint-45-page-user-management",
                     "label": "User Management Page",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-user-management']' is visible for User Management Page.",
-                    "screenshotId": "shot-44-page-user-management",
+                    "screenshotId": "shot-45-page-user-management",
                     "path": "/library/page-user-management",
                     "captureId": "page-user-management",
                     "locator": "[data-testid='page-user-management']",
@@ -710,11 +725,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-45-page-incident-review",
+                    "id": "checkpoint-46-page-incident-review",
                     "label": "Incident Review Page",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-incident-review']' is visible for Incident Review Page.",
-                    "screenshotId": "shot-45-page-incident-review",
+                    "screenshotId": "shot-46-page-incident-review",
                     "path": "/library/page-incident-review",
                     "captureId": "page-incident-review",
                     "locator": "[data-testid='page-incident-review']",
@@ -723,11 +738,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-46-page-revenue-forecast",
+                    "id": "checkpoint-47-page-revenue-forecast",
                     "label": "Revenue Forecast Page",
                     "action": "goto",
                     "assertion": "The target '[data-testid='page-revenue-forecast']' is visible for Revenue Forecast Page.",
-                    "screenshotId": "shot-46-page-revenue-forecast",
+                    "screenshotId": "shot-47-page-revenue-forecast",
                     "path": "/library/page-revenue-forecast",
                     "captureId": "page-revenue-forecast",
                     "locator": "[data-testid='page-revenue-forecast']",
@@ -736,11 +751,11 @@
                     "waitUntil": "load"
                   },
                   {
-                    "id": "checkpoint-47-library-index",
+                    "id": "checkpoint-48-library-index",
                     "label": "Surface Library Index",
                     "action": "goto",
                     "assertion": "The page '/library' is ready for evidence review.",
-                    "screenshotId": "shot-47-library-index",
+                    "screenshotId": "shot-48-library-index",
                     "path": "/library",
                     "captureId": "library-index",
                     "waitUntil": "networkidle"
@@ -774,9 +789,9 @@
           "notes": [
             "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
             "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
-            "Configured visual captures across linked sources: 47."
+            "Configured visual captures across linked sources: 48."
           ],
-          "captureCount": 47
+          "captureCount": 48
         }
       ],
       "plannerSections": [
@@ -903,15 +918,15 @@
           "enabled": false,
           "reason": "Implementation retries are available, but the current config keeps this stage disabled.",
           "details": [
-            "When QA is also enabled, failed verification can loop back into another implementation attempt."
+            "QA failures can feed directly back into the next bounded implementation attempt."
           ]
         },
         {
           "id": "qa-verification",
           "type": "qa-verification",
           "label": "QA verification",
-          "enabled": false,
-          "reason": "QA verification is available, but the current config keeps this stage disabled.",
+          "enabled": true,
+          "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
           "details": [
             "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
           ]
@@ -1023,7 +1038,9 @@
           "model": "models/gemini-3.1-flash-lite-preview",
           "status": "skipped",
           "source": "skipped",
-          "warnings": []
+          "warnings": [
+            "QA verification configuration is recorded and executes during source runs after implementation completes."
+          ]
         }
       ]
     }
@@ -1480,11 +1497,24 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-27-view-dashboard-summary",
+                  "id": "checkpoint-27-component-activity-timeline",
+                  "label": "Activity Timeline",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-activity-timeline']' is visible for Activity Timeline.",
+                  "screenshotId": "shot-27-component-activity-timeline",
+                  "path": "/library/component-activity-timeline",
+                  "captureId": "component-activity-timeline",
+                  "locator": "[data-testid='component-activity-timeline']",
+                  "waitForSelector": "[data-testid='component-activity-timeline']",
+                  "target": "[data-testid='component-activity-timeline']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-28-view-dashboard-summary",
                   "label": "Dashboard Summary View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-dashboard-summary']' is visible for Dashboard Summary View.",
-                  "screenshotId": "shot-27-view-dashboard-summary",
+                  "screenshotId": "shot-28-view-dashboard-summary",
                   "path": "/library/view-dashboard-summary",
                   "captureId": "view-dashboard-summary",
                   "locator": "[data-testid='view-dashboard-summary']",
@@ -1493,11 +1523,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-28-view-list-overview",
+                  "id": "checkpoint-29-view-list-overview",
                   "label": "List Overview View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-list-overview']' is visible for List Overview View.",
-                  "screenshotId": "shot-28-view-list-overview",
+                  "screenshotId": "shot-29-view-list-overview",
                   "path": "/library/view-list-overview",
                   "captureId": "view-list-overview",
                   "locator": "[data-testid='view-list-overview']",
@@ -1506,11 +1536,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-29-view-settings-panel",
+                  "id": "checkpoint-30-view-settings-panel",
                   "label": "Settings Panel View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-settings-panel']' is visible for Settings Panel View.",
-                  "screenshotId": "shot-29-view-settings-panel",
+                  "screenshotId": "shot-30-view-settings-panel",
                   "path": "/library/view-settings-panel",
                   "captureId": "view-settings-panel",
                   "locator": "[data-testid='view-settings-panel']",
@@ -1519,11 +1549,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-30-view-empty-results",
+                  "id": "checkpoint-31-view-empty-results",
                   "label": "Empty Results View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-empty-results']' is visible for Empty Results View.",
-                  "screenshotId": "shot-30-view-empty-results",
+                  "screenshotId": "shot-31-view-empty-results",
                   "path": "/library/view-empty-results",
                   "captureId": "view-empty-results",
                   "locator": "[data-testid='view-empty-results']",
@@ -1532,11 +1562,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-31-view-campaign-table",
+                  "id": "checkpoint-32-view-campaign-table",
                   "label": "Campaign Table View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-campaign-table']' is visible for Campaign Table View.",
-                  "screenshotId": "shot-31-view-campaign-table",
+                  "screenshotId": "shot-32-view-campaign-table",
                   "path": "/library/view-campaign-table",
                   "captureId": "view-campaign-table",
                   "locator": "[data-testid='view-campaign-table']",
@@ -1545,11 +1575,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-32-view-notifications-center",
+                  "id": "checkpoint-33-view-notifications-center",
                   "label": "Notifications Center View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-notifications-center']' is visible for Notifications Center View.",
-                  "screenshotId": "shot-32-view-notifications-center",
+                  "screenshotId": "shot-33-view-notifications-center",
                   "path": "/library/view-notifications-center",
                   "captureId": "view-notifications-center",
                   "locator": "[data-testid='view-notifications-center']",
@@ -1558,11 +1588,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-33-view-user-directory",
+                  "id": "checkpoint-34-view-user-directory",
                   "label": "User Directory View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-user-directory']' is visible for User Directory View.",
-                  "screenshotId": "shot-33-view-user-directory",
+                  "screenshotId": "shot-34-view-user-directory",
                   "path": "/library/view-user-directory",
                   "captureId": "view-user-directory",
                   "locator": "[data-testid='view-user-directory']",
@@ -1571,11 +1601,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-34-view-revenue-kpis",
+                  "id": "checkpoint-35-view-revenue-kpis",
                   "label": "Revenue KPIs View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-revenue-kpis']' is visible for Revenue KPIs View.",
-                  "screenshotId": "shot-34-view-revenue-kpis",
+                  "screenshotId": "shot-35-view-revenue-kpis",
                   "path": "/library/view-revenue-kpis",
                   "captureId": "view-revenue-kpis",
                   "locator": "[data-testid='view-revenue-kpis']",
@@ -1584,11 +1614,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-35-view-onboarding-checklist",
+                  "id": "checkpoint-36-view-onboarding-checklist",
                   "label": "Onboarding Checklist View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-onboarding-checklist']' is visible for Onboarding Checklist View.",
-                  "screenshotId": "shot-35-view-onboarding-checklist",
+                  "screenshotId": "shot-36-view-onboarding-checklist",
                   "path": "/library/view-onboarding-checklist",
                   "captureId": "view-onboarding-checklist",
                   "locator": "[data-testid='view-onboarding-checklist']",
@@ -1597,11 +1627,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-36-view-approval-queue",
+                  "id": "checkpoint-37-view-approval-queue",
                   "label": "Approval Queue View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-approval-queue']' is visible for Approval Queue View.",
-                  "screenshotId": "shot-36-view-approval-queue",
+                  "screenshotId": "shot-37-view-approval-queue",
                   "path": "/library/view-approval-queue",
                   "captureId": "view-approval-queue",
                   "locator": "[data-testid='view-approval-queue']",
@@ -1610,11 +1640,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-37-view-audit-log",
+                  "id": "checkpoint-38-view-audit-log",
                   "label": "Audit Log View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-audit-log']' is visible for Audit Log View.",
-                  "screenshotId": "shot-37-view-audit-log",
+                  "screenshotId": "shot-38-view-audit-log",
                   "path": "/library/view-audit-log",
                   "captureId": "view-audit-log",
                   "locator": "[data-testid='view-audit-log']",
@@ -1623,11 +1653,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-38-view-billing-overview",
+                  "id": "checkpoint-39-view-billing-overview",
                   "label": "Billing Overview View",
                   "action": "goto",
                   "assertion": "The target '[data-testid='view-billing-overview']' is visible for Billing Overview View.",
-                  "screenshotId": "shot-38-view-billing-overview",
+                  "screenshotId": "shot-39-view-billing-overview",
                   "path": "/library/view-billing-overview",
                   "captureId": "view-billing-overview",
                   "locator": "[data-testid='view-billing-overview']",
@@ -1636,11 +1666,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-39-page-analytics-overview",
+                  "id": "checkpoint-40-page-analytics-overview",
                   "label": "Analytics Overview",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-analytics-overview']' is visible for Analytics Overview.",
-                  "screenshotId": "shot-39-page-analytics-overview",
+                  "screenshotId": "shot-40-page-analytics-overview",
                   "path": "/library/page-analytics-overview",
                   "captureId": "page-analytics-overview",
                   "locator": "[data-testid='page-analytics-overview']",
@@ -1649,11 +1679,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-40-page-account-list",
+                  "id": "checkpoint-41-page-account-list",
                   "label": "Account List Page",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-account-list']' is visible for Account List Page.",
-                  "screenshotId": "shot-40-page-account-list",
+                  "screenshotId": "shot-41-page-account-list",
                   "path": "/library/page-account-list",
                   "captureId": "page-account-list",
                   "locator": "[data-testid='page-account-list']",
@@ -1662,11 +1692,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-41-page-campaign-editor",
+                  "id": "checkpoint-42-page-campaign-editor",
                   "label": "Campaign Editor Page",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-campaign-editor']' is visible for Campaign Editor Page.",
-                  "screenshotId": "shot-41-page-campaign-editor",
+                  "screenshotId": "shot-42-page-campaign-editor",
                   "path": "/library/page-campaign-editor",
                   "captureId": "page-campaign-editor",
                   "locator": "[data-testid='page-campaign-editor']",
@@ -1675,11 +1705,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-42-page-system-settings",
+                  "id": "checkpoint-43-page-system-settings",
                   "label": "System Settings Page",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-system-settings']' is visible for System Settings Page.",
-                  "screenshotId": "shot-42-page-system-settings",
+                  "screenshotId": "shot-43-page-system-settings",
                   "path": "/library/page-system-settings",
                   "captureId": "page-system-settings",
                   "locator": "[data-testid='page-system-settings']",
@@ -1688,11 +1718,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-43-page-operations-center",
+                  "id": "checkpoint-44-page-operations-center",
                   "label": "Operations Center Page",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-operations-center']' is visible for Operations Center Page.",
-                  "screenshotId": "shot-43-page-operations-center",
+                  "screenshotId": "shot-44-page-operations-center",
                   "path": "/library/page-operations-center",
                   "captureId": "page-operations-center",
                   "locator": "[data-testid='page-operations-center']",
@@ -1701,11 +1731,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-44-page-user-management",
+                  "id": "checkpoint-45-page-user-management",
                   "label": "User Management Page",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-user-management']' is visible for User Management Page.",
-                  "screenshotId": "shot-44-page-user-management",
+                  "screenshotId": "shot-45-page-user-management",
                   "path": "/library/page-user-management",
                   "captureId": "page-user-management",
                   "locator": "[data-testid='page-user-management']",
@@ -1714,11 +1744,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-45-page-incident-review",
+                  "id": "checkpoint-46-page-incident-review",
                   "label": "Incident Review Page",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-incident-review']' is visible for Incident Review Page.",
-                  "screenshotId": "shot-45-page-incident-review",
+                  "screenshotId": "shot-46-page-incident-review",
                   "path": "/library/page-incident-review",
                   "captureId": "page-incident-review",
                   "locator": "[data-testid='page-incident-review']",
@@ -1727,11 +1757,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-46-page-revenue-forecast",
+                  "id": "checkpoint-47-page-revenue-forecast",
                   "label": "Revenue Forecast Page",
                   "action": "goto",
                   "assertion": "The target '[data-testid='page-revenue-forecast']' is visible for Revenue Forecast Page.",
-                  "screenshotId": "shot-46-page-revenue-forecast",
+                  "screenshotId": "shot-47-page-revenue-forecast",
                   "path": "/library/page-revenue-forecast",
                   "captureId": "page-revenue-forecast",
                   "locator": "[data-testid='page-revenue-forecast']",
@@ -1740,11 +1770,11 @@
                   "waitUntil": "load"
                 },
                 {
-                  "id": "checkpoint-47-library-index",
+                  "id": "checkpoint-48-library-index",
                   "label": "Surface Library Index",
                   "action": "goto",
                   "assertion": "The page '/library' is ready for evidence review.",
-                  "screenshotId": "shot-47-library-index",
+                  "screenshotId": "shot-48-library-index",
                   "path": "/library",
                   "captureId": "library-index",
                   "waitUntil": "networkidle"
@@ -1860,15 +1890,15 @@
         "enabled": false,
         "reason": "Implementation retries are available, but the current config keeps this stage disabled.",
         "details": [
-          "When QA is also enabled, failed verification can loop back into another implementation attempt."
+          "QA failures can feed directly back into the next bounded implementation attempt."
         ]
       },
       {
         "id": "qa-verification",
         "type": "qa-verification",
         "label": "QA verification",
-        "enabled": false,
-        "reason": "QA verification is available, but the current config keeps this stage disabled.",
+        "enabled": true,
+        "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
         "details": [
           "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
         ]
@@ -1907,19 +1937,84 @@
   "sources": [
     {
       "sourceId": "intent-poc-app",
-      "status": "completed",
+      "status": "failed",
+      "error": "QA verification failed for source 'intent-poc-app' on attempt 1: Command failed (1). Progress: completed 0/1 targeted work items; pending work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.",
       "linearIssue": null,
       "generatedPlaywrightTests": [
         "tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts"
       ],
-      "attemptCount": 0,
-      "attempts": [],
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "startedAt": "2026-04-21T06:35:05.276Z",
+          "finishedAt": "2026-04-21T06:35:39.763Z",
+          "status": "failed",
+          "failureStage": "qaVerification",
+          "targetedWorkItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "completedInAttemptWorkItemIds": [],
+          "pendingTargetedWorkItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "completedWorkItemIds": [],
+          "remainingWorkItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "implementation": {
+            "status": "skipped",
+            "summary": "Implementation stage is disabled for this run.",
+            "targetedWorkItemIds": [],
+            "completedWorkItemIds": [],
+            "remainingWorkItemIds": [],
+            "commands": [],
+            "fileOperations": []
+          },
+          "qaVerification": {
+            "status": "failed",
+            "summary": "QA verification failed while running 'generated-playwright'.",
+            "error": "Command failed (1).",
+            "targetedWorkItemIds": [
+              "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+            ],
+            "completedWorkItemIds": [],
+            "remainingWorkItemIds": [],
+            "commands": [
+              {
+                "label": "typecheck",
+                "command": "npm run typecheck",
+                "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+                "startedAt": "2026-04-21T06:35:05.299Z",
+                "finishedAt": "2026-04-21T06:35:08.246Z",
+                "durationMs": 2947,
+                "status": "completed",
+                "exitCode": 0,
+                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-typecheck.log"
+              },
+              {
+                "label": "generated-playwright",
+                "command": "npx playwright test \"tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts\"",
+                "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+                "startedAt": "2026-04-21T06:35:08.246Z",
+                "finishedAt": "2026-04-21T06:35:39.762Z",
+                "durationMs": 31516,
+                "status": "failed",
+                "exitCode": 1,
+                "error": "Command failed (1).",
+                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-generated-playwright.log"
+              }
+            ],
+            "fileOperations": []
+          }
+        }
+      ],
       "workspace": {
         "sourceType": "local",
         "rootDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
         "appDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
         "baseUrl": "http://127.0.0.1:6006",
-        "gitCommit": "223ac0d8aa05160d0a929d7840e60b485efddee2"
+        "gitCommit": "454898a5fa1419994356306fbec5eb682725781a"
       },
       "artifacts": {
         "manifestPath": "artifacts/sources/intent-poc-app/manifest.json",

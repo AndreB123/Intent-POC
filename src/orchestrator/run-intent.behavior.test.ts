@@ -777,6 +777,8 @@ test("runIntent Given a dry run When the plan is valid Then it writes plan lifec
     assert.equal(executeSourceRunCalls, 0);
     assert.equal(result.status, "completed");
     assert.equal(result.dryRun, true);
+    assert.equal(result.paths.runDir, path.join(tmpRoot, "artifacts", "business"));
+    assert.equal(result.paths.planLifecyclePath.includes(`${path.sep}artifacts${path.sep}runs${path.sep}`), false);
     assert.deepEqual(result.sourceRuns.map((sourceRun) => sourceRun.status), ["planned"]);
     assert.equal(planLifecycle?.sources[0]?.sourceId, "client-systems-roach-admin");
     assert.equal(planLifecycle?.sources[0]?.status, "planned");
@@ -869,6 +871,9 @@ test("runIntent Given a successful source lane When compare execution finishes T
     assert.equal(result.hasDrift, true);
     assert.equal(result.counts.changed, 1);
     assert.equal(result.counts.unchanged, 0);
+    assert.equal(result.paths.runDir, path.join(tmpRoot, "artifacts", "business"));
+    assert.equal(result.paths.manifestPath, path.join(tmpRoot, "artifacts", "business", "manifest.json"));
+    assert.equal(result.paths.runDir.includes(`${path.sep}artifacts${path.sep}runs${path.sep}`), false);
     assert.equal(result.captures.length, 1);
     assert.equal(manifest?.status, "completed");
     assert.equal(manifest?.summary.counts.changed, 1);

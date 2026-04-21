@@ -38,6 +38,7 @@ The sample config in `intent-poc.yaml` is the source of truth for runnable sourc
 `intent-poc-app` intentionally uses the built-in `surface-library` capture set and the tracked screenshot root. Keep that source aligned with `src/demo-app/model/catalog.ts`, `src/demo-app/capture/build-capture-items.ts`, and `src/demo-app/capture/screenshot-paths.ts`.
 
 Reusable UI-state verification context belongs in `sources.<id>.planning`, not in prompt-specific routing rules. Prefer `planning.verificationNotes` plus `planning.uiStates` for states such as theme, density, mocked app state, or route-driven modes that need explicit activation during verification.
+For theme-sensitive UI bugs, treat dark-mode evidence as paired evidence: capture both a light-mode reference screenshot and a dark-mode target screenshot in the tracked Playwright `bdd/` or `userflows/` outputs instead of trusting a dark-only capture set.
 
 ## Demo UI Architecture
 Intent Studio at `/` is the source of truth for reusable demo-app UI. The `/library` catalog must stay a stable showcase and screenshot surface, but it should be backed by shared app render helpers/components rather than a second parallel mock UI tree.

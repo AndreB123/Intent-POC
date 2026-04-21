@@ -19,7 +19,7 @@ agent:
   allowBDDPlanning: true
   allowTDDPlanning: true
   allowImplementation: false
-  allowQAVerification: false
+  allowQAVerification: true
   fallbackToRules: true
 sources:
   intent-poc-app:
@@ -42,6 +42,7 @@ sources:
       verificationNotes:
         - Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.
         - Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.
+        - Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.
       uiStates:
         - id: theme-mode
           label: Theme mode
@@ -73,6 +74,7 @@ sources:
           notes:
             - Verify the active theme state before trusting screenshot comparisons.
             - Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.
+            - Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.
     studio:
       displayName: Current app
     testing:

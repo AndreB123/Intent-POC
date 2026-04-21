@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "runId": "2026-04-21T04-01-52-274Z-intent-poc-app",
-  "updatedAt": "2026-04-21T04:02:37.850Z",
-  "intentId": "2026-04-21T04-01-52-273Z-change-behavior-for-intent-poc-app",
+  "runId": "2026-04-21T06-35-05-259Z-intent-poc-app",
+  "updatedAt": "2026-04-21T06:35:39.769Z",
+  "intentId": "2026-04-21T06-35-05-259Z-change-behavior-for-intent-poc-app",
   "summary": "change behavior for intent-poc-app",
   "planning": {
     "repoCandidates": [
@@ -26,9 +26,9 @@
         "notes": [
           "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
           "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
-          "Configured visual captures across linked sources: 47."
+          "Configured visual captures across linked sources: 48."
         ],
-        "captureCount": 47
+        "captureCount": 48
       }
     ],
     "plannerSections": [
@@ -115,7 +115,9 @@
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
-        "warnings": []
+        "warnings": [
+          "QA verification configuration is recorded and executes during source runs after implementation completes."
+        ]
       }
     ]
   },
@@ -127,7 +129,7 @@
   "sources": [
     {
       "sourceId": "intent-poc-app",
-      "status": "completed",
+      "status": "failed",
       "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
       "captureScope": {
         "mode": "all",
@@ -135,8 +137,27 @@
       },
       "warnings": [],
       "linearIssue": null,
-      "attemptCount": 0,
-      "attempts": []
+      "attemptCount": 1,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "status": "failed",
+          "failureStage": "qaVerification",
+          "targetedWorkItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "completedInAttemptWorkItemIds": [],
+          "pendingTargetedWorkItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "completedWorkItemIds": [],
+          "remainingWorkItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "implementation": "skipped",
+          "qaVerification": "failed"
+        }
+      ]
     }
   ]
 }

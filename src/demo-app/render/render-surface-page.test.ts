@@ -99,6 +99,24 @@ test("renderSurfacePage Given a shared display-primitive surface When rendered T
   assert.match(html, /class="tab">History<\/span>/);
 });
 
+test("renderSurfacePage Given an activity timeline component When rendered Then it includes details disclosure content", () => {
+  const html = renderSurfacePage(
+    {
+      id: "component-activity-timeline",
+      title: "Activity Timeline",
+      testId: "component-activity-timeline",
+      layer: "component",
+      changesInV2: true
+    },
+    "v1"
+  );
+
+  assert.match(html, /data-testid="component-activity-timeline"/);
+  assert.match(html, /<details>/);
+  assert.match(html, /Activity Timeline/);
+  assert.match(html, /No recent activity\./);
+});
+
 test("renderSurfacePage Given a page surface When rendered Then it reuses the shared page header structure", () => {
   const html = renderSurfacePage(
     {

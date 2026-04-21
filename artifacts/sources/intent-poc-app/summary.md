@@ -1,15 +1,15 @@
 # Intent POC Source Run Summary
 
-- Run ID: 2026-04-21T04-01-52-274Z-intent-poc-app
+- Run ID: 2026-04-21T06-35-05-259Z-intent-poc-app
 - Source: intent-poc-app
-- Status: completed
+- Status: failed
 - Intent: Create a baseline for the deterministic screenshot library for the built-in surface library.
 - Normalized summary: change behavior for intent-poc-app
 - Verification workflow: active
 - Linear issue: not created
 - Has drift: no
 - Desired outcome: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.
-- Error: none
+- Error: QA verification failed for source 'intent-poc-app' on attempt 1: Command failed (1). Progress: completed 0/1 targeted work items; pending work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.
 
 ## AI Stages
 
@@ -18,13 +18,13 @@
 - BDD Planning: completed [deterministic]
 - TDD Planning: completed [deterministic]
 - Implementation: skipped [deterministic]
-- QA Verification: skipped [deterministic]
+- QA Verification: skipped [deterministic] — QA verification configuration is recorded and executes during source runs after implementation completes.
 
 ## Source Plan
 
 - Selection reason: Source intent-poc-app was selected in the requested source scope.
-- Configured captures: 47
-- Executed captures: 47
+- Configured captures: 48
+- Executed captures: 0
 - Capture scope: all configured captures
 - UI state requirements: none
 - Warnings: none
@@ -73,7 +73,7 @@ Create a baseline for the deterministic screenshot library for the built-in surf
   - Order: 1
   - Depends on: none
   - Playwright specs: 1
-  - Checkpoints: 47
+  - Checkpoints: 48
 
 ## Generated Playwright Specs
 
@@ -81,7 +81,23 @@ Create a baseline for the deterministic screenshot library for the built-in surf
 
 ## Runtime Attempts
 
-- None
+### Attempt 1
+- Status: failed
+- Failure stage: qaVerification
+- Targeted work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+- Completed in attempt: none
+- Pending targeted work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+- Completed work items: none
+- Remaining work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+- Implementation: skipped - Implementation stage is disabled for this run.
+  - Commands: none
+  - File operations: none
+- QA verification: failed - QA verification failed while running 'generated-playwright'.
+  - Targeted work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+  - Error: Command failed (1).
+  - typecheck - [completed] - artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-typecheck.log
+  - generated-playwright - [failed] - artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-generated-playwright.log - Command failed (1).
+  - File operations: none
 
 ## Counts
 

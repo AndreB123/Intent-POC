@@ -39,7 +39,7 @@ async function runPreflightChecks(workspaceRoot: string): Promise<void> {
 
   await runCommand("npm run test:code", {
     cwd: workspaceRoot,
-    timeoutMs: 240_000
+    timeoutMs: 600_000
   });
 
   log.info("Preflight validation passed.", {

@@ -423,6 +423,7 @@ test("planImplementationChanges Given generated specs When planning is requested
     assert.match(capturedPrompt, /Requested source UI states for downstream verification:/);
     assert.match(capturedPrompt, /"stateId": "theme-mode"/);
     assert.match(capturedPrompt, /Downstream verification must preserve Theme mode \[theme-mode=dark\] via UI control '\[data-testid='theme-toggle'\]'\./);
+    assert.match(capturedPrompt, /Theme-related UI fixes are not complete until downstream verification captures paired light-mode and dark-mode screenshots\./);
     assert.match(capturedPrompt, /dashboard-affordance\.spec\.ts/);
     assert.match(capturedPrompt, /Prefer existing source files under src\/ and src\/demo-app\//);
     assert.equal(capturedPrompt.includes('"specPaths"'), false);

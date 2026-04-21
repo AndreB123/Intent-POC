@@ -308,13 +308,15 @@ The workflow writes to one deterministic artifact tree under `artifacts/`:
 
 Screenshot library is maintained at `artifacts/library/<sourceId>/` (Git-tracked):
 
-**Source-of-truth images** (flat category folders):
+**Source-of-truth images** (deterministic category folders):
 - `artifacts/library/<sourceId>/components/*.png`
 - `artifacts/library/<sourceId>/views/*.png`
 - `artifacts/library/<sourceId>/pages/*.png`
-- `artifacts/library/<sourceId>/bdd/*.png`
-- `artifacts/library/<sourceId>/userflows/*.png`
+- `artifacts/library/<sourceId>/bdd/<behavior-id>/*.png`
+- `artifacts/library/<sourceId>/userflows/<flow-id>/*.png`
 - `artifacts/library/<sourceId>/manifest.json` — lightweight metadata: capture count, drift summary, intent
+
+Tracked screenshots are upserted in place. Component, view, and page captures keep their catalog-derived file names. BDD and userflow captures use stable human-readable file names within a stable behavior or flow directory, and the next run overwrites the same PNG paths so Git image diff remains the review surface.
 
 The library manifests are lightweight metadata for potential future UI consumption. Business and source manifests, hashes, and comparison outputs live in the same stable tree so downstream tooling can rely on fixed locations.
 
