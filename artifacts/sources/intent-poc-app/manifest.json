@@ -1,57 +1,103 @@
 {
   "version": 1,
-  "runId": "2026-04-20T21-11-28-236Z-intent-poc-app",
-  "timestamp": "2026-04-20T21:11:42.749Z",
+  "runId": "2026-04-21T02-29-19-118Z-intent-poc-app",
+  "timestamp": "2026-04-21T02:30:10.911Z",
   "status": "completed",
   "intent": {
-    "intentId": "2026-04-20T21-11-28-236Z-change-behavior-for-intent-poc-app",
-    "receivedAt": "2026-04-20T21:11:28.236Z",
-    "rawPrompt": "help me fix a bug in our dark mode input field. for some reason both the background and htte text color of the typed text of the user is white or light grey. i cant read what i type",
+    "intentId": "2026-04-21T02-29-19-117Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-21T02:29:19.117Z",
+    "rawPrompt": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
     "summary": "change behavior for intent-poc-app",
     "intentType": "change-behavior",
     "codeSurface": {
       "sourceId": "intent-poc-app",
-      "id": "surface-catalog",
-      "label": "Surface Catalog",
+      "id": "surface-library",
+      "label": "Surface Library",
       "confidence": "high",
-      "rationale": "Prompt normalization identified Surface Catalog as the most likely code surface within intent-poc-app.",
-      "alternatives": []
+      "rationale": "The prompt points to surface-library behavior inside intent-poc-app.",
+      "alternatives": [
+        {
+          "id": "intent-studio",
+          "label": "Intent Studio",
+          "reason": "The library request may also touch the Studio shell if the prompt is using Studio language loosely."
+        }
+      ]
     },
     "businessIntent": {
-      "statement": "Fix the contrast issue in the dark mode input field where both the background and text color are light, making user input unreadable.",
-      "desiredOutcome": "The input field in dark mode must have a high-contrast text color against the background, ensuring readability.",
+      "statement": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+      "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
       "acceptanceCriteria": [
         {
-          "id": "ac-1-the-input-field-background-color-is-dark-in-dark-mode",
-          "description": "The input field background color is dark in dark mode.",
+          "id": "ac-1-intent-is-translated-into-executable-work-for-intent-poc-app",
+          "description": "Intent is translated into executable work for intent-poc-app.",
           "origin": "inferred"
         },
         {
-          "id": "ac-2-the-input-field-text-color-is-light-white-in-dark-mode",
-          "description": "The input field text color is light/white in dark mode.",
+          "id": "ac-2-evidence-is-captured-and-packaged-for-review",
+          "description": "Evidence is captured and packaged for review.",
           "origin": "inferred"
         },
         {
-          "id": "ac-3-the-contrast-ratio-between-text-and-background-meets-accessibility-standards",
-          "description": "The contrast ratio between text and background meets accessibility standards.",
+          "id": "ac-3-results-are-packaged-so-they-can-be-distributed-consistently-with-the-desired-ou",
+          "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..",
           "origin": "inferred"
         }
       ],
       "scenarios": [
         {
-          "id": "scenario-1-verify-dark-mode-input-field-readability",
-          "title": "Verify dark mode input field readability",
-          "goal": "Ensure text is visible when typing in dark mode",
+          "id": "scenario-1-intent-is-translated-into-acceptance-ready-work",
+          "title": "Intent is translated into acceptance-ready work",
+          "goal": "Turn the raw business statement into reviewable BDD structure.",
           "given": [
-            "The application is set to dark mode",
-            "The primitive-input-field component is rendered"
+            "A business intent has been captured: Create a baseline for the deterministic screenshot library for the built-in surface library.",
+            "The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders."
           ],
           "when": [
-            "The user types text into the input field"
+            "The planner decomposes the intent into acceptance criteria and scenarios.",
+            "Applicable sources and destinations are identified from the prompt and configuration."
           ],
           "then": [
-            "The text color is clearly distinguishable from the background color",
-            "A screenshot verification confirms the contrast ratio is sufficient"
+            "Intent is translated into executable work for intent-poc-app.",
+            "Evidence is captured and packaged for review."
+          ],
+          "applicableSourceIds": [
+            "intent-poc-app"
+          ]
+        },
+        {
+          "id": "scenario-2-behavior-is-verified-visually-for-applicable-sources",
+          "title": "Behavior is verified visually for applicable sources",
+          "goal": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+          "given": [
+            "Source intent-poc-app is available for execution."
+          ],
+          "when": [
+            "TDD planning prepares Playwright screenshot verification for the applicable sources.",
+            "The runner maps the requested behavior into QA-runnable visual checkpoints."
+          ],
+          "then": [
+            "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
+            "Each applicable source has executable visual verification coverage with reviewable screenshots."
+          ],
+          "applicableSourceIds": [
+            "intent-poc-app"
+          ]
+        },
+        {
+          "id": "scenario-3-results-are-distributed-consistently",
+          "title": "Results are distributed consistently",
+          "goal": "Make the outputs visible in the places that matter to stakeholders.",
+          "given": [
+            "Execution produces evidence, summaries, and progress state.",
+            "Distribution destinations are known before execution begins."
+          ],
+          "when": [
+            "The run reaches the distribution stage.",
+            "Publishing destinations receive the resulting evidence and summaries."
+          ],
+          "then": [
+            "Stakeholders can inspect the outcome through a consistent package tied to the intent.",
+            "Distribution remains decoupled from any single source-specific workflow."
           ],
           "applicableSourceIds": [
             "intent-poc-app"
@@ -60,19 +106,19 @@
       ],
       "workItems": [
         {
-          "id": "work-1-verify-dark-mode-input-field-readability-intent-poc-app",
+          "id": "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
           "type": "playwright-spec",
           "verificationMode": "tracked-playwright",
-          "title": "Verify dark mode input field readability",
-          "description": "Ensure text is visible when typing in dark mode",
+          "title": "Behavior is verified visually for applicable sources",
+          "description": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
           "scenarioIds": [
-            "scenario-1-verify-dark-mode-input-field-readability"
+            "scenario-2-behavior-is-verified-visually-for-applicable-sources"
           ],
           "sourceIds": [
             "intent-poc-app"
           ],
-          "userVisibleOutcome": "The text color is clearly distinguishable from the background color",
-          "verification": "A screenshot verification confirms the contrast ratio is sufficient",
+          "userVisibleOutcome": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
+          "verification": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
           "execution": {
             "order": 1,
             "dependsOnWorkItemIds": []
@@ -83,25 +129,620 @@
               {
                 "framework": "playwright",
                 "sourceId": "intent-poc-app",
-                "relativeSpecPath": "intent-poc-app/verify-dark-mode-input-field-readability.spec.ts",
+                "relativeSpecPath": "intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts",
                 "suiteName": "Intent-driven flow for intent-poc-app",
-                "testName": "Verify dark mode input field readability",
+                "testName": "Behavior is verified visually for applicable sources",
                 "scenarioIds": [
-                  "scenario-1-verify-dark-mode-input-field-readability"
+                  "scenario-2-behavior-is-verified-visually-for-applicable-sources"
                 ],
                 "checkpoints": [
                   {
-                    "id": "checkpoint-1-primitive-input-field",
+                    "id": "checkpoint-1-primitive-color-chip",
+                    "label": "Color Chip",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-color-chip']' is visible for Color Chip.",
+                    "screenshotId": "shot-1-primitive-color-chip",
+                    "path": "/library/primitive-color-chip",
+                    "captureId": "primitive-color-chip",
+                    "locator": "[data-testid='primitive-color-chip']",
+                    "waitForSelector": "[data-testid='primitive-color-chip']",
+                    "target": "[data-testid='primitive-color-chip']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-2-primitive-typography",
+                    "label": "Typography Scale",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-typography']' is visible for Typography Scale.",
+                    "screenshotId": "shot-2-primitive-typography",
+                    "path": "/library/primitive-typography",
+                    "captureId": "primitive-typography",
+                    "locator": "[data-testid='primitive-typography']",
+                    "waitForSelector": "[data-testid='primitive-typography']",
+                    "target": "[data-testid='primitive-typography']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-3-primitive-pill-tag",
+                    "label": "Pill Tag",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-pill-tag']' is visible for Pill Tag.",
+                    "screenshotId": "shot-3-primitive-pill-tag",
+                    "path": "/library/primitive-pill-tag",
+                    "captureId": "primitive-pill-tag",
+                    "locator": "[data-testid='primitive-pill-tag']",
+                    "waitForSelector": "[data-testid='primitive-pill-tag']",
+                    "target": "[data-testid='primitive-pill-tag']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-4-primitive-input-field",
                     "label": "Input Field",
                     "action": "goto",
                     "assertion": "The target '[data-testid='primitive-input-field']' is visible for Input Field.",
-                    "screenshotId": "shot-1-primitive-input-field",
+                    "screenshotId": "shot-4-primitive-input-field",
                     "path": "/library/primitive-input-field",
                     "captureId": "primitive-input-field",
                     "locator": "[data-testid='primitive-input-field']",
                     "waitForSelector": "[data-testid='primitive-input-field']",
                     "target": "[data-testid='primitive-input-field']",
                     "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-5-primitive-button-set",
+                    "label": "Button Set",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-button-set']' is visible for Button Set.",
+                    "screenshotId": "shot-5-primitive-button-set",
+                    "path": "/library/primitive-button-set",
+                    "captureId": "primitive-button-set",
+                    "locator": "[data-testid='primitive-button-set']",
+                    "waitForSelector": "[data-testid='primitive-button-set']",
+                    "target": "[data-testid='primitive-button-set']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-6-primitive-avatar-stack",
+                    "label": "Avatar Stack",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-avatar-stack']' is visible for Avatar Stack.",
+                    "screenshotId": "shot-6-primitive-avatar-stack",
+                    "path": "/library/primitive-avatar-stack",
+                    "captureId": "primitive-avatar-stack",
+                    "locator": "[data-testid='primitive-avatar-stack']",
+                    "waitForSelector": "[data-testid='primitive-avatar-stack']",
+                    "target": "[data-testid='primitive-avatar-stack']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-7-primitive-status-indicator",
+                    "label": "Status Indicator",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-status-indicator']' is visible for Status Indicator.",
+                    "screenshotId": "shot-7-primitive-status-indicator",
+                    "path": "/library/primitive-status-indicator",
+                    "captureId": "primitive-status-indicator",
+                    "locator": "[data-testid='primitive-status-indicator']",
+                    "waitForSelector": "[data-testid='primitive-status-indicator']",
+                    "target": "[data-testid='primitive-status-indicator']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-8-primitive-spacing-scale",
+                    "label": "Spacing Scale",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-spacing-scale']' is visible for Spacing Scale.",
+                    "screenshotId": "shot-8-primitive-spacing-scale",
+                    "path": "/library/primitive-spacing-scale",
+                    "captureId": "primitive-spacing-scale",
+                    "locator": "[data-testid='primitive-spacing-scale']",
+                    "waitForSelector": "[data-testid='primitive-spacing-scale']",
+                    "target": "[data-testid='primitive-spacing-scale']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-9-primitive-icon-list",
+                    "label": "Icon List",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-icon-list']' is visible for Icon List.",
+                    "screenshotId": "shot-9-primitive-icon-list",
+                    "path": "/library/primitive-icon-list",
+                    "captureId": "primitive-icon-list",
+                    "locator": "[data-testid='primitive-icon-list']",
+                    "waitForSelector": "[data-testid='primitive-icon-list']",
+                    "target": "[data-testid='primitive-icon-list']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-10-primitive-kpi-block",
+                    "label": "KPI Block",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='primitive-kpi-block']' is visible for KPI Block.",
+                    "screenshotId": "shot-10-primitive-kpi-block",
+                    "path": "/library/primitive-kpi-block",
+                    "captureId": "primitive-kpi-block",
+                    "locator": "[data-testid='primitive-kpi-block']",
+                    "waitForSelector": "[data-testid='primitive-kpi-block']",
+                    "target": "[data-testid='primitive-kpi-block']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-11-component-button-primary",
+                    "label": "Primary Button",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-button-primary']' is visible for Primary Button.",
+                    "screenshotId": "shot-11-component-button-primary",
+                    "path": "/library/component-button-primary",
+                    "captureId": "component-button-primary",
+                    "locator": "[data-testid='component-button-primary']",
+                    "waitForSelector": "[data-testid='component-button-primary']",
+                    "target": "[data-testid='component-button-primary']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-12-component-button-secondary",
+                    "label": "Secondary Button",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-button-secondary']' is visible for Secondary Button.",
+                    "screenshotId": "shot-12-component-button-secondary",
+                    "path": "/library/component-button-secondary",
+                    "captureId": "component-button-secondary",
+                    "locator": "[data-testid='component-button-secondary']",
+                    "waitForSelector": "[data-testid='component-button-secondary']",
+                    "target": "[data-testid='component-button-secondary']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-13-component-button-danger",
+                    "label": "Danger Button",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-button-danger']' is visible for Danger Button.",
+                    "screenshotId": "shot-13-component-button-danger",
+                    "path": "/library/component-button-danger",
+                    "captureId": "component-button-danger",
+                    "locator": "[data-testid='component-button-danger']",
+                    "waitForSelector": "[data-testid='component-button-danger']",
+                    "target": "[data-testid='component-button-danger']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-14-component-card-highlight",
+                    "label": "Highlight Card",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-card-highlight']' is visible for Highlight Card.",
+                    "screenshotId": "shot-14-component-card-highlight",
+                    "path": "/library/component-card-highlight",
+                    "captureId": "component-card-highlight",
+                    "locator": "[data-testid='component-card-highlight']",
+                    "waitForSelector": "[data-testid='component-card-highlight']",
+                    "target": "[data-testid='component-card-highlight']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-15-component-card-compact",
+                    "label": "Compact Card",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-card-compact']' is visible for Compact Card.",
+                    "screenshotId": "shot-15-component-card-compact",
+                    "path": "/library/component-card-compact",
+                    "captureId": "component-card-compact",
+                    "locator": "[data-testid='component-card-compact']",
+                    "waitForSelector": "[data-testid='component-card-compact']",
+                    "target": "[data-testid='component-card-compact']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-16-component-banner-info",
+                    "label": "Info Banner",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-banner-info']' is visible for Info Banner.",
+                    "screenshotId": "shot-16-component-banner-info",
+                    "path": "/library/component-banner-info",
+                    "captureId": "component-banner-info",
+                    "locator": "[data-testid='component-banner-info']",
+                    "waitForSelector": "[data-testid='component-banner-info']",
+                    "target": "[data-testid='component-banner-info']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-17-component-banner-warning",
+                    "label": "Warning Banner",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-banner-warning']' is visible for Warning Banner.",
+                    "screenshotId": "shot-17-component-banner-warning",
+                    "path": "/library/component-banner-warning",
+                    "captureId": "component-banner-warning",
+                    "locator": "[data-testid='component-banner-warning']",
+                    "waitForSelector": "[data-testid='component-banner-warning']",
+                    "target": "[data-testid='component-banner-warning']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-18-component-modal-shell",
+                    "label": "Modal Shell",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-modal-shell']' is visible for Modal Shell.",
+                    "screenshotId": "shot-18-component-modal-shell",
+                    "path": "/library/component-modal-shell",
+                    "captureId": "component-modal-shell",
+                    "locator": "[data-testid='component-modal-shell']",
+                    "waitForSelector": "[data-testid='component-modal-shell']",
+                    "target": "[data-testid='component-modal-shell']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-19-component-table-row",
+                    "label": "Table Row",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-table-row']' is visible for Table Row.",
+                    "screenshotId": "shot-19-component-table-row",
+                    "path": "/library/component-table-row",
+                    "captureId": "component-table-row",
+                    "locator": "[data-testid='component-table-row']",
+                    "waitForSelector": "[data-testid='component-table-row']",
+                    "target": "[data-testid='component-table-row']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-20-component-search-bar",
+                    "label": "Search Bar",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-search-bar']' is visible for Search Bar.",
+                    "screenshotId": "shot-20-component-search-bar",
+                    "path": "/library/component-search-bar",
+                    "captureId": "component-search-bar",
+                    "locator": "[data-testid='component-search-bar']",
+                    "waitForSelector": "[data-testid='component-search-bar']",
+                    "target": "[data-testid='component-search-bar']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-21-component-stat-tile",
+                    "label": "Stat Tile",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-stat-tile']' is visible for Stat Tile.",
+                    "screenshotId": "shot-21-component-stat-tile",
+                    "path": "/library/component-stat-tile",
+                    "captureId": "component-stat-tile",
+                    "locator": "[data-testid='component-stat-tile']",
+                    "waitForSelector": "[data-testid='component-stat-tile']",
+                    "target": "[data-testid='component-stat-tile']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-22-component-nav-tabs",
+                    "label": "Nav Tabs",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-nav-tabs']' is visible for Nav Tabs.",
+                    "screenshotId": "shot-22-component-nav-tabs",
+                    "path": "/library/component-nav-tabs",
+                    "captureId": "component-nav-tabs",
+                    "locator": "[data-testid='component-nav-tabs']",
+                    "waitForSelector": "[data-testid='component-nav-tabs']",
+                    "target": "[data-testid='component-nav-tabs']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-23-component-toast-success",
+                    "label": "Success Toast",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-toast-success']' is visible for Success Toast.",
+                    "screenshotId": "shot-23-component-toast-success",
+                    "path": "/library/component-toast-success",
+                    "captureId": "component-toast-success",
+                    "locator": "[data-testid='component-toast-success']",
+                    "waitForSelector": "[data-testid='component-toast-success']",
+                    "target": "[data-testid='component-toast-success']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-24-component-toast-error",
+                    "label": "Error Toast",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-toast-error']' is visible for Error Toast.",
+                    "screenshotId": "shot-24-component-toast-error",
+                    "path": "/library/component-toast-error",
+                    "captureId": "component-toast-error",
+                    "locator": "[data-testid='component-toast-error']",
+                    "waitForSelector": "[data-testid='component-toast-error']",
+                    "target": "[data-testid='component-toast-error']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-25-component-form-section",
+                    "label": "Form Section",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-form-section']' is visible for Form Section.",
+                    "screenshotId": "shot-25-component-form-section",
+                    "path": "/library/component-form-section",
+                    "captureId": "component-form-section",
+                    "locator": "[data-testid='component-form-section']",
+                    "waitForSelector": "[data-testid='component-form-section']",
+                    "target": "[data-testid='component-form-section']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-26-component-user-list-item",
+                    "label": "User List Item",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='component-user-list-item']' is visible for User List Item.",
+                    "screenshotId": "shot-26-component-user-list-item",
+                    "path": "/library/component-user-list-item",
+                    "captureId": "component-user-list-item",
+                    "locator": "[data-testid='component-user-list-item']",
+                    "waitForSelector": "[data-testid='component-user-list-item']",
+                    "target": "[data-testid='component-user-list-item']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-27-view-dashboard-summary",
+                    "label": "Dashboard Summary View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-dashboard-summary']' is visible for Dashboard Summary View.",
+                    "screenshotId": "shot-27-view-dashboard-summary",
+                    "path": "/library/view-dashboard-summary",
+                    "captureId": "view-dashboard-summary",
+                    "locator": "[data-testid='view-dashboard-summary']",
+                    "waitForSelector": "[data-testid='view-dashboard-summary']",
+                    "target": "[data-testid='view-dashboard-summary']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-28-view-list-overview",
+                    "label": "List Overview View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-list-overview']' is visible for List Overview View.",
+                    "screenshotId": "shot-28-view-list-overview",
+                    "path": "/library/view-list-overview",
+                    "captureId": "view-list-overview",
+                    "locator": "[data-testid='view-list-overview']",
+                    "waitForSelector": "[data-testid='view-list-overview']",
+                    "target": "[data-testid='view-list-overview']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-29-view-settings-panel",
+                    "label": "Settings Panel View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-settings-panel']' is visible for Settings Panel View.",
+                    "screenshotId": "shot-29-view-settings-panel",
+                    "path": "/library/view-settings-panel",
+                    "captureId": "view-settings-panel",
+                    "locator": "[data-testid='view-settings-panel']",
+                    "waitForSelector": "[data-testid='view-settings-panel']",
+                    "target": "[data-testid='view-settings-panel']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-30-view-empty-results",
+                    "label": "Empty Results View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-empty-results']' is visible for Empty Results View.",
+                    "screenshotId": "shot-30-view-empty-results",
+                    "path": "/library/view-empty-results",
+                    "captureId": "view-empty-results",
+                    "locator": "[data-testid='view-empty-results']",
+                    "waitForSelector": "[data-testid='view-empty-results']",
+                    "target": "[data-testid='view-empty-results']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-31-view-campaign-table",
+                    "label": "Campaign Table View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-campaign-table']' is visible for Campaign Table View.",
+                    "screenshotId": "shot-31-view-campaign-table",
+                    "path": "/library/view-campaign-table",
+                    "captureId": "view-campaign-table",
+                    "locator": "[data-testid='view-campaign-table']",
+                    "waitForSelector": "[data-testid='view-campaign-table']",
+                    "target": "[data-testid='view-campaign-table']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-32-view-notifications-center",
+                    "label": "Notifications Center View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-notifications-center']' is visible for Notifications Center View.",
+                    "screenshotId": "shot-32-view-notifications-center",
+                    "path": "/library/view-notifications-center",
+                    "captureId": "view-notifications-center",
+                    "locator": "[data-testid='view-notifications-center']",
+                    "waitForSelector": "[data-testid='view-notifications-center']",
+                    "target": "[data-testid='view-notifications-center']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-33-view-user-directory",
+                    "label": "User Directory View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-user-directory']' is visible for User Directory View.",
+                    "screenshotId": "shot-33-view-user-directory",
+                    "path": "/library/view-user-directory",
+                    "captureId": "view-user-directory",
+                    "locator": "[data-testid='view-user-directory']",
+                    "waitForSelector": "[data-testid='view-user-directory']",
+                    "target": "[data-testid='view-user-directory']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-34-view-revenue-kpis",
+                    "label": "Revenue KPIs View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-revenue-kpis']' is visible for Revenue KPIs View.",
+                    "screenshotId": "shot-34-view-revenue-kpis",
+                    "path": "/library/view-revenue-kpis",
+                    "captureId": "view-revenue-kpis",
+                    "locator": "[data-testid='view-revenue-kpis']",
+                    "waitForSelector": "[data-testid='view-revenue-kpis']",
+                    "target": "[data-testid='view-revenue-kpis']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-35-view-onboarding-checklist",
+                    "label": "Onboarding Checklist View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-onboarding-checklist']' is visible for Onboarding Checklist View.",
+                    "screenshotId": "shot-35-view-onboarding-checklist",
+                    "path": "/library/view-onboarding-checklist",
+                    "captureId": "view-onboarding-checklist",
+                    "locator": "[data-testid='view-onboarding-checklist']",
+                    "waitForSelector": "[data-testid='view-onboarding-checklist']",
+                    "target": "[data-testid='view-onboarding-checklist']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-36-view-approval-queue",
+                    "label": "Approval Queue View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-approval-queue']' is visible for Approval Queue View.",
+                    "screenshotId": "shot-36-view-approval-queue",
+                    "path": "/library/view-approval-queue",
+                    "captureId": "view-approval-queue",
+                    "locator": "[data-testid='view-approval-queue']",
+                    "waitForSelector": "[data-testid='view-approval-queue']",
+                    "target": "[data-testid='view-approval-queue']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-37-view-audit-log",
+                    "label": "Audit Log View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-audit-log']' is visible for Audit Log View.",
+                    "screenshotId": "shot-37-view-audit-log",
+                    "path": "/library/view-audit-log",
+                    "captureId": "view-audit-log",
+                    "locator": "[data-testid='view-audit-log']",
+                    "waitForSelector": "[data-testid='view-audit-log']",
+                    "target": "[data-testid='view-audit-log']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-38-view-billing-overview",
+                    "label": "Billing Overview View",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='view-billing-overview']' is visible for Billing Overview View.",
+                    "screenshotId": "shot-38-view-billing-overview",
+                    "path": "/library/view-billing-overview",
+                    "captureId": "view-billing-overview",
+                    "locator": "[data-testid='view-billing-overview']",
+                    "waitForSelector": "[data-testid='view-billing-overview']",
+                    "target": "[data-testid='view-billing-overview']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-39-page-analytics-overview",
+                    "label": "Analytics Overview",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-analytics-overview']' is visible for Analytics Overview.",
+                    "screenshotId": "shot-39-page-analytics-overview",
+                    "path": "/library/page-analytics-overview",
+                    "captureId": "page-analytics-overview",
+                    "locator": "[data-testid='page-analytics-overview']",
+                    "waitForSelector": "[data-testid='page-analytics-overview']",
+                    "target": "[data-testid='page-analytics-overview']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-40-page-account-list",
+                    "label": "Account List Page",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-account-list']' is visible for Account List Page.",
+                    "screenshotId": "shot-40-page-account-list",
+                    "path": "/library/page-account-list",
+                    "captureId": "page-account-list",
+                    "locator": "[data-testid='page-account-list']",
+                    "waitForSelector": "[data-testid='page-account-list']",
+                    "target": "[data-testid='page-account-list']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-41-page-campaign-editor",
+                    "label": "Campaign Editor Page",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-campaign-editor']' is visible for Campaign Editor Page.",
+                    "screenshotId": "shot-41-page-campaign-editor",
+                    "path": "/library/page-campaign-editor",
+                    "captureId": "page-campaign-editor",
+                    "locator": "[data-testid='page-campaign-editor']",
+                    "waitForSelector": "[data-testid='page-campaign-editor']",
+                    "target": "[data-testid='page-campaign-editor']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-42-page-system-settings",
+                    "label": "System Settings Page",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-system-settings']' is visible for System Settings Page.",
+                    "screenshotId": "shot-42-page-system-settings",
+                    "path": "/library/page-system-settings",
+                    "captureId": "page-system-settings",
+                    "locator": "[data-testid='page-system-settings']",
+                    "waitForSelector": "[data-testid='page-system-settings']",
+                    "target": "[data-testid='page-system-settings']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-43-page-operations-center",
+                    "label": "Operations Center Page",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-operations-center']' is visible for Operations Center Page.",
+                    "screenshotId": "shot-43-page-operations-center",
+                    "path": "/library/page-operations-center",
+                    "captureId": "page-operations-center",
+                    "locator": "[data-testid='page-operations-center']",
+                    "waitForSelector": "[data-testid='page-operations-center']",
+                    "target": "[data-testid='page-operations-center']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-44-page-user-management",
+                    "label": "User Management Page",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-user-management']' is visible for User Management Page.",
+                    "screenshotId": "shot-44-page-user-management",
+                    "path": "/library/page-user-management",
+                    "captureId": "page-user-management",
+                    "locator": "[data-testid='page-user-management']",
+                    "waitForSelector": "[data-testid='page-user-management']",
+                    "target": "[data-testid='page-user-management']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-45-page-incident-review",
+                    "label": "Incident Review Page",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-incident-review']' is visible for Incident Review Page.",
+                    "screenshotId": "shot-45-page-incident-review",
+                    "path": "/library/page-incident-review",
+                    "captureId": "page-incident-review",
+                    "locator": "[data-testid='page-incident-review']",
+                    "waitForSelector": "[data-testid='page-incident-review']",
+                    "target": "[data-testid='page-incident-review']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-46-page-revenue-forecast",
+                    "label": "Revenue Forecast Page",
+                    "action": "goto",
+                    "assertion": "The target '[data-testid='page-revenue-forecast']' is visible for Revenue Forecast Page.",
+                    "screenshotId": "shot-46-page-revenue-forecast",
+                    "path": "/library/page-revenue-forecast",
+                    "captureId": "page-revenue-forecast",
+                    "locator": "[data-testid='page-revenue-forecast']",
+                    "waitForSelector": "[data-testid='page-revenue-forecast']",
+                    "target": "[data-testid='page-revenue-forecast']",
+                    "waitUntil": "load"
+                  },
+                  {
+                    "id": "checkpoint-47-library-index",
+                    "label": "Surface Library Index",
+                    "action": "goto",
+                    "assertion": "The page '/library' is ready for evidence review.",
+                    "screenshotId": "shot-47-library-index",
+                    "path": "/library",
+                    "captureId": "library-index",
+                    "waitUntil": "networkidle"
                   }
                 ]
               }
@@ -114,14 +755,14 @@
       "repoCandidates": [
         {
           "repoId": "intent-poc",
-          "label": "Intent Driven Development POC",
+          "label": "Intent POC",
           "role": "controller-and-demo-source",
           "sourceIds": [
             "intent-poc-app"
           ],
           "selectionStatus": "selected",
           "reason": "Source intent-poc-app was selected in the requested source scope.",
-          "summary": "Current workspace source for Intent Studio, demo evidence flows, and built-in demo surface screenshots.",
+          "summary": "Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.",
           "sourceTypes": [
             "local"
           ],
@@ -130,8 +771,8 @@
           ],
           "refs": [],
           "notes": [
-            "Use this source for prompt-planning, Studio changes, and built-in demo surface evidence.",
-            "Demo screenshot regeneration routes through this source with an explicit library publish opt-in.",
+            "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+            "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
             "Configured visual captures across linked sources: 47."
           ],
           "captureCount": 47
@@ -164,10 +805,8 @@
           "sourceId": "intent-poc-app",
           "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
           "captureScope": {
-            "mode": "subset",
-            "captureIds": [
-              "primitive-input-field"
-            ]
+            "mode": "all",
+            "captureIds": []
           },
           "warnings": []
         }
@@ -260,18 +899,18 @@
           "id": "implementation",
           "type": "implementation",
           "label": "Implementation loop",
-          "enabled": true,
-          "reason": "The runner can execute bounded implementation attempts against the prepared source workspace.",
+          "enabled": false,
+          "reason": "Implementation retries are available, but the current config keeps this stage disabled.",
           "details": [
-            "QA failures can feed directly back into the next bounded implementation attempt."
+            "When QA is also enabled, failed verification can loop back into another implementation attempt."
           ]
         },
         {
           "id": "qa-verification",
           "type": "qa-verification",
           "label": "QA verification",
-          "enabled": true,
-          "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
+          "enabled": false,
+          "reason": "QA verification is available, but the current config keeps this stage disabled.",
           "details": [
             "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
           ]
@@ -304,10 +943,8 @@
     },
     "sourceId": "intent-poc-app",
     "captureScope": {
-      "mode": "subset",
-      "captureIds": [
-        "primitive-input-field"
-      ]
+      "mode": "all",
+      "captureIds": []
     },
     "artifacts": {
       "requireScreenshots": true,
@@ -316,16 +953,15 @@
     },
     "linear": {
       "createIssue": true,
-      "issueTitle": "IDD: help me fix a bug in our dark mode input field. for some reason both the background and htte tex"
+      "issueTitle": "IDD: Create a baseline for the deterministic screenshot library for the built-in surface library."
     },
     "execution": {
       "continueOnCaptureError": false
     },
     "normalizationMeta": {
-      "source": "llm",
+      "source": "rules",
       "warnings": [
-        "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on.",
-        "Ensure that changes do not negatively impact light mode input field styles."
+        "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
       ],
       "requestedPlanningDepth": "full",
       "effectivePlanningDepth": "full",
@@ -338,110 +974,134 @@
           "stageId": "promptNormalization",
           "label": "Prompt Interpretation",
           "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
-          "provider": "gemini",
           "model": "models/gemini-3.1-flash-lite-preview",
-          "status": "completed",
-          "source": "llm",
+          "status": "skipped",
+          "source": "skipped",
           "warnings": []
         },
         {
           "stageId": "linearScoping",
           "label": "Linear Scoping",
           "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
-          "provider": "gemini",
           "model": "models/gemini-3.1-flash-lite-preview",
           "status": "completed",
           "source": "rules",
-          "warnings": [
-            "Linear Scoping does not yet support provider-backed execution, so deterministic Linear lane scoping was used."
-          ]
+          "warnings": []
         },
         {
           "stageId": "bddPlanning",
           "label": "BDD Planning",
           "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
-          "provider": "gemini",
           "model": "models/gemini-3.1-flash-lite-preview",
           "status": "completed",
-          "source": "llm",
-          "warnings": [
-            "Ensure that changes do not negatively impact light mode input field styles."
-          ]
+          "source": "rules",
+          "warnings": []
         },
         {
           "stageId": "tddPlanning",
           "label": "TDD Planning",
           "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
-          "provider": "gemini",
           "model": "models/gemini-3.1-flash-lite-preview",
           "status": "completed",
           "source": "rules",
-          "warnings": [
-            "TDD Planning does not yet support provider-backed execution, so deterministic Playwright spec generation was used."
-          ]
+          "warnings": []
         },
         {
           "stageId": "implementation",
           "label": "Implementation",
           "description": "Apply the planned changes against the scoped source workspace.",
-          "provider": "gemini",
           "model": "models/gemini-3.1-flash-lite-preview",
           "status": "skipped",
           "source": "skipped",
-          "warnings": [
-            "Implementation stage configuration is recorded and executes during source runs before QA verification."
-          ]
+          "warnings": []
         },
         {
           "stageId": "qaVerification",
           "label": "QA Verification",
           "description": "Verify implementation output, tests, and evidence before completion or retry.",
-          "provider": "gemini",
           "model": "models/gemini-3.1-flash-lite-preview",
           "status": "skipped",
           "source": "skipped",
-          "warnings": [
-            "QA verification configuration is recorded and executes during source runs after implementation completes."
-          ]
+          "warnings": []
         }
       ]
     }
   },
   "businessIntent": {
-    "statement": "Fix the contrast issue in the dark mode input field where both the background and text color are light, making user input unreadable.",
-    "desiredOutcome": "The input field in dark mode must have a high-contrast text color against the background, ensuring readability.",
+    "statement": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+    "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
     "acceptanceCriteria": [
       {
-        "id": "ac-1-the-input-field-background-color-is-dark-in-dark-mode",
-        "description": "The input field background color is dark in dark mode.",
+        "id": "ac-1-intent-is-translated-into-executable-work-for-intent-poc-app",
+        "description": "Intent is translated into executable work for intent-poc-app.",
         "origin": "inferred"
       },
       {
-        "id": "ac-2-the-input-field-text-color-is-light-white-in-dark-mode",
-        "description": "The input field text color is light/white in dark mode.",
+        "id": "ac-2-evidence-is-captured-and-packaged-for-review",
+        "description": "Evidence is captured and packaged for review.",
         "origin": "inferred"
       },
       {
-        "id": "ac-3-the-contrast-ratio-between-text-and-background-meets-accessibility-standards",
-        "description": "The contrast ratio between text and background meets accessibility standards.",
+        "id": "ac-3-results-are-packaged-so-they-can-be-distributed-consistently-with-the-desired-ou",
+        "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..",
         "origin": "inferred"
       }
     ],
     "scenarios": [
       {
-        "id": "scenario-1-verify-dark-mode-input-field-readability",
-        "title": "Verify dark mode input field readability",
-        "goal": "Ensure text is visible when typing in dark mode",
+        "id": "scenario-1-intent-is-translated-into-acceptance-ready-work",
+        "title": "Intent is translated into acceptance-ready work",
+        "goal": "Turn the raw business statement into reviewable BDD structure.",
         "given": [
-          "The application is set to dark mode",
-          "The primitive-input-field component is rendered"
+          "A business intent has been captured: Create a baseline for the deterministic screenshot library for the built-in surface library.",
+          "The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders."
         ],
         "when": [
-          "The user types text into the input field"
+          "The planner decomposes the intent into acceptance criteria and scenarios.",
+          "Applicable sources and destinations are identified from the prompt and configuration."
         ],
         "then": [
-          "The text color is clearly distinguishable from the background color",
-          "A screenshot verification confirms the contrast ratio is sufficient"
+          "Intent is translated into executable work for intent-poc-app.",
+          "Evidence is captured and packaged for review."
+        ],
+        "applicableSourceIds": [
+          "intent-poc-app"
+        ]
+      },
+      {
+        "id": "scenario-2-behavior-is-verified-visually-for-applicable-sources",
+        "title": "Behavior is verified visually for applicable sources",
+        "goal": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+        "given": [
+          "Source intent-poc-app is available for execution."
+        ],
+        "when": [
+          "TDD planning prepares Playwright screenshot verification for the applicable sources.",
+          "The runner maps the requested behavior into QA-runnable visual checkpoints."
+        ],
+        "then": [
+          "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
+          "Each applicable source has executable visual verification coverage with reviewable screenshots."
+        ],
+        "applicableSourceIds": [
+          "intent-poc-app"
+        ]
+      },
+      {
+        "id": "scenario-3-results-are-distributed-consistently",
+        "title": "Results are distributed consistently",
+        "goal": "Make the outputs visible in the places that matter to stakeholders.",
+        "given": [
+          "Execution produces evidence, summaries, and progress state.",
+          "Distribution destinations are known before execution begins."
+        ],
+        "when": [
+          "The run reaches the distribution stage.",
+          "Publishing destinations receive the resulting evidence and summaries."
+        ],
+        "then": [
+          "Stakeholders can inspect the outcome through a consistent package tied to the intent.",
+          "Distribution remains decoupled from any single source-specific workflow."
         ],
         "applicableSourceIds": [
           "intent-poc-app"
@@ -450,19 +1110,19 @@
     ],
     "workItems": [
       {
-        "id": "work-1-verify-dark-mode-input-field-readability-intent-poc-app",
+        "id": "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
         "type": "playwright-spec",
         "verificationMode": "tracked-playwright",
-        "title": "Verify dark mode input field readability",
-        "description": "Ensure text is visible when typing in dark mode",
+        "title": "Behavior is verified visually for applicable sources",
+        "description": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
         "scenarioIds": [
-          "scenario-1-verify-dark-mode-input-field-readability"
+          "scenario-2-behavior-is-verified-visually-for-applicable-sources"
         ],
         "sourceIds": [
           "intent-poc-app"
         ],
-        "userVisibleOutcome": "The text color is clearly distinguishable from the background color",
-        "verification": "A screenshot verification confirms the contrast ratio is sufficient",
+        "userVisibleOutcome": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
+        "verification": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
         "execution": {
           "order": 1,
           "dependsOnWorkItemIds": []
@@ -473,25 +1133,620 @@
             {
               "framework": "playwright",
               "sourceId": "intent-poc-app",
-              "relativeSpecPath": "intent-poc-app/verify-dark-mode-input-field-readability.spec.ts",
+              "relativeSpecPath": "intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts",
               "suiteName": "Intent-driven flow for intent-poc-app",
-              "testName": "Verify dark mode input field readability",
+              "testName": "Behavior is verified visually for applicable sources",
               "scenarioIds": [
-                "scenario-1-verify-dark-mode-input-field-readability"
+                "scenario-2-behavior-is-verified-visually-for-applicable-sources"
               ],
               "checkpoints": [
                 {
-                  "id": "checkpoint-1-primitive-input-field",
+                  "id": "checkpoint-1-primitive-color-chip",
+                  "label": "Color Chip",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-color-chip']' is visible for Color Chip.",
+                  "screenshotId": "shot-1-primitive-color-chip",
+                  "path": "/library/primitive-color-chip",
+                  "captureId": "primitive-color-chip",
+                  "locator": "[data-testid='primitive-color-chip']",
+                  "waitForSelector": "[data-testid='primitive-color-chip']",
+                  "target": "[data-testid='primitive-color-chip']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-2-primitive-typography",
+                  "label": "Typography Scale",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-typography']' is visible for Typography Scale.",
+                  "screenshotId": "shot-2-primitive-typography",
+                  "path": "/library/primitive-typography",
+                  "captureId": "primitive-typography",
+                  "locator": "[data-testid='primitive-typography']",
+                  "waitForSelector": "[data-testid='primitive-typography']",
+                  "target": "[data-testid='primitive-typography']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-3-primitive-pill-tag",
+                  "label": "Pill Tag",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-pill-tag']' is visible for Pill Tag.",
+                  "screenshotId": "shot-3-primitive-pill-tag",
+                  "path": "/library/primitive-pill-tag",
+                  "captureId": "primitive-pill-tag",
+                  "locator": "[data-testid='primitive-pill-tag']",
+                  "waitForSelector": "[data-testid='primitive-pill-tag']",
+                  "target": "[data-testid='primitive-pill-tag']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-4-primitive-input-field",
                   "label": "Input Field",
                   "action": "goto",
                   "assertion": "The target '[data-testid='primitive-input-field']' is visible for Input Field.",
-                  "screenshotId": "shot-1-primitive-input-field",
+                  "screenshotId": "shot-4-primitive-input-field",
                   "path": "/library/primitive-input-field",
                   "captureId": "primitive-input-field",
                   "locator": "[data-testid='primitive-input-field']",
                   "waitForSelector": "[data-testid='primitive-input-field']",
                   "target": "[data-testid='primitive-input-field']",
                   "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-5-primitive-button-set",
+                  "label": "Button Set",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-button-set']' is visible for Button Set.",
+                  "screenshotId": "shot-5-primitive-button-set",
+                  "path": "/library/primitive-button-set",
+                  "captureId": "primitive-button-set",
+                  "locator": "[data-testid='primitive-button-set']",
+                  "waitForSelector": "[data-testid='primitive-button-set']",
+                  "target": "[data-testid='primitive-button-set']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-6-primitive-avatar-stack",
+                  "label": "Avatar Stack",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-avatar-stack']' is visible for Avatar Stack.",
+                  "screenshotId": "shot-6-primitive-avatar-stack",
+                  "path": "/library/primitive-avatar-stack",
+                  "captureId": "primitive-avatar-stack",
+                  "locator": "[data-testid='primitive-avatar-stack']",
+                  "waitForSelector": "[data-testid='primitive-avatar-stack']",
+                  "target": "[data-testid='primitive-avatar-stack']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-7-primitive-status-indicator",
+                  "label": "Status Indicator",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-status-indicator']' is visible for Status Indicator.",
+                  "screenshotId": "shot-7-primitive-status-indicator",
+                  "path": "/library/primitive-status-indicator",
+                  "captureId": "primitive-status-indicator",
+                  "locator": "[data-testid='primitive-status-indicator']",
+                  "waitForSelector": "[data-testid='primitive-status-indicator']",
+                  "target": "[data-testid='primitive-status-indicator']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-8-primitive-spacing-scale",
+                  "label": "Spacing Scale",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-spacing-scale']' is visible for Spacing Scale.",
+                  "screenshotId": "shot-8-primitive-spacing-scale",
+                  "path": "/library/primitive-spacing-scale",
+                  "captureId": "primitive-spacing-scale",
+                  "locator": "[data-testid='primitive-spacing-scale']",
+                  "waitForSelector": "[data-testid='primitive-spacing-scale']",
+                  "target": "[data-testid='primitive-spacing-scale']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-9-primitive-icon-list",
+                  "label": "Icon List",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-icon-list']' is visible for Icon List.",
+                  "screenshotId": "shot-9-primitive-icon-list",
+                  "path": "/library/primitive-icon-list",
+                  "captureId": "primitive-icon-list",
+                  "locator": "[data-testid='primitive-icon-list']",
+                  "waitForSelector": "[data-testid='primitive-icon-list']",
+                  "target": "[data-testid='primitive-icon-list']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-10-primitive-kpi-block",
+                  "label": "KPI Block",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='primitive-kpi-block']' is visible for KPI Block.",
+                  "screenshotId": "shot-10-primitive-kpi-block",
+                  "path": "/library/primitive-kpi-block",
+                  "captureId": "primitive-kpi-block",
+                  "locator": "[data-testid='primitive-kpi-block']",
+                  "waitForSelector": "[data-testid='primitive-kpi-block']",
+                  "target": "[data-testid='primitive-kpi-block']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-11-component-button-primary",
+                  "label": "Primary Button",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-button-primary']' is visible for Primary Button.",
+                  "screenshotId": "shot-11-component-button-primary",
+                  "path": "/library/component-button-primary",
+                  "captureId": "component-button-primary",
+                  "locator": "[data-testid='component-button-primary']",
+                  "waitForSelector": "[data-testid='component-button-primary']",
+                  "target": "[data-testid='component-button-primary']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-12-component-button-secondary",
+                  "label": "Secondary Button",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-button-secondary']' is visible for Secondary Button.",
+                  "screenshotId": "shot-12-component-button-secondary",
+                  "path": "/library/component-button-secondary",
+                  "captureId": "component-button-secondary",
+                  "locator": "[data-testid='component-button-secondary']",
+                  "waitForSelector": "[data-testid='component-button-secondary']",
+                  "target": "[data-testid='component-button-secondary']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-13-component-button-danger",
+                  "label": "Danger Button",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-button-danger']' is visible for Danger Button.",
+                  "screenshotId": "shot-13-component-button-danger",
+                  "path": "/library/component-button-danger",
+                  "captureId": "component-button-danger",
+                  "locator": "[data-testid='component-button-danger']",
+                  "waitForSelector": "[data-testid='component-button-danger']",
+                  "target": "[data-testid='component-button-danger']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-14-component-card-highlight",
+                  "label": "Highlight Card",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-card-highlight']' is visible for Highlight Card.",
+                  "screenshotId": "shot-14-component-card-highlight",
+                  "path": "/library/component-card-highlight",
+                  "captureId": "component-card-highlight",
+                  "locator": "[data-testid='component-card-highlight']",
+                  "waitForSelector": "[data-testid='component-card-highlight']",
+                  "target": "[data-testid='component-card-highlight']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-15-component-card-compact",
+                  "label": "Compact Card",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-card-compact']' is visible for Compact Card.",
+                  "screenshotId": "shot-15-component-card-compact",
+                  "path": "/library/component-card-compact",
+                  "captureId": "component-card-compact",
+                  "locator": "[data-testid='component-card-compact']",
+                  "waitForSelector": "[data-testid='component-card-compact']",
+                  "target": "[data-testid='component-card-compact']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-16-component-banner-info",
+                  "label": "Info Banner",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-banner-info']' is visible for Info Banner.",
+                  "screenshotId": "shot-16-component-banner-info",
+                  "path": "/library/component-banner-info",
+                  "captureId": "component-banner-info",
+                  "locator": "[data-testid='component-banner-info']",
+                  "waitForSelector": "[data-testid='component-banner-info']",
+                  "target": "[data-testid='component-banner-info']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-17-component-banner-warning",
+                  "label": "Warning Banner",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-banner-warning']' is visible for Warning Banner.",
+                  "screenshotId": "shot-17-component-banner-warning",
+                  "path": "/library/component-banner-warning",
+                  "captureId": "component-banner-warning",
+                  "locator": "[data-testid='component-banner-warning']",
+                  "waitForSelector": "[data-testid='component-banner-warning']",
+                  "target": "[data-testid='component-banner-warning']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-18-component-modal-shell",
+                  "label": "Modal Shell",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-modal-shell']' is visible for Modal Shell.",
+                  "screenshotId": "shot-18-component-modal-shell",
+                  "path": "/library/component-modal-shell",
+                  "captureId": "component-modal-shell",
+                  "locator": "[data-testid='component-modal-shell']",
+                  "waitForSelector": "[data-testid='component-modal-shell']",
+                  "target": "[data-testid='component-modal-shell']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-19-component-table-row",
+                  "label": "Table Row",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-table-row']' is visible for Table Row.",
+                  "screenshotId": "shot-19-component-table-row",
+                  "path": "/library/component-table-row",
+                  "captureId": "component-table-row",
+                  "locator": "[data-testid='component-table-row']",
+                  "waitForSelector": "[data-testid='component-table-row']",
+                  "target": "[data-testid='component-table-row']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-20-component-search-bar",
+                  "label": "Search Bar",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-search-bar']' is visible for Search Bar.",
+                  "screenshotId": "shot-20-component-search-bar",
+                  "path": "/library/component-search-bar",
+                  "captureId": "component-search-bar",
+                  "locator": "[data-testid='component-search-bar']",
+                  "waitForSelector": "[data-testid='component-search-bar']",
+                  "target": "[data-testid='component-search-bar']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-21-component-stat-tile",
+                  "label": "Stat Tile",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-stat-tile']' is visible for Stat Tile.",
+                  "screenshotId": "shot-21-component-stat-tile",
+                  "path": "/library/component-stat-tile",
+                  "captureId": "component-stat-tile",
+                  "locator": "[data-testid='component-stat-tile']",
+                  "waitForSelector": "[data-testid='component-stat-tile']",
+                  "target": "[data-testid='component-stat-tile']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-22-component-nav-tabs",
+                  "label": "Nav Tabs",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-nav-tabs']' is visible for Nav Tabs.",
+                  "screenshotId": "shot-22-component-nav-tabs",
+                  "path": "/library/component-nav-tabs",
+                  "captureId": "component-nav-tabs",
+                  "locator": "[data-testid='component-nav-tabs']",
+                  "waitForSelector": "[data-testid='component-nav-tabs']",
+                  "target": "[data-testid='component-nav-tabs']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-23-component-toast-success",
+                  "label": "Success Toast",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-toast-success']' is visible for Success Toast.",
+                  "screenshotId": "shot-23-component-toast-success",
+                  "path": "/library/component-toast-success",
+                  "captureId": "component-toast-success",
+                  "locator": "[data-testid='component-toast-success']",
+                  "waitForSelector": "[data-testid='component-toast-success']",
+                  "target": "[data-testid='component-toast-success']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-24-component-toast-error",
+                  "label": "Error Toast",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-toast-error']' is visible for Error Toast.",
+                  "screenshotId": "shot-24-component-toast-error",
+                  "path": "/library/component-toast-error",
+                  "captureId": "component-toast-error",
+                  "locator": "[data-testid='component-toast-error']",
+                  "waitForSelector": "[data-testid='component-toast-error']",
+                  "target": "[data-testid='component-toast-error']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-25-component-form-section",
+                  "label": "Form Section",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-form-section']' is visible for Form Section.",
+                  "screenshotId": "shot-25-component-form-section",
+                  "path": "/library/component-form-section",
+                  "captureId": "component-form-section",
+                  "locator": "[data-testid='component-form-section']",
+                  "waitForSelector": "[data-testid='component-form-section']",
+                  "target": "[data-testid='component-form-section']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-26-component-user-list-item",
+                  "label": "User List Item",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='component-user-list-item']' is visible for User List Item.",
+                  "screenshotId": "shot-26-component-user-list-item",
+                  "path": "/library/component-user-list-item",
+                  "captureId": "component-user-list-item",
+                  "locator": "[data-testid='component-user-list-item']",
+                  "waitForSelector": "[data-testid='component-user-list-item']",
+                  "target": "[data-testid='component-user-list-item']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-27-view-dashboard-summary",
+                  "label": "Dashboard Summary View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-dashboard-summary']' is visible for Dashboard Summary View.",
+                  "screenshotId": "shot-27-view-dashboard-summary",
+                  "path": "/library/view-dashboard-summary",
+                  "captureId": "view-dashboard-summary",
+                  "locator": "[data-testid='view-dashboard-summary']",
+                  "waitForSelector": "[data-testid='view-dashboard-summary']",
+                  "target": "[data-testid='view-dashboard-summary']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-28-view-list-overview",
+                  "label": "List Overview View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-list-overview']' is visible for List Overview View.",
+                  "screenshotId": "shot-28-view-list-overview",
+                  "path": "/library/view-list-overview",
+                  "captureId": "view-list-overview",
+                  "locator": "[data-testid='view-list-overview']",
+                  "waitForSelector": "[data-testid='view-list-overview']",
+                  "target": "[data-testid='view-list-overview']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-29-view-settings-panel",
+                  "label": "Settings Panel View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-settings-panel']' is visible for Settings Panel View.",
+                  "screenshotId": "shot-29-view-settings-panel",
+                  "path": "/library/view-settings-panel",
+                  "captureId": "view-settings-panel",
+                  "locator": "[data-testid='view-settings-panel']",
+                  "waitForSelector": "[data-testid='view-settings-panel']",
+                  "target": "[data-testid='view-settings-panel']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-30-view-empty-results",
+                  "label": "Empty Results View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-empty-results']' is visible for Empty Results View.",
+                  "screenshotId": "shot-30-view-empty-results",
+                  "path": "/library/view-empty-results",
+                  "captureId": "view-empty-results",
+                  "locator": "[data-testid='view-empty-results']",
+                  "waitForSelector": "[data-testid='view-empty-results']",
+                  "target": "[data-testid='view-empty-results']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-31-view-campaign-table",
+                  "label": "Campaign Table View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-campaign-table']' is visible for Campaign Table View.",
+                  "screenshotId": "shot-31-view-campaign-table",
+                  "path": "/library/view-campaign-table",
+                  "captureId": "view-campaign-table",
+                  "locator": "[data-testid='view-campaign-table']",
+                  "waitForSelector": "[data-testid='view-campaign-table']",
+                  "target": "[data-testid='view-campaign-table']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-32-view-notifications-center",
+                  "label": "Notifications Center View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-notifications-center']' is visible for Notifications Center View.",
+                  "screenshotId": "shot-32-view-notifications-center",
+                  "path": "/library/view-notifications-center",
+                  "captureId": "view-notifications-center",
+                  "locator": "[data-testid='view-notifications-center']",
+                  "waitForSelector": "[data-testid='view-notifications-center']",
+                  "target": "[data-testid='view-notifications-center']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-33-view-user-directory",
+                  "label": "User Directory View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-user-directory']' is visible for User Directory View.",
+                  "screenshotId": "shot-33-view-user-directory",
+                  "path": "/library/view-user-directory",
+                  "captureId": "view-user-directory",
+                  "locator": "[data-testid='view-user-directory']",
+                  "waitForSelector": "[data-testid='view-user-directory']",
+                  "target": "[data-testid='view-user-directory']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-34-view-revenue-kpis",
+                  "label": "Revenue KPIs View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-revenue-kpis']' is visible for Revenue KPIs View.",
+                  "screenshotId": "shot-34-view-revenue-kpis",
+                  "path": "/library/view-revenue-kpis",
+                  "captureId": "view-revenue-kpis",
+                  "locator": "[data-testid='view-revenue-kpis']",
+                  "waitForSelector": "[data-testid='view-revenue-kpis']",
+                  "target": "[data-testid='view-revenue-kpis']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-35-view-onboarding-checklist",
+                  "label": "Onboarding Checklist View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-onboarding-checklist']' is visible for Onboarding Checklist View.",
+                  "screenshotId": "shot-35-view-onboarding-checklist",
+                  "path": "/library/view-onboarding-checklist",
+                  "captureId": "view-onboarding-checklist",
+                  "locator": "[data-testid='view-onboarding-checklist']",
+                  "waitForSelector": "[data-testid='view-onboarding-checklist']",
+                  "target": "[data-testid='view-onboarding-checklist']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-36-view-approval-queue",
+                  "label": "Approval Queue View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-approval-queue']' is visible for Approval Queue View.",
+                  "screenshotId": "shot-36-view-approval-queue",
+                  "path": "/library/view-approval-queue",
+                  "captureId": "view-approval-queue",
+                  "locator": "[data-testid='view-approval-queue']",
+                  "waitForSelector": "[data-testid='view-approval-queue']",
+                  "target": "[data-testid='view-approval-queue']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-37-view-audit-log",
+                  "label": "Audit Log View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-audit-log']' is visible for Audit Log View.",
+                  "screenshotId": "shot-37-view-audit-log",
+                  "path": "/library/view-audit-log",
+                  "captureId": "view-audit-log",
+                  "locator": "[data-testid='view-audit-log']",
+                  "waitForSelector": "[data-testid='view-audit-log']",
+                  "target": "[data-testid='view-audit-log']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-38-view-billing-overview",
+                  "label": "Billing Overview View",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='view-billing-overview']' is visible for Billing Overview View.",
+                  "screenshotId": "shot-38-view-billing-overview",
+                  "path": "/library/view-billing-overview",
+                  "captureId": "view-billing-overview",
+                  "locator": "[data-testid='view-billing-overview']",
+                  "waitForSelector": "[data-testid='view-billing-overview']",
+                  "target": "[data-testid='view-billing-overview']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-39-page-analytics-overview",
+                  "label": "Analytics Overview",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-analytics-overview']' is visible for Analytics Overview.",
+                  "screenshotId": "shot-39-page-analytics-overview",
+                  "path": "/library/page-analytics-overview",
+                  "captureId": "page-analytics-overview",
+                  "locator": "[data-testid='page-analytics-overview']",
+                  "waitForSelector": "[data-testid='page-analytics-overview']",
+                  "target": "[data-testid='page-analytics-overview']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-40-page-account-list",
+                  "label": "Account List Page",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-account-list']' is visible for Account List Page.",
+                  "screenshotId": "shot-40-page-account-list",
+                  "path": "/library/page-account-list",
+                  "captureId": "page-account-list",
+                  "locator": "[data-testid='page-account-list']",
+                  "waitForSelector": "[data-testid='page-account-list']",
+                  "target": "[data-testid='page-account-list']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-41-page-campaign-editor",
+                  "label": "Campaign Editor Page",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-campaign-editor']' is visible for Campaign Editor Page.",
+                  "screenshotId": "shot-41-page-campaign-editor",
+                  "path": "/library/page-campaign-editor",
+                  "captureId": "page-campaign-editor",
+                  "locator": "[data-testid='page-campaign-editor']",
+                  "waitForSelector": "[data-testid='page-campaign-editor']",
+                  "target": "[data-testid='page-campaign-editor']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-42-page-system-settings",
+                  "label": "System Settings Page",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-system-settings']' is visible for System Settings Page.",
+                  "screenshotId": "shot-42-page-system-settings",
+                  "path": "/library/page-system-settings",
+                  "captureId": "page-system-settings",
+                  "locator": "[data-testid='page-system-settings']",
+                  "waitForSelector": "[data-testid='page-system-settings']",
+                  "target": "[data-testid='page-system-settings']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-43-page-operations-center",
+                  "label": "Operations Center Page",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-operations-center']' is visible for Operations Center Page.",
+                  "screenshotId": "shot-43-page-operations-center",
+                  "path": "/library/page-operations-center",
+                  "captureId": "page-operations-center",
+                  "locator": "[data-testid='page-operations-center']",
+                  "waitForSelector": "[data-testid='page-operations-center']",
+                  "target": "[data-testid='page-operations-center']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-44-page-user-management",
+                  "label": "User Management Page",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-user-management']' is visible for User Management Page.",
+                  "screenshotId": "shot-44-page-user-management",
+                  "path": "/library/page-user-management",
+                  "captureId": "page-user-management",
+                  "locator": "[data-testid='page-user-management']",
+                  "waitForSelector": "[data-testid='page-user-management']",
+                  "target": "[data-testid='page-user-management']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-45-page-incident-review",
+                  "label": "Incident Review Page",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-incident-review']' is visible for Incident Review Page.",
+                  "screenshotId": "shot-45-page-incident-review",
+                  "path": "/library/page-incident-review",
+                  "captureId": "page-incident-review",
+                  "locator": "[data-testid='page-incident-review']",
+                  "waitForSelector": "[data-testid='page-incident-review']",
+                  "target": "[data-testid='page-incident-review']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-46-page-revenue-forecast",
+                  "label": "Revenue Forecast Page",
+                  "action": "goto",
+                  "assertion": "The target '[data-testid='page-revenue-forecast']' is visible for Revenue Forecast Page.",
+                  "screenshotId": "shot-46-page-revenue-forecast",
+                  "path": "/library/page-revenue-forecast",
+                  "captureId": "page-revenue-forecast",
+                  "locator": "[data-testid='page-revenue-forecast']",
+                  "waitForSelector": "[data-testid='page-revenue-forecast']",
+                  "target": "[data-testid='page-revenue-forecast']",
+                  "waitUntil": "load"
+                },
+                {
+                  "id": "checkpoint-47-library-index",
+                  "label": "Surface Library Index",
+                  "action": "goto",
+                  "assertion": "The page '/library' is ready for evidence review.",
+                  "screenshotId": "shot-47-library-index",
+                  "path": "/library",
+                  "captureId": "library-index",
+                  "waitUntil": "networkidle"
                 }
               ]
             }
@@ -507,10 +1762,8 @@
         "sourceId": "intent-poc-app",
         "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
         "captureScope": {
-          "mode": "subset",
-          "captureIds": [
-            "primitive-input-field"
-          ]
+          "mode": "all",
+          "captureIds": []
         },
         "warnings": []
       }
@@ -603,18 +1856,18 @@
         "id": "implementation",
         "type": "implementation",
         "label": "Implementation loop",
-        "enabled": true,
-        "reason": "The runner can execute bounded implementation attempts against the prepared source workspace.",
+        "enabled": false,
+        "reason": "Implementation retries are available, but the current config keeps this stage disabled.",
         "details": [
-          "QA failures can feed directly back into the next bounded implementation attempt."
+          "When QA is also enabled, failed verification can loop back into another implementation attempt."
         ]
       },
       {
         "id": "qa-verification",
         "type": "qa-verification",
         "label": "QA verification",
-        "enabled": true,
-        "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
+        "enabled": false,
+        "reason": "QA verification is available, but the current config keeps this stage disabled.",
         "details": [
           "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
         ]
@@ -650,129 +1903,21 @@
     "id": "intent-poc-app",
     "purpose": "Source intent-poc-app was selected in the requested source scope.",
     "captureScope": {
-      "mode": "subset",
-      "captureIds": [
-        "primitive-input-field"
-      ]
+      "mode": "all",
+      "captureIds": []
     },
     "configuredCaptureCount": 47,
-    "executedCaptureCount": 1,
+    "executedCaptureCount": 47,
     "sourceType": "local",
     "rootDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "appDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "baseUrl": "http://127.0.0.1:6006",
-    "gitCommit": "ec9201137aee6cae52549e975370acc3ac63f28f",
+    "gitCommit": "6bb4c5d0678a0cf6193df80a032a2b88e33ec9dc",
     "generatedPlaywrightTests": [
-      "tests/intent/intent-poc-app/verify-dark-mode-input-field-readability.spec.ts"
+      "tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts"
     ]
   },
-  "attempts": [
-    {
-      "attemptNumber": 1,
-      "startedAt": "2026-04-20T21:11:28.257Z",
-      "finishedAt": "2026-04-20T21:11:41.691Z",
-      "status": "completed",
-      "targetedWorkItemIds": [
-        "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
-      ],
-      "completedInAttemptWorkItemIds": [
-        "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
-      ],
-      "pendingTargetedWorkItemIds": [],
-      "completedWorkItemIds": [
-        "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
-      ],
-      "remainingWorkItemIds": [],
-      "implementation": {
-        "status": "completed",
-        "summary": "Applied 1 file operation (0 create, 1 replace, 0 delete).",
-        "targetedWorkItemIds": [
-          "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
-        ],
-        "completedWorkItemIds": [
-          "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
-        ],
-        "remainingWorkItemIds": [],
-        "commands": [
-          {
-            "label": "plan-change-set",
-            "command": "gemini:plan-implementation-change-set",
-            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-20T21:11:28.300Z",
-            "finishedAt": "2026-04-20T21:11:29.600Z",
-            "durationMs": 1300,
-            "status": "completed",
-            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-plan.json"
-          },
-          {
-            "label": "materialize-change-set",
-            "command": "gemini:materialize-implementation-files",
-            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-20T21:11:29.603Z",
-            "finishedAt": "2026-04-20T21:11:36.026Z",
-            "durationMs": 6423,
-            "status": "completed",
-            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-materialize.json"
-          },
-          {
-            "label": "apply-change-set",
-            "command": "apply:implementation-change-set",
-            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-20T21:11:36.064Z",
-            "finishedAt": "2026-04-20T21:11:36.066Z",
-            "durationMs": 2,
-            "status": "completed",
-            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-apply.json"
-          }
-        ],
-        "fileOperations": [
-          {
-            "operation": "replace",
-            "filePath": "src/demo-app/render/render-surface-frame.ts",
-            "rationale": "Update the .dark-mode CSS to ensure the input field has a dark background and light text, improving contrast and readability in dark mode.",
-            "status": "applied"
-          }
-        ]
-      },
-      "qaVerification": {
-        "status": "completed",
-        "summary": "QA verification passed 2 commands.",
-        "targetedWorkItemIds": [
-          "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
-        ],
-        "completedWorkItemIds": [
-          "work-1-verify-dark-mode-input-field-readability-intent-poc-app",
-          "work-1-verify-dark-mode-input-field-readability-intent-poc-app"
-        ],
-        "remainingWorkItemIds": [],
-        "commands": [
-          {
-            "label": "typecheck",
-            "command": "npm run typecheck",
-            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-20T21:11:36.069Z",
-            "finishedAt": "2026-04-20T21:11:39.368Z",
-            "durationMs": 3299,
-            "status": "completed",
-            "exitCode": 0,
-            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-typecheck.log"
-          },
-          {
-            "label": "generated-playwright",
-            "command": "npx playwright test \"tests/intent/intent-poc-app/verify-dark-mode-input-field-readability.spec.ts\"",
-            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-20T21:11:39.369Z",
-            "finishedAt": "2026-04-20T21:11:41.690Z",
-            "durationMs": 2321,
-            "status": "completed",
-            "exitCode": 0,
-            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-generated-playwright.log"
-          }
-        ],
-        "fileOperations": []
-      }
-    }
-  ],
+  "attempts": [],
   "playwright": {
     "browser": "chromium",
     "headless": true,
@@ -789,14 +1934,74 @@
   },
   "captures": [
     {
+      "captureId": "primitive-color-chip",
+      "name": "Color Chip",
+      "path": "/library/primitive-color-chip",
+      "url": "http://127.0.0.1:6006/library/primitive-color-chip",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-color-chip.png",
+      "relativeOutputPath": "components/primitive-color-chip.png",
+      "durationMs": 1083,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-color-chip']",
+      "status": "captured",
+      "hash": "99232a2d6c2b49c3c845f3ffb9b76c25be8c9adaf1ac9c1bf1e3ec11fca0a8eb",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-typography",
+      "name": "Typography Scale",
+      "path": "/library/primitive-typography",
+      "url": "http://127.0.0.1:6006/library/primitive-typography",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-typography.png",
+      "relativeOutputPath": "components/primitive-typography.png",
+      "durationMs": 1086,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-typography']",
+      "status": "captured",
+      "hash": "d25b5e62951e40dfe3df0ab2f16c169f4f9d57db7f3e00d1fd352a1c0c9c6a16",
+      "width": 1148,
+      "height": 191,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-pill-tag",
+      "name": "Pill Tag",
+      "path": "/library/primitive-pill-tag",
+      "url": "http://127.0.0.1:6006/library/primitive-pill-tag",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-pill-tag.png",
+      "relativeOutputPath": "components/primitive-pill-tag.png",
+      "durationMs": 1107,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-pill-tag']",
+      "status": "captured",
+      "hash": "72663f698ef0c5c1db8fba0375b619afa922712f5bd9553ca34d1e2ce438a7dc",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
       "captureId": "primitive-input-field",
       "name": "Input Field",
       "path": "/library/primitive-input-field",
       "url": "http://127.0.0.1:6006/library/primitive-input-field",
       "kind": "locator",
-      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/sources/intent-poc-app/captures/components/primitive-input-field.png",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-input-field.png",
       "relativeOutputPath": "components/primitive-input-field.png",
-      "durationMs": 963,
+      "durationMs": 1062,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -806,6 +2011,864 @@
       "hash": "be7951b328e2ff26b6217d84ee8d27373ac3c95ff203a2a2fa78eb5df4f36434",
       "width": 1148,
       "height": 137,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-button-set",
+      "name": "Button Set",
+      "path": "/library/primitive-button-set",
+      "url": "http://127.0.0.1:6006/library/primitive-button-set",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-button-set.png",
+      "relativeOutputPath": "components/primitive-button-set.png",
+      "durationMs": 1039,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-button-set']",
+      "status": "captured",
+      "hash": "6039d6408f2e512ba2e96cd6adca74a694984ea994f26b9c4d78694fba253b24",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-avatar-stack",
+      "name": "Avatar Stack",
+      "path": "/library/primitive-avatar-stack",
+      "url": "http://127.0.0.1:6006/library/primitive-avatar-stack",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-avatar-stack.png",
+      "relativeOutputPath": "components/primitive-avatar-stack.png",
+      "durationMs": 1099,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-avatar-stack']",
+      "status": "captured",
+      "hash": "2c3781096819cd07482f3b78745d83f8ce19467efdde79cfae115ea6ee1ccb0d",
+      "width": 1148,
+      "height": 133,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-status-indicator",
+      "name": "Status Indicator",
+      "path": "/library/primitive-status-indicator",
+      "url": "http://127.0.0.1:6006/library/primitive-status-indicator",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-status-indicator.png",
+      "relativeOutputPath": "components/primitive-status-indicator.png",
+      "durationMs": 1106,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-status-indicator']",
+      "status": "captured",
+      "hash": "75399e8f22c05619857392180480a03464e1e28e07cc7f465b7f66eb3dff9854",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-spacing-scale",
+      "name": "Spacing Scale",
+      "path": "/library/primitive-spacing-scale",
+      "url": "http://127.0.0.1:6006/library/primitive-spacing-scale",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-spacing-scale.png",
+      "relativeOutputPath": "components/primitive-spacing-scale.png",
+      "durationMs": 1040,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-spacing-scale']",
+      "status": "captured",
+      "hash": "ece02510ffe2ab7b3f747cdd9573060cce71fc66e546f8b7b488fa22afc9afb2",
+      "width": 1148,
+      "height": 275,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-icon-list",
+      "name": "Icon List",
+      "path": "/library/primitive-icon-list",
+      "url": "http://127.0.0.1:6006/library/primitive-icon-list",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-icon-list.png",
+      "relativeOutputPath": "components/primitive-icon-list.png",
+      "durationMs": 1051,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-icon-list']",
+      "status": "captured",
+      "hash": "c2e2e4e4d08a7d4f339545003c55a09154c4f20283c2dbf05da982ae686091cd",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-kpi-block",
+      "name": "KPI Block",
+      "path": "/library/primitive-kpi-block",
+      "url": "http://127.0.0.1:6006/library/primitive-kpi-block",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-kpi-block.png",
+      "relativeOutputPath": "components/primitive-kpi-block.png",
+      "durationMs": 989,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-kpi-block']",
+      "status": "captured",
+      "hash": "69be0a5cd947da70513b0da2d459e4997a5f7895ba21072aa2f5aaa3beb18edc",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-primary",
+      "name": "Primary Button",
+      "path": "/library/component-button-primary",
+      "url": "http://127.0.0.1:6006/library/component-button-primary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-primary.png",
+      "relativeOutputPath": "components/component-button-primary.png",
+      "durationMs": 1039,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-primary']",
+      "status": "captured",
+      "hash": "93ea2d086a1fec0c56c2216d985ef8353b6373ed0bf3b96f7863453916ccf547",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-secondary",
+      "name": "Secondary Button",
+      "path": "/library/component-button-secondary",
+      "url": "http://127.0.0.1:6006/library/component-button-secondary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-secondary.png",
+      "relativeOutputPath": "components/component-button-secondary.png",
+      "durationMs": 990,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-secondary']",
+      "status": "captured",
+      "hash": "d8244c5b9a65577cda392e5573bf268efdb958df94a6081795d48da62c2cf2f7",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-danger",
+      "name": "Danger Button",
+      "path": "/library/component-button-danger",
+      "url": "http://127.0.0.1:6006/library/component-button-danger",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-danger.png",
+      "relativeOutputPath": "components/component-button-danger.png",
+      "durationMs": 1032,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-danger']",
+      "status": "captured",
+      "hash": "e1c36ee544ae199151ccc19da3836d823ba8e45276c274ebc2fbd342c412b706",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-card-highlight",
+      "name": "Highlight Card",
+      "path": "/library/component-card-highlight",
+      "url": "http://127.0.0.1:6006/library/component-card-highlight",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-highlight.png",
+      "relativeOutputPath": "components/component-card-highlight.png",
+      "durationMs": 977,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-card-highlight']",
+      "status": "captured",
+      "hash": "e4959e65e6a2eab0859dae16ab79c7c6f841f8db359236b8a29155c98ebe2180",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-card-compact",
+      "name": "Compact Card",
+      "path": "/library/component-card-compact",
+      "url": "http://127.0.0.1:6006/library/component-card-compact",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-compact.png",
+      "relativeOutputPath": "components/component-card-compact.png",
+      "durationMs": 1013,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-card-compact']",
+      "status": "captured",
+      "hash": "ebb4f5ae5d3891da1b9e01d91ecba6e705600e75b8125f3a1d01fc1dd4c83e6a",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-banner-info",
+      "name": "Info Banner",
+      "path": "/library/component-banner-info",
+      "url": "http://127.0.0.1:6006/library/component-banner-info",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-info.png",
+      "relativeOutputPath": "components/component-banner-info.png",
+      "durationMs": 1037,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-banner-info']",
+      "status": "captured",
+      "hash": "f4c8ae979424e832e5b448759cb1a48ab3a77cf04b429eaf077e515a561d2800",
+      "width": 1148,
+      "height": 151,
+      "warnings": []
+    },
+    {
+      "captureId": "component-banner-warning",
+      "name": "Warning Banner",
+      "path": "/library/component-banner-warning",
+      "url": "http://127.0.0.1:6006/library/component-banner-warning",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-warning.png",
+      "relativeOutputPath": "components/component-banner-warning.png",
+      "durationMs": 1083,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-banner-warning']",
+      "status": "captured",
+      "hash": "2b89bdd3ae109db4056d999b2c0422d66ede7b9797f74491f7228dce00d98db9",
+      "width": 1148,
+      "height": 151,
+      "warnings": []
+    },
+    {
+      "captureId": "component-modal-shell",
+      "name": "Modal Shell",
+      "path": "/library/component-modal-shell",
+      "url": "http://127.0.0.1:6006/library/component-modal-shell",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-modal-shell.png",
+      "relativeOutputPath": "components/component-modal-shell.png",
+      "durationMs": 1041,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-modal-shell']",
+      "status": "captured",
+      "hash": "d27890dae57c421cb7ffd350ff359bff8acc00d13244a3e2db2c401133a67516",
+      "width": 1148,
+      "height": 196,
+      "warnings": []
+    },
+    {
+      "captureId": "component-table-row",
+      "name": "Table Row",
+      "path": "/library/component-table-row",
+      "url": "http://127.0.0.1:6006/library/component-table-row",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-table-row.png",
+      "relativeOutputPath": "components/component-table-row.png",
+      "durationMs": 1089,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-table-row']",
+      "status": "captured",
+      "hash": "219afe3fba3cbed8b153a3f2a8f17cbeeb50209b8ea6d74ea24df17305be6639",
+      "width": 1148,
+      "height": 169,
+      "warnings": []
+    },
+    {
+      "captureId": "component-search-bar",
+      "name": "Search Bar",
+      "path": "/library/component-search-bar",
+      "url": "http://127.0.0.1:6006/library/component-search-bar",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-search-bar.png",
+      "relativeOutputPath": "components/component-search-bar.png",
+      "durationMs": 1051,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-search-bar']",
+      "status": "captured",
+      "hash": "9b3954c5d8ef53b4b84b206b027ecf49a73b5fe5496e6eb19890bc4df19b8561",
+      "width": 1148,
+      "height": 137,
+      "warnings": []
+    },
+    {
+      "captureId": "component-stat-tile",
+      "name": "Stat Tile",
+      "path": "/library/component-stat-tile",
+      "url": "http://127.0.0.1:6006/library/component-stat-tile",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-stat-tile.png",
+      "relativeOutputPath": "components/component-stat-tile.png",
+      "durationMs": 1042,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-stat-tile']",
+      "status": "captured",
+      "hash": "acc1d920cba619622f569ae9e4889977669b6c83e9b1d6c38a6a4cea8be9b4ee",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-nav-tabs",
+      "name": "Nav Tabs",
+      "path": "/library/component-nav-tabs",
+      "url": "http://127.0.0.1:6006/library/component-nav-tabs",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-nav-tabs.png",
+      "relativeOutputPath": "components/component-nav-tabs.png",
+      "durationMs": 1008,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-nav-tabs']",
+      "status": "captured",
+      "hash": "52b7a4dc3c4158416328fbe95f06834c0e9dfce73fc1fec45ee6220bff0fe3d8",
+      "width": 1148,
+      "height": 131,
+      "warnings": []
+    },
+    {
+      "captureId": "component-toast-success",
+      "name": "Success Toast",
+      "path": "/library/component-toast-success",
+      "url": "http://127.0.0.1:6006/library/component-toast-success",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-success.png",
+      "relativeOutputPath": "components/component-toast-success.png",
+      "durationMs": 1029,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-toast-success']",
+      "status": "captured",
+      "hash": "22b6823e7d1ce4d304027fc9224b7439b81dd94538f8358acf6b2c9df2365e5d",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-toast-error",
+      "name": "Error Toast",
+      "path": "/library/component-toast-error",
+      "url": "http://127.0.0.1:6006/library/component-toast-error",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-error.png",
+      "relativeOutputPath": "components/component-toast-error.png",
+      "durationMs": 1071,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-toast-error']",
+      "status": "captured",
+      "hash": "ff58d401f769c1961903532c2a2d66c813436547d7bee2287b1553b0f9b30fcc",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-form-section",
+      "name": "Form Section",
+      "path": "/library/component-form-section",
+      "url": "http://127.0.0.1:6006/library/component-form-section",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-form-section.png",
+      "relativeOutputPath": "components/component-form-section.png",
+      "durationMs": 1122,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-form-section']",
+      "status": "captured",
+      "hash": "8f59db07ac4f3e044dafdd5602eff5ca59b6e2235e98e9d754c8423caa9283fe",
+      "width": 1148,
+      "height": 300,
+      "warnings": []
+    },
+    {
+      "captureId": "component-user-list-item",
+      "name": "User List Item",
+      "path": "/library/component-user-list-item",
+      "url": "http://127.0.0.1:6006/library/component-user-list-item",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-user-list-item.png",
+      "relativeOutputPath": "components/component-user-list-item.png",
+      "durationMs": 1113,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-user-list-item']",
+      "status": "captured",
+      "hash": "38de89f252e50f87a5546512bf0a4091e407fbb4da3738d6917fed4d7b5e323e",
+      "width": 1148,
+      "height": 155,
+      "warnings": []
+    },
+    {
+      "captureId": "view-dashboard-summary",
+      "name": "Dashboard Summary View",
+      "path": "/library/view-dashboard-summary",
+      "url": "http://127.0.0.1:6006/library/view-dashboard-summary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-dashboard-summary.png",
+      "relativeOutputPath": "views/view-dashboard-summary.png",
+      "durationMs": 1092,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-dashboard-summary']",
+      "status": "captured",
+      "hash": "97a771ae74c6bd07c9bec48b58da9f8960ff689edd77fbb82891b3c082c531c8",
+      "width": 1148,
+      "height": 295,
+      "warnings": []
+    },
+    {
+      "captureId": "view-list-overview",
+      "name": "List Overview View",
+      "path": "/library/view-list-overview",
+      "url": "http://127.0.0.1:6006/library/view-list-overview",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-list-overview.png",
+      "relativeOutputPath": "views/view-list-overview.png",
+      "durationMs": 1149,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-list-overview']",
+      "status": "captured",
+      "hash": "14b0adc5d95ec4c55762c424e12f0a024a0c1848676fc69054c8ff65ca221abd",
+      "width": 1148,
+      "height": 283,
+      "warnings": []
+    },
+    {
+      "captureId": "view-settings-panel",
+      "name": "Settings Panel View",
+      "path": "/library/view-settings-panel",
+      "url": "http://127.0.0.1:6006/library/view-settings-panel",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-settings-panel.png",
+      "relativeOutputPath": "views/view-settings-panel.png",
+      "durationMs": 1115,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-settings-panel']",
+      "status": "captured",
+      "hash": "469a3356d2aae50b3df630fa5017504f8f2aec4ec1a4917b62bd8bcf52c70b2c",
+      "width": 1148,
+      "height": 349,
+      "warnings": []
+    },
+    {
+      "captureId": "view-empty-results",
+      "name": "Empty Results View",
+      "path": "/library/view-empty-results",
+      "url": "http://127.0.0.1:6006/library/view-empty-results",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-empty-results.png",
+      "relativeOutputPath": "views/view-empty-results.png",
+      "durationMs": 1102,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-empty-results']",
+      "status": "captured",
+      "hash": "626a12cd3bcda52764a2eca1bd522967b4a1dfdd6693cc75899082efb77d7936",
+      "width": 1148,
+      "height": 195,
+      "warnings": []
+    },
+    {
+      "captureId": "view-campaign-table",
+      "name": "Campaign Table View",
+      "path": "/library/view-campaign-table",
+      "url": "http://127.0.0.1:6006/library/view-campaign-table",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-campaign-table.png",
+      "relativeOutputPath": "views/view-campaign-table.png",
+      "durationMs": 1088,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-campaign-table']",
+      "status": "captured",
+      "hash": "42623944908cec3aefdeb2f1c63bc91ba3a5d0692a63e691253c5df23b21b442",
+      "width": 1148,
+      "height": 299,
+      "warnings": []
+    },
+    {
+      "captureId": "view-notifications-center",
+      "name": "Notifications Center View",
+      "path": "/library/view-notifications-center",
+      "url": "http://127.0.0.1:6006/library/view-notifications-center",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-notifications-center.png",
+      "relativeOutputPath": "views/view-notifications-center.png",
+      "durationMs": 1153,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-notifications-center']",
+      "status": "captured",
+      "hash": "b0376e2847a8b981ad89e792c5727eff43096878b8378d85be646bd6c6b05098",
+      "width": 1148,
+      "height": 295,
+      "warnings": []
+    },
+    {
+      "captureId": "view-user-directory",
+      "name": "User Directory View",
+      "path": "/library/view-user-directory",
+      "url": "http://127.0.0.1:6006/library/view-user-directory",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-user-directory.png",
+      "relativeOutputPath": "views/view-user-directory.png",
+      "durationMs": 1076,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-user-directory']",
+      "status": "captured",
+      "hash": "5468629af8c19c63801e12be93fcfde0497808e203138b6697d21cacb164b239",
+      "width": 1148,
+      "height": 335,
+      "warnings": []
+    },
+    {
+      "captureId": "view-revenue-kpis",
+      "name": "Revenue KPIs View",
+      "path": "/library/view-revenue-kpis",
+      "url": "http://127.0.0.1:6006/library/view-revenue-kpis",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-revenue-kpis.png",
+      "relativeOutputPath": "views/view-revenue-kpis.png",
+      "durationMs": 1086,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-revenue-kpis']",
+      "status": "captured",
+      "hash": "e9e122c0dc157eca745543ff59d670ca9f4e6d545c0c994d17171bb93bb863d8",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "view-onboarding-checklist",
+      "name": "Onboarding Checklist View",
+      "path": "/library/view-onboarding-checklist",
+      "url": "http://127.0.0.1:6006/library/view-onboarding-checklist",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-onboarding-checklist.png",
+      "relativeOutputPath": "views/view-onboarding-checklist.png",
+      "durationMs": 1110,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-onboarding-checklist']",
+      "status": "captured",
+      "hash": "e905f1abb8934eefc61324b9ba339ecd5e12344bac7480322d47e621a3e3206d",
+      "width": 1148,
+      "height": 325,
+      "warnings": []
+    },
+    {
+      "captureId": "view-approval-queue",
+      "name": "Approval Queue View",
+      "path": "/library/view-approval-queue",
+      "url": "http://127.0.0.1:6006/library/view-approval-queue",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-approval-queue.png",
+      "relativeOutputPath": "views/view-approval-queue.png",
+      "durationMs": 1066,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-approval-queue']",
+      "status": "captured",
+      "hash": "c8ab3f19aeaeabab42976a04e8b2a13722a98996a56cc757afb266e80ad43740",
+      "width": 1148,
+      "height": 340,
+      "warnings": []
+    },
+    {
+      "captureId": "view-audit-log",
+      "name": "Audit Log View",
+      "path": "/library/view-audit-log",
+      "url": "http://127.0.0.1:6006/library/view-audit-log",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-audit-log.png",
+      "relativeOutputPath": "views/view-audit-log.png",
+      "durationMs": 1062,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-audit-log']",
+      "status": "captured",
+      "hash": "0c7e55bd2b23c2c895a25fafd37fe5cef4a2cde446166796db86ba2a928081db",
+      "width": 1148,
+      "height": 311,
+      "warnings": []
+    },
+    {
+      "captureId": "view-billing-overview",
+      "name": "Billing Overview View",
+      "path": "/library/view-billing-overview",
+      "url": "http://127.0.0.1:6006/library/view-billing-overview",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-billing-overview.png",
+      "relativeOutputPath": "views/view-billing-overview.png",
+      "durationMs": 1028,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-billing-overview']",
+      "status": "captured",
+      "hash": "3b81ebc30e9c769dc7cae5cf08f78b7fb440d26e3bd1b4585aedb4418a3b8cb7",
+      "width": 1148,
+      "height": 223,
+      "warnings": []
+    },
+    {
+      "captureId": "page-analytics-overview",
+      "name": "Analytics Overview",
+      "path": "/library/page-analytics-overview",
+      "url": "http://127.0.0.1:6006/library/page-analytics-overview",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-analytics-overview.png",
+      "relativeOutputPath": "pages/page-analytics-overview.png",
+      "durationMs": 1155,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "cdd13ee9eb8b270b658bb3dccc2c13ae03ca53fa7243aec562668c5eee18fd5b",
+      "width": 1440,
+      "height": 900,
+      "warnings": []
+    },
+    {
+      "captureId": "page-account-list",
+      "name": "Account List Page",
+      "path": "/library/page-account-list",
+      "url": "http://127.0.0.1:6006/library/page-account-list",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-account-list.png",
+      "relativeOutputPath": "pages/page-account-list.png",
+      "durationMs": 1180,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-account-list']",
+      "status": "captured",
+      "hash": "e2593f1e7f68bf64193b7fb48508099d0c602cbddd1c57a237e7d6b5b8837a00",
+      "width": 1148,
+      "height": 575,
+      "warnings": []
+    },
+    {
+      "captureId": "page-campaign-editor",
+      "name": "Campaign Editor Page",
+      "path": "/library/page-campaign-editor",
+      "url": "http://127.0.0.1:6006/library/page-campaign-editor",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-campaign-editor.png",
+      "relativeOutputPath": "pages/page-campaign-editor.png",
+      "durationMs": 1117,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-campaign-editor']",
+      "status": "captured",
+      "hash": "3c3cc2db8ace86f63b4e0be50ddb99b53492552a249d2b1e380d65ecac77e7cf",
+      "width": 1148,
+      "height": 646,
+      "warnings": []
+    },
+    {
+      "captureId": "page-system-settings",
+      "name": "System Settings Page",
+      "path": "/library/page-system-settings",
+      "url": "http://127.0.0.1:6006/library/page-system-settings",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-system-settings.png",
+      "relativeOutputPath": "pages/page-system-settings.png",
+      "durationMs": 1069,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-system-settings']",
+      "status": "captured",
+      "hash": "8eb4362d94dc460b9229f2186df71941c47ae9c77ee93e099d24bfd04fac5f67",
+      "width": 1148,
+      "height": 477,
+      "warnings": []
+    },
+    {
+      "captureId": "page-operations-center",
+      "name": "Operations Center Page",
+      "path": "/library/page-operations-center",
+      "url": "http://127.0.0.1:6006/library/page-operations-center",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-operations-center.png",
+      "relativeOutputPath": "pages/page-operations-center.png",
+      "durationMs": 1054,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-operations-center']",
+      "status": "captured",
+      "hash": "f3cb401d97f75e8dc71b0472ec799976fbdbd2d6c4b342654045a797bd729d80",
+      "width": 1148,
+      "height": 773,
+      "warnings": []
+    },
+    {
+      "captureId": "page-user-management",
+      "name": "User Management Page",
+      "path": "/library/page-user-management",
+      "url": "http://127.0.0.1:6006/library/page-user-management",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-user-management.png",
+      "relativeOutputPath": "pages/page-user-management.png",
+      "durationMs": 1069,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-user-management']",
+      "status": "captured",
+      "hash": "3b14408850384db6c80a54fd1190bac1e1894c5696ac7e0dd0735f7bc5736d51",
+      "width": 1148,
+      "height": 632,
+      "warnings": []
+    },
+    {
+      "captureId": "page-incident-review",
+      "name": "Incident Review Page",
+      "path": "/library/page-incident-review",
+      "url": "http://127.0.0.1:6006/library/page-incident-review",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-incident-review.png",
+      "relativeOutputPath": "pages/page-incident-review.png",
+      "durationMs": 1003,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-incident-review']",
+      "status": "captured",
+      "hash": "116956547178f7c6cb61eb7029b263c15ec8c1c089a957762f08953310cae47d",
+      "width": 1148,
+      "height": 563,
+      "warnings": []
+    },
+    {
+      "captureId": "page-revenue-forecast",
+      "name": "Revenue Forecast Page",
+      "path": "/library/page-revenue-forecast",
+      "url": "http://127.0.0.1:6006/library/page-revenue-forecast",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-revenue-forecast.png",
+      "relativeOutputPath": "pages/page-revenue-forecast.png",
+      "durationMs": 1021,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-revenue-forecast']",
+      "status": "captured",
+      "hash": "8b7c99310436544b172bf170fc74910f9ccf1868c1068cd78a22517bced2e37d",
+      "width": 1148,
+      "height": 551,
+      "warnings": []
+    },
+    {
+      "captureId": "library-index",
+      "name": "Surface Library Index",
+      "path": "/library",
+      "url": "http://127.0.0.1:6006/library",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/library-index.png",
+      "relativeOutputPath": "library-index.png",
+      "durationMs": 1260,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "a0992b84e4c8dab901fd0acae009a51bf0694f40418f13b8a3c93f73291b149b",
+      "width": 1440,
+      "height": 1819,
       "warnings": []
     }
   ],

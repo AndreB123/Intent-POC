@@ -680,7 +680,7 @@ function derivePlaywrightVerificationMode(
 }
 
 function supportsIntentStudioLifecycleVerification(sourceId: string): boolean {
-  return sourceId === "intent-poc-app" || sourceId === "demo-catalog";
+  return sourceId === "intent-poc-app";
 }
 
 function hasIntentStudioLifecycleSignals(text: string): boolean {
@@ -748,10 +748,10 @@ function buildIntentStudioLifecycleMockState(input: {
     sources: [
       {
         id: input.sourceId,
-        label: input.sourceId === "intent-poc-app" ? "Intent POC App" : "Demo Catalog",
+        label: input.sourceId === "intent-poc-app" ? "Intent POC App" : "Surface Library",
         repoLabel: "Intent POC",
         role: "controller-and-demo-source",
-        summary: "Intent Studio and demo catalog source.",
+        summary: "Intent Studio and surface library source.",
         aliases: [input.sourceId],
         captureCount: 0,
         sourceType: "local",
@@ -1075,7 +1075,7 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
           label: "Intent POC App",
           repoLabel: "Intent POC",
           role: "controller-and-demo-source",
-          summary: "Intent Studio and demo catalog source.",
+          summary: "Intent Studio and surface library source.",
           aliases: ["demo", "intent-poc-app"],
           captureCount: 1,
           sourceType: "local",
@@ -2558,10 +2558,10 @@ function pickCaptureScopeForSource(
   }
 
   const promptMatchValue = resolution.promptMatchValues[sourceId];
-  if (sourceId === "intent-poc-app" && promptMatchValue === "demo-catalog") {
-    const legacyDemoCatalogCaptureIds = ["library-index", "component-button-primary", "page-analytics-overview"];
+  if (sourceId === "intent-poc-app" && (promptMatchValue === "surface library" || promptMatchValue === "surface-library" || promptMatchValue === "library")) {
+    const defaultSurfaceLibraryCaptureIds = ["library-index", "component-button-primary", "page-analytics-overview"];
     const availableCaptureIds = new Set(options.availableSources[sourceId].capture.items.map((item) => item.id));
-    const compatibleCaptureIds = legacyDemoCatalogCaptureIds.filter((captureId) => availableCaptureIds.has(captureId));
+    const compatibleCaptureIds = defaultSurfaceLibraryCaptureIds.filter((captureId) => availableCaptureIds.has(captureId));
 
     if (compatibleCaptureIds.length > 0) {
       return {

@@ -130,7 +130,7 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
-test("loadConfig expands the built-in demo surface catalog for the unified app source", async () => {
+test("loadConfig expands the built-in surface library capture set for the unified app source", async () => {
   const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-config-catalog-test-"));
   const configPath = path.join(tmpDir, "intent-poc.yaml");
 
@@ -150,7 +150,7 @@ test("loadConfig expands the built-in demo surface catalog for the unified app s
       "sources:",
       "  intent-poc-app:",
       "    aliases:",
-      "      - demo-catalog",
+      "      - surface-library",
       "    source:",
       "      type: local",
       `      localPath: ${JSON.stringify(tmpDir)}`,
@@ -164,7 +164,7 @@ test("loadConfig expands the built-in demo surface catalog for the unified app s
       "        type: http",
       "        url: http://127.0.0.1:3000",
       "    capture:",
-      "      catalog: demo-surface-catalog",
+      "      catalog: surface-library",
       "      publishToLibrary: false",
       "      items:",
       "        - id: library-index",
@@ -193,7 +193,7 @@ test("loadConfig expands the built-in demo surface catalog for the unified app s
   );
 
   const loaded = await loadConfig(configPath);
-  assert.equal(loaded.config.sources["intent-poc-app"].capture.catalog, "demo-surface-catalog");
+  assert.equal(loaded.config.sources["intent-poc-app"].capture.catalog, "surface-library");
   assert.equal(loaded.config.sources["intent-poc-app"].capture.items.length, 47);
   assert.equal(
     loaded.config.sources["intent-poc-app"].capture.items.some((item) => item.id === "library-index" && item.fullPage === true),

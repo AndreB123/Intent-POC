@@ -102,7 +102,7 @@ function resolveControllerRelativePaths(config: AppConfig, configDir: string): A
 function buildBuiltInCaptureItems(config: AppConfig): AppConfig {
   const sources = Object.fromEntries(
     Object.entries(config.sources).map(([sourceId, configuredSource]) => {
-      const generatedItems = configuredSource.capture.catalog === "demo-surface-catalog"
+      const generatedItems = configuredSource.capture.catalog === "surface-library"
         ? buildCaptureItemsFromCatalog(SURFACE_CATALOG)
         : [];
       const explicitItemsById = new Map(configuredSource.capture.items.map((item) => [item.id, item]));

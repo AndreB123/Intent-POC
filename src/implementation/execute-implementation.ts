@@ -22,6 +22,7 @@ import {
   readWorkspacePackageContext
 } from "./gemini-code-generator";
 import { applyImplementationChangeSet } from "./apply-changes";
+import { formatCompactUiStateList } from "../intent/ui-state-requirements";
 
 function captureErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -115,9 +116,17 @@ function buildForbiddenAbsolutePaths(input: ExecuteImplementationStageInput): st
   return forbiddenRoots;
 }
 
-function buildImplementationSummary(fileOperations: SourceStageFileOperationRecord[]): string {
+function buildImplementationSummary(
+  fileOperations: SourceStageFileOperationRecord[],
+  uiStateRequirements: ExecuteImplementationStageInput["sourcePlan"]["uiStateRequirements"] = []
+): string {
+  const uiStateSummary =
+    uiStateRequirements.length > 0
+      ? ` Requested UI states for downstream verification: ${formatCompactUiStateList(uiStateRequirements)}.`
+      : "";
+
   if (fileOperations.length === 0) {
-    return "No source file changes were required for this attempt.";
+    return `No source file changes were required for this attempt.${uiStateSummary}`;
   }
 
   const counts = fileOperations.reduce(
@@ -128,7 +137,7 @@ function buildImplementationSummary(fileOperations: SourceStageFileOperationReco
     { create: 0, replace: 0, delete: 0 }
   );
 
-  return `Applied ${fileOperations.length} file operation${fileOperations.length === 1 ? "" : "s"} (${counts.create} create, ${counts.replace} replace, ${counts.delete} delete).`;
+  return `Applied ${fileOperations.length} file operation${fileOperations.length === 1 ? "" : "s"} (${counts.create} create, ${counts.replace} replace, ${counts.delete} delete).${uiStateSummary}`;
 }
 
 function getTestFileKind(filePath: string): "test" | "spec" | undefined {
@@ -452,6 +461,7 @@ export async function executeImplementationStage(
       codeSurface: input.normalizedIntent.codeSurface,
       desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
       acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
+      sourceUiStateRequirements: input.sourcePlan.uiStateRequirements,
       scenarios,
       activeWorkItems,
       backlogWorkItems,
@@ -596,7 +606,7 @@ export async function executeImplementationStage(
 
     return {
       status: "completed",
-      summary: buildImplementationSummary(fileOperations),
+      summary: buildImplementationSummary(fileOperations, input.sourcePlan.uiStateRequirements),
       targetedWorkItemIds: input.activeWorkItemIds,
       completedWorkItemIds: [...input.completedWorkItemIds, ...input.activeWorkItemIds],
       remainingWorkItemIds: input.remainingWorkItemIds.filter((workItemId) => !input.activeWorkItemIds.includes(workItemId)),

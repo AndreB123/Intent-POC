@@ -3,8 +3,12 @@ import path from "node:path";
 import { z } from "zod";
 import { ResolvedAgentStageConfig } from "../intent/agent-stage-config";
 import { CodeSurfaceSelection, getCodeSurfaceImplementationHints } from "../intent/code-surface";
-import { BDDScenario, TDDWorkItem } from "../intent/intent-types";
+import { BDDScenario, ResolvedUiStateRequirement, TDDWorkItem } from "../intent/intent-types";
 import { createGeminiClient } from "../intent/gemini-client";
+import {
+  collectWorkItemRequiredUiStates,
+  formatDetailedUiStateRequirement
+} from "../intent/ui-state-requirements";
 
 const IMPLEMENTATION_OPERATION_TYPES = ["create", "replace", "delete"] as const;
 
@@ -48,6 +52,7 @@ export interface ImplementationWorkItemContext {
   order: number;
   dependsOnWorkItemIds: string[];
   scenarioIds: string[];
+  requiredUiStates: ResolvedUiStateRequirement[];
   verificationNotes: string[];
 }
 
@@ -66,6 +71,7 @@ export interface ImplementationPromptContext {
   };
   desiredOutcome: string;
   acceptanceCriteria: string[];
+  sourceUiStateRequirements: ResolvedUiStateRequirement[];
   scenarios: ImplementationScenarioContext[];
   activeWorkItems: ImplementationWorkItemContext[];
   backlogWorkItems: ImplementationWorkItemContext[];
@@ -344,10 +350,15 @@ function buildScenarioContext(scenarios: BDDScenario[]): ImplementationScenarioC
 }
 
 function buildVerificationNotes(workItem: TDDWorkItem): string[] {
-  return workItem.playwright.specs.map(
+  const requiredUiStates = collectWorkItemRequiredUiStates(workItem);
+
+  return [
+    ...workItem.playwright.specs.map(
     (spec) =>
       `${spec.framework} coverage \"${spec.suiteName}\" / \"${spec.testName}\" is a tracked read-only verification asset during implementation.`
-  );
+    ),
+    ...requiredUiStates.map((requirement) => `Downstream verification must preserve ${formatDetailedUiStateRequirement(requirement)}`)
+  ];
 }
 
 function buildWorkItemContext(workItems: TDDWorkItem[]): ImplementationWorkItemContext[] {
@@ -360,6 +371,7 @@ function buildWorkItemContext(workItems: TDDWorkItem[]): ImplementationWorkItemC
     order: workItem.execution.order,
     dependsOnWorkItemIds: workItem.execution.dependsOnWorkItemIds,
     scenarioIds: workItem.scenarioIds,
+    requiredUiStates: collectWorkItemRequiredUiStates(workItem),
     verificationNotes: buildVerificationNotes(workItem)
   }));
 }
@@ -691,6 +703,12 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
       : []),
     `Intent summary: ${input.summary}`,
     `Desired outcome: ${input.desiredOutcome}`,
+    ...(input.sourceUiStateRequirements.length > 0
+      ? [
+          "Requested source UI states for downstream verification:",
+          JSON.stringify(input.sourceUiStateRequirements, null, 2)
+        ]
+      : []),
     "Acceptance criteria:",
     JSON.stringify(input.acceptanceCriteria, null, 2),
     "Relevant scenarios:",
@@ -834,6 +852,7 @@ export function buildImplementationPromptContext(input: {
   codeSurface?: CodeSurfaceSelection;
   desiredOutcome: string;
   acceptanceCriteria: string[];
+  sourceUiStateRequirements?: ResolvedUiStateRequirement[];
   scenarios: BDDScenario[];
   activeWorkItems: TDDWorkItem[];
   backlogWorkItems: TDDWorkItem[];
@@ -846,6 +865,7 @@ export function buildImplementationPromptContext(input: {
 
   return {
     rawPrompt: input.rawPrompt,
+  sourceUiStateRequirements: input.sourceUiStateRequirements ?? [],
     summary: input.summary,
     sourceId: input.sourceId,
     codeSurface: input.codeSurface

@@ -6,7 +6,7 @@ import test from "node:test";
 import { toFileUrlPath } from "../evidence/paths";
 import { normalizeIntent } from "../intent/normalize-intent";
 import { NormalizedIntent } from "../intent/intent-types";
-import { buildBehaviorSource, buildDemoCatalogBehaviorSource } from "../orchestrator/run-intent.test-support";
+import { buildBehaviorSource, buildIntentPocAppBehaviorSource } from "../orchestrator/run-intent.test-support";
 import { writeGeneratedPlaywrightTests } from "./write-generated-playwright-tests";
 
 test("writeGeneratedPlaywrightTests preserves unrelated tracked specs while refreshing targeted files", async () => {
@@ -101,7 +101,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
 
   try {
     const source = {
-      ...buildDemoCatalogBehaviorSource(rootDir),
+      ...buildIntentPocAppBehaviorSource(rootDir),
       testing: {
         playwright: {
           enabled: true,
@@ -114,7 +114,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
       intentId: "intent-hidden-checkpoint",
       receivedAt: new Date().toISOString(),
       rawPrompt: "Collapse the optional configuration section in Intent Studio.",
-      summary: "change behavior for demo-catalog",
+      summary: "change behavior for intent-poc-app",
       intentType: "change-behavior",
       businessIntent: {
         statement: "Collapse the optional configuration section in Intent Studio.",
@@ -123,13 +123,13 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
         scenarios: [],
         workItems: [
           {
-            id: "work-1-collapse-configuration-section-demo-catalog",
+            id: "work-1-collapse-configuration-section-intent-poc-app",
             type: "playwright-spec",
             verificationMode: "tracked-playwright",
             title: "Collapse configuration section",
             description: "Verify the configuration section collapses.",
             scenarioIds: [],
-            sourceIds: ["demo-catalog"],
+            sourceIds: ["intent-poc-app"],
             userVisibleOutcome: "The configuration section is no longer visible.",
             verification: "A generated Playwright spec captures reviewable screenshots so QA can run this verification automatically.",
             execution: {
@@ -141,9 +141,9 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
               specs: [
                 {
                   framework: "playwright",
-                  sourceId: "demo-catalog",
-                  relativeSpecPath: "demo-catalog/collapse-configuration-section.spec.ts",
-                  suiteName: "Intent-driven flow for demo-catalog",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/collapse-configuration-section.spec.ts",
+                  suiteName: "Intent-driven flow for intent-poc-app",
                   testName: "Collapse configuration section",
                   scenarioIds: [],
                   checkpoints: [
@@ -172,10 +172,10 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
         }
       },
       executionPlan: {
-        primarySourceId: "demo-catalog",
+        primarySourceId: "intent-poc-app",
         sources: [
           {
-            sourceId: "demo-catalog",
+            sourceId: "intent-poc-app",
             selectionReason: "Requested source.",
             captureScope: {
               mode: "all",
@@ -189,7 +189,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
         orchestrationStrategy: "single-source",
         reviewNotes: []
       },
-      sourceId: "demo-catalog",
+      sourceId: "intent-poc-app",
       captureScope: {
         mode: "all",
         captureIds: []
@@ -221,7 +221,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
 
     const result = await writeGeneratedPlaywrightTests({
       workspace: {
-        sourceId: "demo-catalog",
+        sourceId: "intent-poc-app",
         source,
         rootDir,
         appDir: rootDir,
@@ -229,7 +229,7 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
         sourceType: source.source.type
       },
       normalizedIntent,
-      sourceId: "demo-catalog"
+      sourceId: "intent-poc-app"
     });
 
     const hiddenSpecPath = result?.files.find((filePath) => filePath.includes("collapse"));
@@ -254,7 +254,7 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
 
   try {
     const source = {
-      ...buildDemoCatalogBehaviorSource(rootDir),
+      ...buildIntentPocAppBehaviorSource(rootDir),
       testing: {
         playwright: {
           enabled: true,
@@ -267,7 +267,7 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
       intentId: "intent-layout-checkpoint",
       receivedAt: new Date().toISOString(),
       rawPrompt: "Keep the run intent button directly below the prompt input.",
-      summary: "change behavior for demo-catalog",
+      summary: "change behavior for intent-poc-app",
       intentType: "change-behavior",
       businessIntent: {
         statement: "Keep the run intent button directly below the prompt input.",
@@ -276,13 +276,13 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
         scenarios: [],
         workItems: [
           {
-            id: "work-1-verify-prompt-layout-demo-catalog",
+            id: "work-1-verify-prompt-layout-intent-poc-app",
             type: "playwright-spec",
             verificationMode: "tracked-playwright",
             title: "Verify prompt layout",
             description: "Verify the prompt layout relationship.",
             scenarioIds: [],
-            sourceIds: ["demo-catalog"],
+            sourceIds: ["intent-poc-app"],
             userVisibleOutcome: "The run intent button remains directly below the prompt input.",
             verification: "The run intent button remains directly below the prompt input.",
             execution: {
@@ -294,9 +294,9 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
               specs: [
                 {
                   framework: "playwright",
-                  sourceId: "demo-catalog",
-                  relativeSpecPath: "demo-catalog/verify-prompt-layout.spec.ts",
-                  suiteName: "Intent-driven flow for demo-catalog",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/verify-prompt-layout.spec.ts",
+                  suiteName: "Intent-driven flow for intent-poc-app",
                   testName: "Verify prompt layout",
                   scenarioIds: [],
                   checkpoints: [
@@ -326,10 +326,10 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
         }
       },
       executionPlan: {
-        primarySourceId: "demo-catalog",
+        primarySourceId: "intent-poc-app",
         sources: [
           {
-            sourceId: "demo-catalog",
+            sourceId: "intent-poc-app",
             selectionReason: "Requested source.",
             captureScope: {
               mode: "all",
@@ -343,7 +343,7 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
         orchestrationStrategy: "single-source",
         reviewNotes: []
       },
-      sourceId: "demo-catalog",
+      sourceId: "intent-poc-app",
       captureScope: {
         mode: "all",
         captureIds: []
@@ -375,7 +375,7 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
 
     const result = await writeGeneratedPlaywrightTests({
       workspace: {
-        sourceId: "demo-catalog",
+        sourceId: "intent-poc-app",
         source,
         rootDir,
         appDir: rootDir,
@@ -383,7 +383,7 @@ test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs a
         sourceType: source.source.type
       },
       normalizedIntent,
-      sourceId: "demo-catalog"
+      sourceId: "intent-poc-app"
     });
 
     const layoutSpecPath = result?.files.find((filePath) => filePath.includes("prompt-layout"));
@@ -406,7 +406,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
 
   try {
     const source = {
-      ...buildDemoCatalogBehaviorSource(rootDir),
+      ...buildIntentPocAppBehaviorSource(rootDir),
       testing: {
         playwright: {
           enabled: true,
@@ -419,7 +419,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
       intentId: "intent-studio-results-links",
       receivedAt: new Date().toISOString(),
       rawPrompt: "Verify that screenshots at the bottom of the results page link to the actual images.",
-      summary: "change behavior for demo-catalog",
+      summary: "change behavior for intent-poc-app",
       intentType: "change-behavior",
       businessIntent: {
         statement: "Verify that screenshots at the bottom of the results page link to the actual images.",
@@ -428,13 +428,13 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
         scenarios: [],
         workItems: [
           {
-            id: "work-1-verify-results-links-demo-catalog",
+            id: "work-1-verify-results-links-intent-poc-app",
             type: "playwright-spec",
             verificationMode: "mocked-state-playwright",
             title: "Verify results links",
             description: "Verify the Studio results page uses file-backed screenshot links.",
             scenarioIds: [],
-            sourceIds: ["demo-catalog"],
+            sourceIds: ["intent-poc-app"],
             userVisibleOutcome: "The results page capture previews link to the generated images.",
             verification: "The results page capture previews link to the generated images.",
             execution: {
@@ -446,9 +446,9 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
               specs: [
                 {
                   framework: "playwright",
-                  sourceId: "demo-catalog",
-                  relativeSpecPath: "demo-catalog/verify-results-links.spec.ts",
-                  suiteName: "Intent-driven flow for demo-catalog",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/verify-results-links.spec.ts",
+                  suiteName: "Intent-driven flow for intent-poc-app",
                   testName: "Verify results links",
                   scenarioIds: [],
                   checkpoints: [
@@ -463,13 +463,13 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                       mockStudioState: {
                         configPath: "intent-poc.yaml",
                         linearEnabled: false,
-                        defaultSourceId: "demo-catalog",
+                        defaultSourceId: "intent-poc-app",
                         agentStages: [],
                         sources: [
                           {
-                            id: "demo-catalog",
-                            label: "Demo Catalog",
-                            aliases: ["demo-catalog"],
+                            id: "intent-poc-app",
+                            label: "Surface Library",
+                            aliases: ["intent-poc-app"],
                             captureCount: 1,
                             sourceType: "local",
                             sourceLocation: ".",
@@ -485,8 +485,8 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                         currentRun: {
                           sessionId: "session-1",
                           prompt: "Verify that screenshots at the bottom of the results page link to the actual images.",
-                          requestedSourceIds: ["demo-catalog"],
-                          sourceId: "demo-catalog",
+                          requestedSourceIds: ["intent-poc-app"],
+                          sourceId: "intent-poc-app",
                           dryRun: true,
                           status: "completed",
                           startedAt: "2026-04-16T00:00:00.000Z",
@@ -495,11 +495,11 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                           events: [],
                           captures: [
                             {
-                              sourceId: "demo-catalog",
+                              sourceId: "intent-poc-app",
                               captureId: "result",
                               status: "captured",
                               url: "/results",
-                              imagePath: "artifacts/sources/demo-catalog/captures/result.png"
+                              imagePath: "artifacts/sources/intent-poc-app/captures/result.png"
                             }
                           ],
                           sourceRuns: [],
@@ -517,7 +517,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                       screenshotId: "results-page-image-src",
                       target: "#captures .capture-card img",
                       attributeName: "src",
-                      expectedSubstring: toFileUrlPath("artifacts/sources/demo-catalog/captures/result.png") ?? "",
+                      expectedSubstring: toFileUrlPath("artifacts/sources/intent-poc-app/captures/result.png") ?? "",
                       waitForSelector: "#captures .capture-card img"
                     },
                     {
@@ -528,7 +528,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
                       screenshotId: "results-page-link-href",
                       target: "#captures .capture-card .capture-links a",
                       attributeName: "href",
-                      expectedSubstring: toFileUrlPath("artifacts/sources/demo-catalog/captures/result.png") ?? "",
+                      expectedSubstring: toFileUrlPath("artifacts/sources/intent-poc-app/captures/result.png") ?? "",
                       waitForSelector: "#captures .capture-card .capture-links a"
                     }
                   ]
@@ -547,10 +547,10 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
         }
       },
       executionPlan: {
-        primarySourceId: "demo-catalog",
+        primarySourceId: "intent-poc-app",
         sources: [
           {
-            sourceId: "demo-catalog",
+            sourceId: "intent-poc-app",
             selectionReason: "Requested source.",
             captureScope: {
               mode: "all",
@@ -564,7 +564,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
         orchestrationStrategy: "single-source",
         reviewNotes: []
       },
-      sourceId: "demo-catalog",
+      sourceId: "intent-poc-app",
       captureScope: {
         mode: "all",
         captureIds: []
@@ -596,7 +596,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
 
     const result = await writeGeneratedPlaywrightTests({
       workspace: {
-        sourceId: "demo-catalog",
+        sourceId: "intent-poc-app",
         source,
         rootDir,
         appDir: rootDir,
@@ -604,7 +604,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
         sourceType: source.source.type
       },
       normalizedIntent,
-      sourceId: "demo-catalog"
+      sourceId: "intent-poc-app"
     });
 
     const specPath = result?.files.find((filePath) => filePath.includes("results-links"));
@@ -615,7 +615,7 @@ test("writeGeneratedPlaywrightTests Given Studio results-link checkpoints When s
     assert.equal(generatedContent.includes('await page.route("**/api/events", async (route) => {'), true);
     assert.equal(generatedContent.includes('const attributeValue = await target.getAttribute("src");'), true);
     assert.equal(
-      generatedContent.includes('expect(attributeValue ?? "", "The results page capture previews link to the generated images.").toContain("/files/artifacts%2Fsources%2Fdemo-catalog%2Fcaptures%2Fresult.png");'),
+      generatedContent.includes('expect(attributeValue ?? "", "The results page capture previews link to the generated images.").toContain("/files/artifacts%2Fsources%2Fintent-poc-app%2Fcaptures%2Fresult.png");'),
       true
     );
   } finally {
@@ -628,7 +628,7 @@ test("writeGeneratedPlaywrightTests Given required UI states When specs are gene
 
   try {
     const source = {
-      ...buildDemoCatalogBehaviorSource(rootDir),
+      ...buildIntentPocAppBehaviorSource(rootDir),
       testing: {
         playwright: {
           enabled: true,
@@ -639,11 +639,11 @@ test("writeGeneratedPlaywrightTests Given required UI states When specs are gene
 
     const normalizedIntent = normalizeIntent({
       rawPrompt: "Compare the demo evidence in dark mode so the theme styling is reviewable.",
-      defaultSourceId: "demo-catalog",
+      defaultSourceId: "intent-poc-app",
       continueOnCaptureError: false,
       availableSources: {
-        "demo-catalog": {
-          aliases: ["demo", "demo-catalog"],
+        "intent-poc-app": {
+          aliases: ["demo", "intent-poc-app"],
           planning: {
             repoId: "intent-poc",
             repoLabel: "Intent POC",
@@ -654,7 +654,7 @@ test("writeGeneratedPlaywrightTests Given required UI states When specs are gene
               {
                 id: "theme-mode",
                 label: "Theme mode",
-                description: "The demo catalog supports light and dark theme states.",
+                description: "The surface library supports light and dark theme states.",
                 activation: [
                   {
                     type: "ui-control",
@@ -684,7 +684,7 @@ test("writeGeneratedPlaywrightTests Given required UI states When specs are gene
             items: [
               {
                 id: "component-button-primary",
-                name: "Demo Primary Button",
+                name: "Primary Button",
                 path: "/library/component-button-primary",
                 locator: "[data-testid='component-button-primary']",
                 waitForSelector: "[data-testid='component-button-primary']",
@@ -699,7 +699,7 @@ test("writeGeneratedPlaywrightTests Given required UI states When specs are gene
 
     const result = await writeGeneratedPlaywrightTests({
       workspace: {
-        sourceId: "demo-catalog",
+        sourceId: "intent-poc-app",
         source,
         rootDir,
         appDir: rootDir,
@@ -707,10 +707,10 @@ test("writeGeneratedPlaywrightTests Given required UI states When specs are gene
         sourceType: source.source.type
       },
       normalizedIntent,
-      sourceId: "demo-catalog"
+      sourceId: "intent-poc-app"
     });
 
-    const specPath = result?.files.find((filePath) => filePath.includes("demo-catalog"));
+    const specPath = result?.files.find((filePath) => filePath.includes("intent-poc-app"));
     assert.ok(specPath);
 
     const generatedContent = await fs.readFile(specPath!, "utf8");
@@ -735,7 +735,7 @@ test("writeGeneratedPlaywrightTests Given query-param UI states When specs are g
 
   try {
     const source = {
-      ...buildDemoCatalogBehaviorSource(rootDir),
+      ...buildIntentPocAppBehaviorSource(rootDir),
       testing: {
         playwright: {
           enabled: true,
@@ -746,11 +746,11 @@ test("writeGeneratedPlaywrightTests Given query-param UI states When specs are g
 
     const normalizedIntent = normalizeIntent({
       rawPrompt: "Compare the demo evidence in compact density mode so spacing is reviewable.",
-      defaultSourceId: "demo-catalog",
+      defaultSourceId: "intent-poc-app",
       continueOnCaptureError: false,
       availableSources: {
-        "demo-catalog": {
-          aliases: ["demo", "demo-catalog"],
+        "intent-poc-app": {
+          aliases: ["demo", "intent-poc-app"],
           planning: {
             repoId: "intent-poc",
             repoLabel: "Intent POC",
@@ -761,7 +761,7 @@ test("writeGeneratedPlaywrightTests Given query-param UI states When specs are g
               {
                 id: "density-mode",
                 label: "Density mode",
-                description: "The demo catalog supports compact and comfortable density modes.",
+                description: "The surface library supports compact and comfortable density modes.",
                 activation: [
                   {
                     type: "query-param",
@@ -791,7 +791,7 @@ test("writeGeneratedPlaywrightTests Given query-param UI states When specs are g
             items: [
               {
                 id: "component-button-primary",
-                name: "Demo Primary Button",
+                name: "Primary Button",
                 path: "/library/component-button-primary",
                 locator: "[data-testid='component-button-primary']",
                 waitForSelector: "[data-testid='component-button-primary']",
@@ -806,7 +806,7 @@ test("writeGeneratedPlaywrightTests Given query-param UI states When specs are g
 
     const result = await writeGeneratedPlaywrightTests({
       workspace: {
-        sourceId: "demo-catalog",
+        sourceId: "intent-poc-app",
         source,
         rootDir,
         appDir: rootDir,
@@ -814,10 +814,10 @@ test("writeGeneratedPlaywrightTests Given query-param UI states When specs are g
         sourceType: source.source.type
       },
       normalizedIntent,
-      sourceId: "demo-catalog"
+      sourceId: "intent-poc-app"
     });
 
-    const specPath = result?.files.find((filePath) => filePath.includes("demo-catalog"));
+    const specPath = result?.files.find((filePath) => filePath.includes("intent-poc-app"));
     assert.ok(specPath);
 
     const generatedContent = await fs.readFile(specPath!, "utf8");

@@ -3,7 +3,7 @@
 - Run ID: <generated-run-id>
 - Source: intent-poc-app
 - Status: completed
-- Intent: Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
+- Intent: Create a baseline screenshot library for the surface library source. The plan must turn the request into acceptance-ready work for the built-in surface library. The captured evidence should reflect dark mode during verification. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
 - Normalized summary: change behavior for intent-poc-app
 - Verification workflow: active
 - Linear issue: not created
@@ -22,19 +22,21 @@
 
 ## Source Plan
 
-- Selection reason: Source intent-poc-app matched the prompt alias 'demo-catalog'.
+- Selection reason: Source intent-poc-app matched the prompt alias 'surface library'.
 - Configured captures: 3
 - Executed captures: 1
 - Capture scope: library-index, component-button-primary, page-analytics-overview
-- Warnings: none
+- UI state requirements: theme-mode=dark
+- Warnings: Requested UI states: theme-mode=dark.
 
 ## Business Intent
 
-Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
+Create a baseline screenshot library for the surface library source. The plan must turn the request into acceptance-ready work for the built-in surface library. The captured evidence should reflect dark mode during verification. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
 
 ## Acceptance Criteria
 
-- turn the request into acceptance-ready work for the built-in catalog experience
+- turn the request into acceptance-ready work for the built-in surface library
+- reflect dark mode during verification
 - publish a reviewable evidence package for GitHub and documentation stakeholders
 - leave a visible business process gate for baseline review
 - product and engineering leads can inspect the baseline without reading implementation details
@@ -45,12 +47,12 @@ Create a baseline screenshot library for the demo-catalog source. The plan must 
 ## BDD Scenarios
 
 ### Intent is translated into acceptance-ready work
-- Given A business intent has been captured: Create a baseline screenshot library for the demo-catalog source. The plan must turn the request into acceptance-ready work for the built-in catalog experience. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
+- Given A business intent has been captured: Create a baseline screenshot library for the surface library source. The plan must turn the request into acceptance-ready work for the built-in surface library. The captured evidence should reflect dark mode during verification. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
 - Given The desired outcome is explicit: product and engineering leads can inspect the baseline without reading implementation details
 - When The planner decomposes the intent into acceptance criteria and scenarios.
 - When Applicable sources and destinations are identified from the prompt and configuration.
-- Then turn the request into acceptance-ready work for the built-in catalog experience
-- Then publish a reviewable evidence package for GitHub and documentation stakeholders
+- Then turn the request into acceptance-ready work for the built-in surface library
+- Then reflect dark mode during verification
 
 ### Behavior is verified visually for applicable sources
 - Given Source intent-poc-app is available for execution.

@@ -1,8 +1,8 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { renderSurfaceCatalogIndex, renderSurfacePage } from "./render-surface-page";
+import { renderLibraryArchitectureDocsPage, renderLibraryPlanningDocsPage, renderSurfaceLibraryIndex, renderSurfacePage } from "./render-surface-page";
 
-test("renderSurfacePage Given a catalog surface When rendered Then it does not include the Studio dark mode toggle", () => {
+test("renderSurfacePage Given a library surface When rendered Then it does not include the Studio dark mode toggle", () => {
   const html = renderSurfacePage(
     {
       id: "component-button-primary",
@@ -19,8 +19,8 @@ test("renderSurfacePage Given a catalog surface When rendered Then it does not i
   assert.match(html, /data-testid="component-button-primary"/);
 });
 
-test("renderSurfaceCatalogIndex Given the library landing page When rendered Then it stays free of the Studio dark mode toggle", () => {
-  const html = renderSurfaceCatalogIndex(
+test("renderSurfaceLibraryIndex Given the library landing page When rendered Then it stays free of the Studio dark mode toggle", () => {
+  const html = renderSurfaceLibraryIndex(
     [
       {
         id: "component-button-primary",
@@ -35,7 +35,32 @@ test("renderSurfaceCatalogIndex Given the library landing page When rendered The
 
   assert.doesNotMatch(html, /dark-mode-toggle/);
   assert.doesNotMatch(html, /\sid="theme-toggle"/);
-  assert.match(html, /Primitive\/Component\/View\/Page Catalog/);
+  assert.match(html, /Primitive\/Component\/View\/Page Library/);
+  assert.match(html, /\/library\/planning-docs\?variant=v1/);
+  assert.match(html, /\/library\/architecture-docs\?variant=v1/);
+});
+
+test("renderLibraryPlanningDocsPage Given the planning docs surface When rendered Then it preserves shared BDD and TDD containers", () => {
+  const html = renderLibraryPlanningDocsPage("v1");
+
+  assert.match(html, /data-testid="library-planning-docs"/);
+  assert.match(html, /Library Planning Docs/);
+  assert.match(html, /id="step-bdd"/);
+  assert.match(html, /id="plan-criteria"/);
+  assert.match(html, /id="step-tdd"/);
+  assert.match(html, /id="plan-work-items"/);
+  assert.match(html, /\/library\/architecture-docs\?variant=v1/);
+});
+
+test("renderLibraryArchitectureDocsPage Given the architecture docs surface When rendered Then it preserves work scope guidance separately from planning", () => {
+  const html = renderLibraryArchitectureDocsPage("v1");
+
+  assert.match(html, /data-testid="library-architecture-docs"/);
+  assert.match(html, /Library Architecture Docs/);
+  assert.match(html, /How Work Scope Works/);
+  assert.match(html, /Default work scope/);
+  assert.match(html, /Planning vs feature surfaces/);
+  assert.doesNotMatch(html, /id="step-bdd"/);
 });
 
 test("renderSurfacePage Given a shared summary-card surface When rendered Then it reuses the Studio selection-card structure", () => {

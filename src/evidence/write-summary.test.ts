@@ -6,18 +6,18 @@ import {
   buildBehaviorTestConfig,
   buildCapturedOutcome,
   buildComparisonSummary,
-  buildDemoCatalogBehaviorSource
+  buildIntentPocAppBehaviorSource
 } from "../orchestrator/run-intent.test-support";
 import { SourceRunPaths } from "./paths";
 import { buildSourceSummaryMarkdown } from "./write-summary";
 
 function buildSourcePaths(rootDir: string): SourceRunPaths {
-  const sourceDir = path.join(rootDir, "artifacts", "runs", "run-1", "sources", "demo-catalog");
+  const sourceDir = path.join(rootDir, "artifacts", "runs", "run-1", "sources", "intent-poc-app");
 
   return {
     controllerRoot: rootDir,
     runId: "run-1",
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     sourceDir,
     attemptsDir: path.join(sourceDir, "attempts"),
     capturesDir: path.join(sourceDir, "captures"),
@@ -28,7 +28,7 @@ function buildSourcePaths(rootDir: string): SourceRunPaths {
     comparisonPath: path.join(sourceDir, "comparison.json"),
     summaryPath: path.join(sourceDir, "summary.md"),
     appLogPath: path.join(sourceDir, "logs", "app.log"),
-    baselineSourceDir: path.join(rootDir, "artifacts", "library", "demo-catalog")
+    baselineSourceDir: path.join(rootDir, "artifacts", "library", "intent-poc-app")
   };
 }
 
@@ -36,18 +36,18 @@ test("buildSourceSummaryMarkdown surfaces capture coverage and missing baseline 
   const rootDir = "/tmp/intent-poc-summary";
   const config = buildBehaviorTestConfig(rootDir, {
     sources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource(rootDir)
+      "intent-poc-app": buildIntentPocAppBehaviorSource(rootDir)
     },
-    defaultSourceId: "demo-catalog"
+    defaultSourceId: "intent-poc-app"
   });
   const normalizedIntent = normalizeIntent({
-    rawPrompt: "Compare the demo-catalog evidence so we can tell whether the dark mode work is visible.",
-    defaultSourceId: "demo-catalog",
+    rawPrompt: "Compare the intent-poc-app evidence so we can tell whether the dark mode work is visible.",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: config.sources
   });
   normalizedIntent.executionPlan.sources[0]!.warnings = [
-    "Gemini suggested narrowing demo-catalog captures to library-index, but the prompt did not explicitly name those captures, so all configured captures were preserved."
+    "Gemini suggested narrowing intent-poc-app captures to library-index, but the prompt did not explicitly name those captures, so all configured captures were preserved."
   ];
 
   const markdown = buildSourceSummaryMarkdown({
@@ -76,7 +76,7 @@ test("buildSourceSummaryMarkdown surfaces capture coverage and missing baseline 
 
   assert.match(markdown, /Configured captures: 3/);
   assert.match(markdown, /Executed captures: 1/);
-  assert.match(markdown, /Gemini suggested narrowing demo-catalog captures to library-index/);
+  assert.match(markdown, /Gemini suggested narrowing intent-poc-app captures to library-index/);
   assert.match(markdown, /## Comparison Issues/);
   assert.match(markdown, /One or more captures are missing a baseline image\./);
   assert.match(markdown, /Missing baseline for library-index: Baseline image not found\./);
@@ -86,13 +86,13 @@ test("buildSourceSummaryMarkdown surfaces invalid baseline preflight failures", 
   const rootDir = "/tmp/intent-poc-summary";
   const config = buildBehaviorTestConfig(rootDir, {
     sources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource(rootDir)
+      "intent-poc-app": buildIntentPocAppBehaviorSource(rootDir)
     },
-    defaultSourceId: "demo-catalog"
+    defaultSourceId: "intent-poc-app"
   });
   const normalizedIntent = normalizeIntent({
-    rawPrompt: "Compare the demo-catalog evidence so we can tell whether the dark mode work is visible.",
-    defaultSourceId: "demo-catalog",
+    rawPrompt: "Compare the intent-poc-app evidence so we can tell whether the dark mode work is visible.",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: config.sources
   });
@@ -116,7 +116,7 @@ test("buildSourceSummaryMarkdown labels targeted code-validation work items corr
   const rootDir = "/tmp/intent-poc-summary";
   const config = buildBehaviorTestConfig(rootDir, {
     sources: {
-      "intent-poc-app": buildDemoCatalogBehaviorSource(rootDir)
+      "intent-poc-app": buildIntentPocAppBehaviorSource(rootDir)
     },
     defaultSourceId: "intent-poc-app"
   });
@@ -151,7 +151,7 @@ test("buildSourceSummaryMarkdown labels mocked-state Playwright work items clear
   const rootDir = "/tmp/intent-poc-summary";
   const config = buildBehaviorTestConfig(rootDir, {
     sources: {
-      "intent-poc-app": buildDemoCatalogBehaviorSource(rootDir)
+      "intent-poc-app": buildIntentPocAppBehaviorSource(rootDir)
     },
     defaultSourceId: "intent-poc-app"
   });

@@ -10,7 +10,7 @@ function shouldSkipPreflightChecks(): boolean {
   return process.argv.includes("--skip-preflight");
 }
 
-export function getLegacyDemoArtifactPaths(workspaceRoot: string): string[] {
+export function getLegacyLibraryArtifactPaths(workspaceRoot: string): string[] {
   const screenshotRoot = getDemoScreenshotRoot(workspaceRoot);
 
   return [
@@ -62,7 +62,7 @@ async function listTrackedScreenshotFiles(rootPath: string): Promise<string[]> {
   return files.flat().sort();
 }
 
-export async function runDemoLibrary(): Promise<void> {
+export async function runSurfaceLibraryRefresh(): Promise<void> {
   const workspaceRoot = process.cwd();
   const screenshotRoot = getDemoScreenshotRoot(workspaceRoot);
   const configPath = path.join(workspaceRoot, "intent-poc.yaml");
@@ -79,16 +79,16 @@ export async function runDemoLibrary(): Promise<void> {
     configPath,
     sourceIds: ["intent-poc-app"],
     publishToLibrary: true,
-    intent: "Create a baseline for the deterministic screenshot library for the built-in demo surface catalog."
+    intent: "Create a baseline for the deterministic screenshot library for the built-in surface library."
   });
 
-  await Promise.all(getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));
+  await Promise.all(getLegacyLibraryArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));
 
   const capturedFiles = (await listTrackedScreenshotFiles(screenshotRoot)).map((filePath) =>
     path.relative(workspaceRoot, filePath)
   );
 
-  log.info("Demo screenshot library generated through the unified runIntent workflow.", {
+  log.info("Surface library screenshots generated through the unified runIntent workflow.", {
     runId: result.paths.runId,
     sourceId: result.sourceId,
     screenshotRoot: path.relative(workspaceRoot, screenshotRoot),
@@ -96,7 +96,7 @@ export async function runDemoLibrary(): Promise<void> {
     summaryPath: path.relative(workspaceRoot, result.paths.summaryPath),
     manifestPath: path.relative(workspaceRoot, result.paths.manifestPath),
     preflightChecks: shouldSkipPreflightChecks() ? [] : ["npm run typecheck", "npm run test:code"],
-    legacyArtifactPathsCleared: getLegacyDemoArtifactPaths(workspaceRoot).map((targetPath) =>
+    legacyArtifactPathsCleared: getLegacyLibraryArtifactPaths(workspaceRoot).map((targetPath) =>
       path.relative(workspaceRoot, targetPath)
     ),
     files: capturedFiles
@@ -104,7 +104,7 @@ export async function runDemoLibrary(): Promise<void> {
 }
 
 if (require.main === module) {
-  void runDemoLibrary().catch((error) => {
+  void runSurfaceLibraryRefresh().catch((error) => {
     log.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   });

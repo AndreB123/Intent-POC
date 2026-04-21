@@ -74,11 +74,11 @@ async function writeStudioConfig(configPath: string, tmpDir: string): Promise<vo
       "  screenshots:",
       "    planning:",
       "      repoId: intent-poc",
-      "      repoLabel: Intent POC Demo Components",
+      "      repoLabel: Intent POC Surface Library",
       "      role: tracked screenshots",
-      "      summary: Demo screenshot maintenance source.",
+      "      summary: Surface library screenshot maintenance source.",
       "    studio:",
-      "      displayName: Tracked demo screenshots",
+      "      displayName: Tracked library screenshots",
       "    source:",
       "      type: local",
       `      localPath: ${JSON.stringify(tmpDir)}`,
@@ -154,7 +154,7 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   assert.equal(state.sources[0].role, "current repo");
   assert.equal(state.sources[0].defaultScope, true);
   assert.equal(state.sources[1].id, "screenshots");
-  assert.equal(state.sources[1].label, "Tracked demo screenshots");
+  assert.equal(state.sources[1].label, "Tracked library screenshots");
 
   const saveResponse = await fetch(`${server.baseUrl}/api/source-metadata`, {
     method: "POST",
@@ -163,10 +163,10 @@ test("startIntentStudioServer exposes all configured sources and saves source me
     },
     body: JSON.stringify({
       sourceId: "screenshots",
-      displayName: "Demo components",
-      repoLabel: "Intent POC Demo Surfaces",
-      role: "shared demo component library",
-      summary: "Visible demo component source for tracked screenshots and catalog review."
+      displayName: "Library surfaces",
+      repoLabel: "Intent POC Surface Library",
+      role: "shared surface library",
+      summary: "Visible surface library source for tracked screenshots and library review."
     })
   });
   assert.equal(saveResponse.status, 200);
@@ -174,14 +174,14 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   const updatedStateResponse = await fetch(`${server.baseUrl}/api/state`);
   assert.equal(updatedStateResponse.status, 200);
   const updatedState = (await updatedStateResponse.json()) as typeof state;
-  assert.equal(updatedState.sources[1].label, "Demo components");
-  assert.equal(updatedState.sources[1].repoLabel, "Intent POC Demo Surfaces");
-  assert.equal(updatedState.sources[1].role, "shared demo component library");
+  assert.equal(updatedState.sources[1].label, "Library surfaces");
+  assert.equal(updatedState.sources[1].repoLabel, "Intent POC Surface Library");
+  assert.equal(updatedState.sources[1].role, "shared surface library");
 
   const updatedConfig = await fs.readFile(configPath, "utf8");
-  assert.match(updatedConfig, /displayName: Demo components/);
-  assert.match(updatedConfig, /repoLabel: Intent POC Demo Surfaces/);
-  assert.match(updatedConfig, /role: shared demo component library/);
+  assert.match(updatedConfig, /displayName: Library surfaces/);
+  assert.match(updatedConfig, /repoLabel: Intent POC Surface Library/);
+  assert.match(updatedConfig, /role: shared surface library/);
 
   const pageResponse = await fetch(server.baseUrl);
   assert.equal(pageResponse.status, 200);
@@ -193,6 +193,32 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   assert.match(pageHtml, /id="plan-execution-note"/);
   assert.match(pageHtml, /class="lifecycle-step-status" id="step-plan-status" data-state="pending">Pending/);
   assert.doesNotMatch(pageHtml, /5\. Execution Plan/);
+
+  const planningDocsResponse = await fetch(`${server.baseUrl}/library/planning-docs`);
+  assert.equal(planningDocsResponse.status, 200);
+  const planningDocsHtml = await planningDocsResponse.text();
+  assert.match(planningDocsHtml, /data-testid="library-planning-docs"/);
+  assert.match(planningDocsHtml, /id="step-bdd"/);
+  assert.match(planningDocsHtml, /id="plan-criteria"/);
+  assert.match(planningDocsHtml, /id="step-tdd"/);
+  assert.match(planningDocsHtml, /id="plan-work-items"/);
+
+  const removedAliasResponse = await fetch(`${server.baseUrl}/library/studio-planning-docs`);
+  assert.equal(removedAliasResponse.status, 404);
+
+  const architectureDocsResponse = await fetch(`${server.baseUrl}/library/architecture-docs`);
+  assert.equal(architectureDocsResponse.status, 200);
+  const architectureDocsHtml = await architectureDocsResponse.text();
+  assert.match(architectureDocsHtml, /data-testid="library-architecture-docs"/);
+  assert.match(architectureDocsHtml, /How Work Scope Works/);
+  assert.doesNotMatch(architectureDocsHtml, /id="step-bdd"/);
+
+  const libraryIndexResponse = await fetch(`${server.baseUrl}/library`);
+  assert.equal(libraryIndexResponse.status, 200);
+  const libraryIndexHtml = await libraryIndexResponse.text();
+  assert.match(libraryIndexHtml, /Primitive\/Component\/View\/Page Library/);
+  assert.match(libraryIndexHtml, /\/library\/planning-docs\?variant=v1/);
+  assert.match(libraryIndexHtml, /\/library\/architecture-docs\?variant=v1/);
 });
 
 test("startIntentStudioServer rejects Studio requests that enable implementation without a provider", async (t) => {

@@ -18,7 +18,12 @@ import {
   writeSourceEvidenceFiles
 } from "../evidence/write-manifest";
 import { writeBusinessSummaryMarkdown, writeSourceSummaryMarkdown } from "../evidence/write-summary";
-import { NormalizedIntent, TDDWorkItem, IntentLifecycleStatus } from "../intent/intent-types";
+import {
+  NormalizedIntent,
+  ResolvedUiStateRequirement,
+  TDDWorkItem,
+  IntentLifecycleStatus
+} from "../intent/intent-types";
 import {
   ResolvedAgentStageConfig,
   RunAgentConfigOverride,
@@ -44,6 +49,7 @@ import { prepareSourceWorkspace } from "../target/prepare-workspace";
 import { ResolvedSourceWorkspace, resolveSourceWorkspace } from "../target/resolve-target";
 import { classifyChangedPaths } from "./test-impact-detector";
 import { writeGeneratedPlaywrightTests } from "../tdd/write-generated-playwright-tests";
+import { formatCompactUiStateList } from "../intent/ui-state-requirements";
 
 export interface RunIntentEvent {
   timestamp: string;
@@ -211,6 +217,7 @@ export interface QAVerificationCommandPlan {
 export interface QAVerificationExecutionPlan {
   commands?: QAVerificationCommandPlan[];
   error?: string;
+  uiStateRequirements: ResolvedUiStateRequirement[];
 }
 
 interface QAFallbackPathGroup {
@@ -276,7 +283,7 @@ export async function canReuseRunningSourceApp(input: {
 
   const readiness = input.workspace.source.app.readiness;
   const quickTimeoutMs = Math.min(
-    readiness.intervalMs,
+    Math.max(readiness.intervalMs * 2, 250),
     readiness.timeoutMs,
     1_000
   );
@@ -594,6 +601,8 @@ export function buildQAVerificationExecutionPlan(input: {
   implementationFileOperations: SourceStageExecutionRecord["fileOperations"];
   workspaceRootDir: string;
 }): QAVerificationExecutionPlan {
+  const sourcePlan = input.normalizedIntent.executionPlan.sources.find((source) => source.sourceId === input.sourceId);
+  const uiStateRequirements = sourcePlan?.uiStateRequirements ?? [];
   const activeWorkItems = sortWorkItemsForExecution(
     input.normalizedIntent.businessIntent.workItems.filter(
       (workItem) => workItem.sourceIds.includes(input.sourceId) && input.activeWorkItemIds.includes(workItem.id)
@@ -606,6 +615,7 @@ export function buildQAVerificationExecutionPlan(input: {
 
   if (expectsGeneratedPlaywright && input.generatedPlaywrightTests.length === 0) {
     return {
+      uiStateRequirements,
       error: `Missing targeted tracked Playwright specs for active work items: ${activeWorkItemIds.join(", ")}.`
     };
   }
@@ -637,8 +647,31 @@ export function buildQAVerificationExecutionPlan(input: {
   }
 
   return {
+    uiStateRequirements,
     commands
   };
+}
+
+function buildQAVerificationSummary(input: {
+  status: "completed" | "failed" | "blocked";
+  commandCount?: number;
+  failedCommandLabel?: string;
+  uiStateRequirements: ResolvedUiStateRequirement[];
+}): string {
+  const uiStateSuffix =
+    input.uiStateRequirements.length > 0
+      ? ` Requested UI states: ${formatCompactUiStateList(input.uiStateRequirements)}.`
+      : "";
+
+  if (input.status === "blocked") {
+    return `QA verification failed before execution because targeted Playwright coverage was missing.${uiStateSuffix}`;
+  }
+
+  if (input.status === "failed") {
+    return `QA verification failed while running '${input.failedCommandLabel ?? "unknown"}'.${uiStateSuffix}`;
+  }
+
+  return `QA verification passed ${input.commandCount ?? 0} command${input.commandCount === 1 ? "" : "s"}.${uiStateSuffix}`;
 }
 
 async function runLoggedStageCommand(input: {
@@ -705,7 +738,10 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
   if (qaPlan.error) {
     return {
       status: "failed",
-      summary: "QA verification failed before execution because targeted Playwright coverage was missing.",
+      summary: buildQAVerificationSummary({
+        status: "blocked",
+        uiStateRequirements: qaPlan.uiStateRequirements
+      }),
       error: qaPlan.error,
       targetedWorkItemIds: input.activeWorkItemIds,
       completedWorkItemIds: input.completedWorkItemIds,
@@ -740,7 +776,11 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
     if (commandRecord.status === "failed") {
       return {
         status: "failed",
-        summary: `QA verification failed while running '${command.label}'.`,
+        summary: buildQAVerificationSummary({
+          status: "failed",
+          failedCommandLabel: command.label,
+          uiStateRequirements: qaPlan.uiStateRequirements
+        }),
         error: commandRecord.error,
         targetedWorkItemIds: input.activeWorkItemIds,
         completedWorkItemIds: input.completedWorkItemIds,
@@ -753,7 +793,11 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
 
   return {
     status: "completed",
-    summary: `QA verification passed ${commandRecords.length} command${commandRecords.length === 1 ? "" : "s"}.`,
+    summary: buildQAVerificationSummary({
+      status: "completed",
+      commandCount: commandRecords.length,
+      uiStateRequirements: qaPlan.uiStateRequirements
+    }),
     targetedWorkItemIds: input.activeWorkItemIds,
     completedWorkItemIds: [...input.completedWorkItemIds, ...input.activeWorkItemIds],
     remainingWorkItemIds: input.remainingWorkItemIds.filter((workItemId) => !input.activeWorkItemIds.includes(workItemId)),
@@ -2441,7 +2485,9 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     }
 
     const sourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
-    const paths = await dependencies.createRunPaths(loadedConfig, sourceIds);
+    const paths = await dependencies.createRunPaths(loadedConfig, sourceIds, {
+      publishToLibrary: options.publishToLibrary
+    });
     await dependencies.writeJsonFile(paths.normalizedIntentPath, normalizedIntent);
 
     emitRunEvent(options, "intent", "Intent normalized.", {

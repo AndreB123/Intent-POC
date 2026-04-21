@@ -1,6 +1,6 @@
 export const CODE_SURFACE_IDS = [
   "intent-studio",
-  "surface-catalog",
+  "surface-library",
   "capture-and-evidence",
   "orchestrator-and-planning",
   "config-and-settings",
@@ -34,7 +34,7 @@ export interface CodeSurfaceImplementationHints {
 
 const CODE_SURFACE_LABELS: Record<CodeSurfaceId, string> = {
   "intent-studio": "Intent Studio",
-  "surface-catalog": "Surface Catalog",
+  "surface-library": "Surface Library",
   "capture-and-evidence": "Capture And Evidence",
   "orchestrator-and-planning": "Orchestrator And Planning",
   "config-and-settings": "Config And Settings",
@@ -42,12 +42,14 @@ const CODE_SURFACE_LABELS: Record<CodeSurfaceId, string> = {
 };
 
 const INTENT_STUDIO_KEYWORDS = ["intent studio", "studio screen", "studio page", "studio server"];
-const SURFACE_CATALOG_KEYWORDS = [
-  "surface catalog",
+const SURFACE_LIBRARY_KEYWORDS = [
+  "surface library",
   "component library",
   "library",
   "catalog page",
+  "library page",
   "catalog view",
+  "library view",
   "component page",
   "surface frame"
 ];
@@ -138,7 +140,7 @@ function includesAnyPhrase(prompt: string, phrases: string[]): boolean {
 }
 
 function isIntentPocAppSource(sourceId: string): boolean {
-  return sourceId === "intent-poc-app" || sourceId === "demo-catalog";
+  return sourceId === "intent-poc-app";
 }
 
 function buildAlternative(id: CodeSurfaceId, reason: string): CodeSurfaceAlternative {
@@ -176,7 +178,7 @@ export function getCodeSurfaceImplementationHints(codeSurfaceId: CodeSurfaceId):
         ],
         keywords: ["intent", "studio", "runner", "header", "toggle", "theme"]
       };
-    case "surface-catalog":
+    case "surface-library":
       return {
         primaryPathPrefixes: [
           "src/demo-app/render/render-surface-frame.ts",
@@ -191,12 +193,12 @@ export function getCodeSurfaceImplementationHints(codeSurfaceId: CodeSurfaceId):
           "src/demo-app/render/render-intent-studio-page.ts",
           "src/demo-app/server/start-intent-studio-server.ts"
         ],
-        keywords: ["catalog", "surface", "library", "component", "view", "page"]
+        keywords: ["surface", "library", "component", "view", "page"]
       };
     case "capture-and-evidence":
       return {
         primaryPathPrefixes: ["src/capture/", "src/evidence/", "src/compare/", "src/demo-app/capture/"],
-        adjacentPathPrefixes: ["src/demo-app/generate-demo-library.ts"],
+        adjacentPathPrefixes: ["src/demo-app/generate-surface-library.ts"],
         avoidPathPrefixes: ["src/demo-app/render/render-intent-studio-page.ts"],
         keywords: ["capture", "screenshot", "baseline", "diff", "evidence", "comparison"]
       };
@@ -256,7 +258,7 @@ export function inferCodeSurface(input: {
       rationale: `The prompt targets Intent Studio run results or capture links inside ${input.primarySourceId}.`,
       alternatives: [
         buildAlternative("capture-and-evidence", "The issue may still involve capture outputs, but the broken behavior is in the Studio results UI."),
-        buildAlternative("surface-catalog", "The request still references screenshots and could be mistaken for a catalog evidence task.")
+        buildAlternative("surface-library", "The request still references screenshots and could be mistaken for a library evidence task.")
       ]
     };
   }
@@ -268,18 +270,18 @@ export function inferCodeSurface(input: {
       label: getCodeSurfaceLabel("intent-studio"),
       confidence: "high",
       rationale: `The prompt explicitly references Intent Studio inside ${input.primarySourceId}.`,
-      alternatives: [buildAlternative("surface-catalog", "The request could still affect the catalog shell around demo surfaces.")]
+      alternatives: [buildAlternative("surface-library", "The request could still affect the library shell around library surfaces.")]
     };
   }
 
-  if (includesAnyPhrase(normalizedPrompt, SURFACE_CATALOG_KEYWORDS)) {
+  if (includesAnyPhrase(normalizedPrompt, SURFACE_LIBRARY_KEYWORDS)) {
     return {
       sourceId: input.primarySourceId,
-      id: "surface-catalog",
-      label: getCodeSurfaceLabel("surface-catalog"),
+      id: "surface-library",
+      label: getCodeSurfaceLabel("surface-library"),
       confidence: "high",
-      rationale: `The prompt points to library or catalog behavior inside ${input.primarySourceId}.`,
-      alternatives: [buildAlternative("intent-studio", "The catalog request may also touch the Studio shell if the prompt is using Studio language loosely.")]
+      rationale: `The prompt points to surface-library behavior inside ${input.primarySourceId}.`,
+      alternatives: [buildAlternative("intent-studio", "The library request may also touch the Studio shell if the prompt is using Studio language loosely.")]
     };
   }
 
@@ -290,7 +292,7 @@ export function inferCodeSurface(input: {
       label: getCodeSurfaceLabel("capture-and-evidence"),
       confidence: "high",
       rationale: `The prompt is centered on screenshots, evidence, or comparison outputs within ${input.primarySourceId}.`,
-      alternatives: [buildAlternative("surface-catalog", "Evidence requests can still originate from a surface-catalog change.")]
+      alternatives: [buildAlternative("surface-library", "Evidence requests can still originate from a surface-library change.")]
     };
   }
 
@@ -337,7 +339,7 @@ export function inferCodeSurface(input: {
       rationale: `The prompt suggests a user-facing change in ${input.primarySourceId}, but it does not unambiguously identify which code surface owns it.`,
       alternatives: [
         buildAlternative("intent-studio", "The request may belong to the Studio shell."),
-        buildAlternative("surface-catalog", "The request may belong to the catalog rendering surface.")
+        buildAlternative("surface-library", "The request may belong to the library rendering surface.")
       ]
     };
   }

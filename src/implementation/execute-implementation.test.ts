@@ -75,6 +75,28 @@ function buildNormalizedIntent(sourceId: string, codeSurface?: CodeSurfaceSelect
                 suiteName: "Dashboard affordance",
                 testName: "shows the affordance",
                 scenarioIds: ["scenario-1"],
+                requiredUiStates: [
+                  {
+                    stateId: "theme-mode",
+                    label: "Theme mode",
+                    description: "Activate dark mode before verification.",
+                    requestedValue: "dark",
+                    activation: [
+                      {
+                        type: "ui-control",
+                        target: "[data-testid='theme-toggle']",
+                        values: {
+                          light: "false",
+                          dark: "true"
+                        },
+                        notes: []
+                      }
+                    ],
+                    verificationStrategies: ["visual-regression"],
+                    notes: ["Use the toggle before screenshots are captured."],
+                    reason: "The prompt explicitly requests dark mode."
+                  }
+                ],
                 checkpoints: []
               }
             ]
@@ -100,6 +122,28 @@ function buildNormalizedIntent(sourceId: string, codeSurface?: CodeSurfaceSelect
             mode: "all",
             captureIds: []
           },
+          uiStateRequirements: [
+            {
+              stateId: "theme-mode",
+              label: "Theme mode",
+              description: "Activate dark mode before verification.",
+              requestedValue: "dark",
+              activation: [
+                {
+                  type: "ui-control",
+                  target: "[data-testid='theme-toggle']",
+                  values: {
+                    light: "false",
+                    dark: "true"
+                  },
+                  notes: []
+                }
+              ],
+              verificationStrategies: ["visual-regression"],
+              notes: ["Use the toggle before screenshots are captured."],
+              reason: "The prompt explicitly requests dark mode."
+            }
+          ],
           warnings: []
         }
       ],
@@ -237,6 +281,28 @@ async function createImplementationInput(): Promise<{
           mode: "all",
           captureIds: []
         },
+        uiStateRequirements: [
+          {
+            stateId: "theme-mode",
+            label: "Theme mode",
+            description: "Activate dark mode before verification.",
+            requestedValue: "dark",
+            activation: [
+              {
+                type: "ui-control",
+                target: "[data-testid='theme-toggle']",
+                values: {
+                  light: "false",
+                  dark: "true"
+                },
+                notes: []
+              }
+            ],
+            verificationStrategies: ["visual-regression"],
+            notes: ["Use the toggle before screenshots are captured."],
+            reason: "The prompt explicitly requests dark mode."
+          }
+        ],
         warnings: []
       },
       sourcePaths,
@@ -293,6 +359,7 @@ async function buildPlanningContext(rootDir: string, input: ExecuteImplementatio
     codeSurface: input.normalizedIntent.codeSurface,
     desiredOutcome: input.normalizedIntent.businessIntent.desiredOutcome,
     acceptanceCriteria: input.normalizedIntent.businessIntent.acceptanceCriteria.map((criterion) => criterion.description),
+    sourceUiStateRequirements: input.sourcePlan.uiStateRequirements,
     scenarios,
     activeWorkItems,
     backlogWorkItems,
@@ -353,6 +420,9 @@ test("planImplementationChanges Given generated specs When planning is requested
 
     assert.match(capturedPrompt, /Tracked Playwright specs \(read-only verification inputs\):/);
     assert.match(capturedPrompt, /Active work items to implement in this pass:/);
+    assert.match(capturedPrompt, /Requested source UI states for downstream verification:/);
+    assert.match(capturedPrompt, /"stateId": "theme-mode"/);
+    assert.match(capturedPrompt, /Downstream verification must preserve Theme mode \[theme-mode=dark\] via UI control '\[data-testid='theme-toggle'\]'\./);
     assert.match(capturedPrompt, /dashboard-affordance\.spec\.ts/);
     assert.match(capturedPrompt, /Prefer existing source files under src\/ and src\/demo-app\//);
     assert.equal(capturedPrompt.includes('"specPaths"'), false);
@@ -401,7 +471,7 @@ test("collectRelevantImplementationFiles Given matching source and test files Wh
       rootDir,
       rawPrompt: "Add a dark mode toggle to the theme frame.",
       summary: "Add a dark mode toggle to the theme frame.",
-      sourceId: "demo-catalog",
+      sourceId: "intent-poc-app",
       desiredOutcome: "Users can see a dark mode toggle in the theme frame.",
       acceptanceCriteria: ["The dark mode toggle appears in the theme frame."],
       scenarios: [],
@@ -442,9 +512,9 @@ test("collectRelevantImplementationFiles Given an intent studio surface When lib
       rootDir,
       rawPrompt: "Add a dark mode button to the intent studio screen, not the library.",
       summary: "Add the dark mode button to Intent Studio.",
-      sourceId: "demo-catalog",
+      sourceId: "intent-poc-app",
       codeSurface: {
-        sourceId: "demo-catalog",
+        sourceId: "intent-poc-app",
         id: "intent-studio",
         label: "Intent Studio",
         confidence: "high",
@@ -610,7 +680,7 @@ test("executeImplementationStage Given a planned ad hoc spec target When validat
         operations: [
           {
             operation: "create",
-            filePath: "demo-catalog/verify-dark-mode-toggle-appearance.spec.ts",
+            filePath: "rogue-specs/verify-dark-mode-toggle-appearance.spec.ts",
             rationale: "Add a verification spec for the requested UI change."
           }
         ],
@@ -647,9 +717,9 @@ test("executeImplementationStage Given an existing rogue spec file When validati
   let materializeCalls = 0;
 
   try {
-    await fs.mkdir(path.join(rootDir, "demo-catalog"), { recursive: true });
+    await fs.mkdir(path.join(rootDir, "rogue-specs"), { recursive: true });
     await fs.writeFile(
-      path.join(rootDir, "demo-catalog", "verify-dark-mode-toggle-appearance.spec.ts"),
+      path.join(rootDir, "rogue-specs", "verify-dark-mode-toggle-appearance.spec.ts"),
       "test('rogue spec', () => {});\n"
     );
 
@@ -658,7 +728,7 @@ test("executeImplementationStage Given an existing rogue spec file When validati
         operations: [
           {
             operation: "replace",
-            filePath: "demo-catalog/verify-dark-mode-toggle-appearance.spec.ts",
+            filePath: "rogue-specs/verify-dark-mode-toggle-appearance.spec.ts",
             rationale: "Update the verification spec content."
           }
         ],

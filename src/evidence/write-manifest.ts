@@ -90,6 +90,9 @@ export interface PlanLifecycleRecord {
     sourceId: string;
     status: SourceEvidenceRecord["status"];
     selectionReason?: string;
+    captureScope?: NormalizedIntent["executionPlan"]["sources"][number]["captureScope"];
+    warnings?: string[];
+    uiStateRequirements?: NormalizedIntent["executionPlan"]["sources"][number]["uiStateRequirements"];
     linearIssue?: LinearIssueRef | null;
     attemptCount?: number;
     attempts?: Array<{
@@ -404,6 +407,9 @@ export async function writePlanLifecycleFile(input: {
         sourceId: sourceRun.sourceId,
         status: sourceRun.status,
         selectionReason: sourcePlan?.selectionReason,
+        captureScope: sourcePlan?.captureScope,
+        warnings: sourcePlan?.warnings,
+        uiStateRequirements: sourcePlan?.uiStateRequirements,
         linearIssue: sourceRun.linearIssue ?? input.linearPublication?.sourceIssues[sourceRun.sourceId] ?? null,
         attemptCount: sourceRun.attempts.length,
         attempts: sourceRun.attempts.map((attempt) => ({

@@ -4,7 +4,7 @@ import { buildGeminiSourceSummary, GeminiSourceDescriptor } from "./gemini-sourc
 
 const availableSources: Record<string, GeminiSourceDescriptor> = {
   "intent-poc-app": {
-    aliases: ["demo-catalog"],
+    aliases: ["surface library", "surface-library", "library"],
     source: {
       type: "local",
       localPath: "."
@@ -13,8 +13,8 @@ const availableSources: Record<string, GeminiSourceDescriptor> = {
       repoId: "intent-poc",
       repoLabel: "Intent POC",
       role: "controller-and-demo-source",
-      summary: "Current workspace source for Intent Studio and demo evidence flows.",
-      notes: ["Use this source for prompt planning and demo evidence."],
+      summary: "Current workspace source for Intent Studio and surface library evidence flows.",
+      notes: ["Use this source for prompt planning and surface library evidence."],
       verificationNotes: ["Verify requested UI state before trusting screenshots."],
       uiStates: [
         {
@@ -60,7 +60,7 @@ test("buildGeminiSourceSummary includes reusable UI-state planning metadata for 
   const summary = JSON.parse(buildGeminiSourceSummary(availableSources));
 
   assert.equal(summary[0].sourceId, "intent-poc-app");
-  assert.equal(summary[0].summary, "Current workspace source for Intent Studio and demo evidence flows.");
+  assert.equal(summary[0].summary, "Current workspace source for Intent Studio and surface library evidence flows.");
   assert.deepEqual(summary[0].verificationNotes, ["Verify requested UI state before trusting screenshots."]);
   assert.equal(summary[0].uiStates[0].id, "theme-mode");
   assert.equal(summary[0].uiStates[0].activation[0].type, "ui-control");

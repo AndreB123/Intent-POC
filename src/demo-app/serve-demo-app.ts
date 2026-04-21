@@ -20,7 +20,7 @@ export async function serveDemoApp(options: ServeDemoAppOptions = {}): Promise<v
   log.info("Demo app ready.", {
     baseUrl: server.baseUrl,
     studioUrl: `${server.baseUrl}/`,
-    catalogUrl: `${server.baseUrl}/library`,
+    libraryUrl: `${server.baseUrl}/library`,
     healthUrl: `${server.baseUrl}/health`,
     variant: options.variant ?? "v1",
     configPath: options.configPath ?? "./intent-poc.yaml"

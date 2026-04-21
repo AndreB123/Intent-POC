@@ -12,6 +12,7 @@ import {
   SourceRunAttemptRecord,
   SourceStageExecutionRecord
 } from "./write-manifest";
+import { formatCompactUiStateList } from "../intent/ui-state-requirements";
 
 function emptyComparisonCounts(): Record<ComparisonStatus, number> {
   return {
@@ -188,6 +189,7 @@ export function buildSourceSummaryMarkdown(input: {
     `- Configured captures: ${configuredCaptureCount}`,
     `- Executed captures: ${executedCaptureCount}`,
     `- Capture scope: ${currentSourcePlan?.captureScope.mode === "subset" ? currentSourcePlan.captureScope.captureIds.join(", ") : "all configured captures"}`,
+    `- UI state requirements: ${currentSourcePlan?.uiStateRequirements?.length ? formatCompactUiStateList(currentSourcePlan.uiStateRequirements) : "none"}`,
     `- Warnings: ${currentSourcePlan?.warnings.length ? currentSourcePlan.warnings.join(" ") : "none"}`,
     "",
     `## Business Intent`,

@@ -13,7 +13,7 @@ import {
   buildBehaviorTestLoadedConfig,
   buildCapturedOutcome,
   buildComparisonSummary,
-  buildDemoCatalogBehaviorSource,
+  buildIntentPocAppBehaviorSource,
   buildSourceRunResult
 } from "./run-intent.test-support";
 
@@ -75,13 +75,18 @@ function assertIntentPocBddSamplePlan(normalizedIntent: NormalizedIntent): void 
     normalizedIntent.executionPlan.sources.map((source) => ({
       sourceId: source.sourceId,
       selectionReason: source.selectionReason,
-      captureScope: source.captureScope
+      captureScope: source.captureScope,
+      uiStateRequirements: (source.uiStateRequirements ?? []).map((requirement) => ({
+        stateId: requirement.stateId,
+        requestedValue: requirement.requestedValue
+      }))
     })),
     [
       {
         sourceId: expected.sourceId,
         selectionReason: expected.selectionReason,
-        captureScope: expected.captureScope
+        captureScope: expected.captureScope,
+        uiStateRequirements: expected.uiStateRequirements
       }
     ]
   );
@@ -141,7 +146,7 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-bdd-sample-"));
   const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot, {
     sources: {
-      "intent-poc-app": buildDemoCatalogBehaviorSource(tmpRoot)
+      "intent-poc-app": buildIntentPocAppBehaviorSource(tmpRoot)
     },
     defaultSourceId: "intent-poc-app"
   });
@@ -192,7 +197,11 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
       planning: {
         repoCandidates: Array<{ repoId: string; selectionStatus: string }>;
       };
-      sources: Array<{ sourceId: string; selectionReason?: string }>;
+      sources: Array<{
+        sourceId: string;
+        selectionReason?: string;
+        uiStateRequirements?: Array<{ stateId: string; requestedValue?: string }>;
+      }>;
     }>(result.paths.planLifecyclePath);
     const manifest = await readJsonFile<{
       status: string;
@@ -237,6 +246,13 @@ test("runIntent Given the canonical Intent POC BDD sample When baseline executio
     assert.equal(planLifecycle?.summary, INTENT_POC_BDD_SAMPLE.expected.summary);
     assert.equal(planLifecycle?.sources[0]?.sourceId, "intent-poc-app");
     assert.equal(planLifecycle?.sources[0]?.selectionReason, INTENT_POC_BDD_SAMPLE.expected.selectionReason);
+    assert.deepEqual(
+      planLifecycle?.sources[0]?.uiStateRequirements?.map((requirement) => ({
+        stateId: requirement.stateId,
+        requestedValue: requirement.requestedValue
+      })),
+      INTENT_POC_BDD_SAMPLE.expected.uiStateRequirements
+    );
     assert.deepEqual(
       planLifecycle?.planning.repoCandidates.map((repo) => ({
         repoId: repo.repoId,

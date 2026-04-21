@@ -138,16 +138,37 @@ export function buildDocsPortalBehaviorSource(rootDir: string): SourceConfig {
   });
 }
 
-export function buildDemoCatalogBehaviorSource(rootDir: string): SourceConfig {
+export function buildIntentPocAppBehaviorSource(rootDir: string): SourceConfig {
   return buildBehaviorSource({
     rootDir,
-    aliases: ["demo", "demo-app", "demo-catalog"],
+    aliases: ["intent-poc-app", "intent-studio", "studio", "surface library", "surface-library", "library", "components"],
     planning: {
       repoId: "intent-poc",
       repoLabel: "Intent POC",
       role: "controller-and-demo-source",
-      summary: "Current workspace used to bootstrap resumable IDD planning and demo evidence flows.",
-      notes: ["Use this repo as the first concrete repo-context example while agent access is pending."]
+      summary: "Current workspace used to bootstrap resumable IDD planning and surface library evidence flows.",
+      notes: ["Use this repo as the first concrete repo-context example while agent access is pending."],
+      verificationNotes: ["The surface library supports a dark mode toggle that should be activated explicitly when requested."],
+      uiStates: [
+        {
+          id: "theme-mode",
+          label: "Theme mode",
+          description: "Activate the surface library theme toggle before verification when the prompt requests dark mode.",
+          activation: [
+            {
+              type: "ui-control",
+              target: "[data-testid='theme-toggle']",
+              values: {
+                light: "false",
+                dark: "true"
+              },
+              notes: []
+            }
+          ],
+          verificationStrategies: ["visual-regression"],
+          notes: ["The toggle updates the surface library query state before screenshots are captured."]
+        }
+      ]
     },
     studio: {
       displayName: "Current app"
@@ -160,7 +181,7 @@ export function buildDemoCatalogBehaviorSource(rootDir: string): SourceConfig {
     captureItems: [
       {
         id: "library-index",
-        name: "Demo Catalog Index",
+        name: "Surface Library Index",
         path: "/library",
         fullPage: true,
         maskSelectors: [],
@@ -168,7 +189,7 @@ export function buildDemoCatalogBehaviorSource(rootDir: string): SourceConfig {
       },
       {
         id: "component-button-primary",
-        name: "Demo Primary Button",
+        name: "Primary Button",
         path: "/library/component-button-primary",
         locator: "[data-testid='component-button-primary']",
         waitForSelector: "[data-testid='component-button-primary']",
@@ -177,7 +198,7 @@ export function buildDemoCatalogBehaviorSource(rootDir: string): SourceConfig {
       },
       {
         id: "page-analytics-overview",
-        name: "Demo Analytics Overview",
+        name: "Analytics Overview",
         path: "/library/page-analytics-overview",
         fullPage: true,
         maskSelectors: [],

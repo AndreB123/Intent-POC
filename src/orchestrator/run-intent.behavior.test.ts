@@ -9,7 +9,7 @@ import { TDDWorkItem } from "../intent/intent-types";
 import { readJsonFile } from "../shared/fs";
 import {
   buildBehaviorTestLoadedConfig,
-  buildDemoCatalogBehaviorSource,
+  buildIntentPocAppBehaviorSource,
   buildCapturedOutcome,
   buildComparisonSummary,
   buildSourceRunAttemptRecord,
@@ -33,7 +33,7 @@ function buildLoopWorkItem(id: string, order: number, dependsOnWorkItemIds: stri
     title: id,
     description: `${id} description`,
     scenarioIds: [],
-    sourceIds: ["demo-catalog"],
+    sourceIds: ["intent-poc-app"],
     userVisibleOutcome: `${id} outcome`,
     verification: `${id} verification`,
     execution: {
@@ -59,7 +59,7 @@ test("runSourceAttemptLoop Given a retryable QA failure When a later attempt pas
   const retries: number[] = [];
 
   const result = await runSourceAttemptLoop<string>({
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     workItems: [buildLoopWorkItem("work-1", 1)],
     workItemBatchSize: 1,
     maxAttempts: 3,
@@ -134,7 +134,7 @@ test("runSourceAttemptLoop Given repeated QA failures When retries are exhausted
   const retries: number[] = [];
 
   const result = await runSourceAttemptLoop({
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     workItems: [buildLoopWorkItem("work-1", 1)],
     workItemBatchSize: 1,
     maxAttempts: 3,
@@ -172,14 +172,14 @@ test("runSourceAttemptLoop Given repeated QA failures When retries are exhausted
   assert.equal(result.attempts.length, 3);
   assert.deepEqual(retries, [2, 3]);
   assert.equal(result.attempts.at(-1)?.failureStage, "qaVerification");
-  assert.match(result.error ?? "", /QA verification failed for source 'demo-catalog' on attempt 3/);
+  assert.match(result.error ?? "", /QA verification failed for source 'intent-poc-app' on attempt 3/);
 });
 
 test("runSourceAttemptLoop Given ordered work items When one batch passes QA Then it continues to the next batch before completing", async () => {
   const executedBatches: string[][] = [];
 
   const result = await runSourceAttemptLoop<string>({
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     workItems: [buildLoopWorkItem("work-1", 1), buildLoopWorkItem("work-2", 2, ["work-1"])],
     workItemBatchSize: 2,
     maxAttempts: 3,
@@ -226,7 +226,7 @@ test("runSourceAttemptLoop Given multiple dependency-ready work items When batch
   const executedBatches: string[][] = [];
 
   const result = await runSourceAttemptLoop<string>({
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     workItems: [
       buildLoopWorkItem("work-1", 1),
       buildLoopWorkItem("work-2", 2),
@@ -280,7 +280,7 @@ test("runSourceAttemptLoop Given a failed batch with partial completion When it 
   const executedBatches: string[][] = [];
 
   const result = await runSourceAttemptLoop<string>({
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     workItems: [
       buildLoopWorkItem("work-1", 1),
       buildLoopWorkItem("work-2", 2),
@@ -361,7 +361,7 @@ test("runSourceAttemptLoop Given QA fails after the targeted batch fully complet
   const retries: number[] = [];
 
   const result = await runSourceAttemptLoop({
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     workItems: [buildLoopWorkItem("work-1", 1)],
     workItemBatchSize: 1,
     maxAttempts: 3,
@@ -401,7 +401,7 @@ test("runSourceAttemptLoop Given QA fails after the targeted batch fully complet
   assert.deepEqual(result.attempts[0]?.completedInAttemptWorkItemIds, ["work-1"]);
   assert.deepEqual(result.attempts[0]?.pendingTargetedWorkItemIds, []);
   assert.deepEqual(result.attempts[0]?.completedWorkItemIds, ["work-1"]);
-  assert.match(result.error ?? "", /QA verification failed for source 'demo-catalog' on attempt 1/);
+  assert.match(result.error ?? "", /QA verification failed for source 'intent-poc-app' on attempt 1/);
 });
 
 test("waitForSourceAppReady Given the launched app exits while another process already serves readiness When startup is checked Then it fails instead of accepting the stale server", async () => {
@@ -425,7 +425,7 @@ test("waitForSourceAppReady Given the launched app exits while another process a
       waitForSourceAppReady({
         config: buildBehaviorTestLoadedConfig(os.tmpdir()).config,
         workspace: {
-          sourceId: "demo-catalog",
+          sourceId: "intent-poc-app",
           source: {
             app: {
               readiness: {
@@ -479,7 +479,7 @@ test("canReuseRunningSourceApp Given a ready existing local dev server When reus
     const reusable = await canReuseRunningSourceApp({
       config: buildBehaviorTestLoadedConfig(os.tmpdir()).config,
       workspace: {
-        sourceId: "demo-catalog",
+        sourceId: "intent-poc-app",
         sourceType: "local",
         source: {
           workspace: {
@@ -520,16 +520,16 @@ test("buildQAVerificationExecutionPlan Given active Playwright work without gene
   const normalizedIntent = normalizeIntent({
     rawPrompt:
       "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
-    defaultSourceId: "demo-catalog",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
     }
   });
 
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     activeWorkItemIds: [normalizedIntent.businessIntent.workItems[0]!.id],
     generatedPlaywrightTests: [],
     implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
@@ -543,19 +543,19 @@ test("buildQAVerificationExecutionPlan Given active Playwright work without gene
 test("buildQAVerificationExecutionPlan Given active Playwright work with generated specs When QA planning runs Then it chooses focused generated Playwright regression", () => {
   const normalizedIntent = normalizeIntent({
     rawPrompt:
-      "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
-    defaultSourceId: "demo-catalog",
+      "The space under the prompt run input box and instructions must be collapsable in dark mode. All the optional config and setup should be collapsable.",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
     }
   });
 
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     activeWorkItemIds: [normalizedIntent.businessIntent.workItems[0]!.id],
-    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/demo-catalog/work-1.spec.ts"],
+    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/intent-poc-app/work-1.spec.ts"],
     implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
     workspaceRootDir: "/tmp/intent-poc"
   });
@@ -564,6 +564,13 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
   assert.deepEqual(
     plan.commands?.map((command) => command.label),
     ["typecheck", "generated-playwright"]
+  );
+  assert.deepEqual(
+    plan.uiStateRequirements.map((requirement) => ({
+      stateId: requirement.stateId,
+      requestedValue: requirement.requestedValue
+    })),
+    [{ stateId: "theme-mode", requestedValue: "dark" }]
   );
   assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
 });
@@ -575,7 +582,7 @@ test("buildQAVerificationExecutionPlan Given active targeted code-validation wor
     defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {
-      "intent-poc-app": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
     }
   });
 
@@ -603,10 +610,10 @@ test("buildQAVerificationExecutionPlan Given mixed verification modes When QA pl
   const normalizedIntent = normalizeIntent({
     rawPrompt:
       "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
-    defaultSourceId: "demo-catalog",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
     }
   });
 
@@ -617,7 +624,7 @@ test("buildQAVerificationExecutionPlan Given mixed verification modes When QA pl
     title: "Validate planner wiring",
     description: "Validate the planner wiring with targeted code regression.",
     scenarioIds: [],
-    sourceIds: ["demo-catalog"],
+    sourceIds: ["intent-poc-app"],
     userVisibleOutcome: "Planner wiring remains validated.",
     verification: "Typecheck and targeted source-scoped code tests validate the planner wiring.",
     execution: {
@@ -632,9 +639,9 @@ test("buildQAVerificationExecutionPlan Given mixed verification modes When QA pl
 
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     activeWorkItemIds: normalizedIntent.businessIntent.workItems.map((workItem) => workItem.id),
-    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/demo-catalog/work-1.spec.ts"],
+    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/intent-poc-app/work-1.spec.ts"],
     implementationFileOperations: [{ operation: "replace", filePath: "src/orchestrator/run-intent.ts", rationale: "qa", status: "applied" }],
     workspaceRootDir: "/tmp/intent-poc"
   });
@@ -655,16 +662,16 @@ test("buildQAVerificationExecutionPlan Given no active work items and demo app c
   const normalizedIntent = normalizeIntent({
     rawPrompt:
       "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
-    defaultSourceId: "demo-catalog",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
     }
   });
 
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     activeWorkItemIds: [],
     generatedPlaywrightTests: [],
     implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
@@ -686,16 +693,16 @@ test("buildQAVerificationExecutionPlan Given no active work items and orchestrat
   const normalizedIntent = normalizeIntent({
     rawPrompt:
       "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
-    defaultSourceId: "demo-catalog",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
     }
   });
 
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     activeWorkItemIds: [],
     generatedPlaywrightTests: [],
     implementationFileOperations: [{ operation: "replace", filePath: "src/orchestrator/run-intent.ts", rationale: "qa", status: "applied" }],
@@ -717,16 +724,16 @@ test("buildQAVerificationExecutionPlan Given no active work items and config cha
   const normalizedIntent = normalizeIntent({
     rawPrompt:
       "The space under the prompt run input box and instructions must be collapsable. All the optional config and setup should be collapsable.",
-    defaultSourceId: "demo-catalog",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: {
-      "demo-catalog": buildDemoCatalogBehaviorSource("/tmp/intent-poc")
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
     }
   });
 
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
-    sourceId: "demo-catalog",
+    sourceId: "intent-poc-app",
     activeWorkItemIds: [],
     generatedPlaywrightTests: [],
     implementationFileOperations: [{ operation: "replace", filePath: "src/config/schema.ts", rationale: "config", status: "applied" }],

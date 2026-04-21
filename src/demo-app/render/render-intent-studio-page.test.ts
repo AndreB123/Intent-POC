@@ -19,5 +19,11 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
   assert.ok(submitButtonIndex > promptInputIndex);
   assert.ok(workScopeIndex > submitButtonIndex);
   assert.ok(stepsPanelIndex > submitButtonIndex);
+  assert.match(html, /id="step-bdd"/);
+  assert.match(html, /id="plan-criteria"/);
+  assert.match(html, /id="step-tdd"/);
+  assert.match(html, /id="plan-work-items"/);
+  assert.match(html, /id="selection-title"/);
+  assert.match(html, /id="selection-defaults"/);
   assert.match(html, /<\/html>\s*$/);
 });

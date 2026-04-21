@@ -5,14 +5,14 @@ This file explains why the canonical sample is a template rather than just a cap
 ## Prompt To Plan Mapping
 
 Prompt sentence:
-`Create a baseline screenshot library for the demo-catalog source.`
+`Create a baseline screenshot library for the surface library source.`
 Effect:
 - sets the intent type to `baseline`
-- resolves the legacy `demo-catalog` prompt alias to the `intent-poc-app` execution source
+- resolves the legacy `surface library` prompt alias to the `intent-poc-app` execution source
 - preserves the legacy three-capture subset for the catalog index, primary button, and analytics overview entrypoints
 
 Prompt sentence:
-`The plan must turn the request into acceptance-ready work for the built-in catalog experience.`
+`The plan must turn the request into acceptance-ready work for the built-in surface library.`
 Effect:
 - creates a prompt-origin acceptance criterion
 - feeds the first scenario outcome and first scenario work item

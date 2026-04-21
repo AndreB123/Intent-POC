@@ -205,3 +205,37 @@ test("updateScreenshotLibrary writes captured assets for tracked screenshot sour
     await fs.rm(tmpRoot, { recursive: true, force: true });
   }
 });
+
+test("updateScreenshotLibrary Given captures already stored in the tracked library root When publishing runs Then it updates the manifest without duplicating files", async () => {
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-screenshot-library-in-place-"));
+
+  try {
+    const intentType: NormalizedIntent["intentType"] = "change-behavior";
+    const config = buildConfig(tmpRoot);
+    const capturePath = path.join(tmpRoot, "library", "library", "pages", "home.png");
+    await fs.mkdir(path.dirname(capturePath), { recursive: true });
+    await fs.writeFile(capturePath, `${intentType}-capture`, "utf8");
+
+    const beforeStat = await fs.stat(capturePath);
+
+    const result = await updateScreenshotLibrary({
+      config,
+      sourceId: "library",
+      runId: `run-${intentType}`,
+      captures: [buildCapture(capturePath)],
+      normalizedIntent: buildNormalizedIntent(intentType)
+    });
+
+    const afterStat = await fs.stat(capturePath);
+    const manifestPath = path.join(result.sourceLibraryRoot, "manifest.json");
+    const manifest = await readJsonFile<{ runId: string; captureCount: number; failedCaptureCount: number }>(manifestPath);
+
+    assert.equal(await fs.readFile(capturePath, "utf8"), `${intentType}-capture`);
+    assert.equal(beforeStat.ino, afterStat.ino);
+    assert.equal(manifest?.runId, `run-${intentType}`);
+    assert.equal(manifest?.captureCount, 1);
+    assert.equal(manifest?.failedCaptureCount, 0);
+  } finally {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  }
+});

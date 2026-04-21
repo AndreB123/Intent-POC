@@ -1,90 +1,87 @@
 # Intent POC Source Run Summary
 
-- Run ID: 2026-04-20T21-11-28-236Z-intent-poc-app
+- Run ID: 2026-04-21T02-29-19-118Z-intent-poc-app
 - Source: intent-poc-app
 - Status: completed
-- Intent: help me fix a bug in our dark mode input field. for some reason both the background and htte text color of the typed text of the user is white or light grey. i cant read what i type
+- Intent: Create a baseline for the deterministic screenshot library for the built-in surface library.
 - Normalized summary: change behavior for intent-poc-app
 - Verification workflow: active
 - Linear issue: not created
 - Has drift: no
-- Desired outcome: The input field in dark mode must have a high-contrast text color against the background, ensuring readability.
+- Desired outcome: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.
 - Error: none
 
 ## AI Stages
 
-- Prompt Interpretation: completed [gemini / models/gemini-3.1-flash-lite-preview]
-- Linear Scoping: completed [gemini / models/gemini-3.1-flash-lite-preview] — Linear Scoping does not yet support provider-backed execution, so deterministic Linear lane scoping was used.
-- BDD Planning: completed [gemini / models/gemini-3.1-flash-lite-preview] — Ensure that changes do not negatively impact light mode input field styles.
-- TDD Planning: completed [gemini / models/gemini-3.1-flash-lite-preview] — TDD Planning does not yet support provider-backed execution, so deterministic Playwright spec generation was used.
-- Implementation: skipped [gemini / models/gemini-3.1-flash-lite-preview] — Implementation stage configuration is recorded and executes during source runs before QA verification.
-- QA Verification: skipped [gemini / models/gemini-3.1-flash-lite-preview] — QA verification configuration is recorded and executes during source runs after implementation completes.
+- Prompt Interpretation: skipped [deterministic]
+- Linear Scoping: completed [deterministic]
+- BDD Planning: completed [deterministic]
+- TDD Planning: completed [deterministic]
+- Implementation: skipped [deterministic]
+- QA Verification: skipped [deterministic]
 
 ## Source Plan
 
 - Selection reason: Source intent-poc-app was selected in the requested source scope.
 - Configured captures: 47
-- Executed captures: 1
-- Capture scope: primitive-input-field
+- Executed captures: 47
+- Capture scope: all configured captures
+- UI state requirements: none
 - Warnings: none
 
 ## Business Intent
 
-Fix the contrast issue in the dark mode input field where both the background and text color are light, making user input unreadable.
+Create a baseline for the deterministic screenshot library for the built-in surface library.
 
 ## Acceptance Criteria
 
-- The input field background color is dark in dark mode.
-- The input field text color is light/white in dark mode.
-- The contrast ratio between text and background meets accessibility standards.
+- Intent is translated into executable work for intent-poc-app.
+- Evidence is captured and packaged for review.
+- Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..
 
 ## BDD Scenarios
 
-### Verify dark mode input field readability
-- Given The application is set to dark mode
-- Given The primitive-input-field component is rendered
-- When The user types text into the input field
-- Then The text color is clearly distinguishable from the background color
-- Then A screenshot verification confirms the contrast ratio is sufficient
+### Intent is translated into acceptance-ready work
+- Given A business intent has been captured: Create a baseline for the deterministic screenshot library for the built-in surface library.
+- Given The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.
+- When The planner decomposes the intent into acceptance criteria and scenarios.
+- When Applicable sources and destinations are identified from the prompt and configuration.
+- Then Intent is translated into executable work for intent-poc-app.
+- Then Evidence is captured and packaged for review.
+
+### Behavior is verified visually for applicable sources
+- Given Source intent-poc-app is available for execution.
+- When TDD planning prepares Playwright screenshot verification for the applicable sources.
+- When The runner maps the requested behavior into QA-runnable visual checkpoints.
+- Then QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.
+- Then Each applicable source has executable visual verification coverage with reviewable screenshots.
+
+### Results are distributed consistently
+- Given Execution produces evidence, summaries, and progress state.
+- Given Distribution destinations are known before execution begins.
+- When The run reaches the distribution stage.
+- When Publishing destinations receive the resulting evidence and summaries.
+- Then Stakeholders can inspect the outcome through a consistent package tied to the intent.
+- Then Distribution remains decoupled from any single source-specific workflow.
 
 ## TDD Work Items
 
-- Verify dark mode input field readability
+- Behavior is verified visually for applicable sources
   - Type: QA-runnable Playwright screenshot spec
-  - Outcome: The text color is clearly distinguishable from the background color
-  - Verification: A screenshot verification confirms the contrast ratio is sufficient
+  - Outcome: QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.
+  - Verification: QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.
   - Order: 1
   - Depends on: none
   - Playwright specs: 1
-  - Checkpoints: 1
+  - Checkpoints: 47
 
 ## Generated Playwright Specs
 
-- tests/intent/intent-poc-app/verify-dark-mode-input-field-readability.spec.ts
+- tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts
 
 ## Runtime Attempts
 
-### Attempt 1
-- Status: completed
-- Failure stage: none
-- Targeted work items: work-1-verify-dark-mode-input-field-readability-intent-poc-app
-- Completed in attempt: work-1-verify-dark-mode-input-field-readability-intent-poc-app
-- Pending targeted work items: none
-- Completed work items: work-1-verify-dark-mode-input-field-readability-intent-poc-app
-- Remaining work items: none
-- Implementation: completed - Applied 1 file operation (0 create, 1 replace, 0 delete).
-  - Targeted work items: work-1-verify-dark-mode-input-field-readability-intent-poc-app
-  - Completed work items: work-1-verify-dark-mode-input-field-readability-intent-poc-app
-  - plan-change-set - [completed] - artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-plan.json
-  - materialize-change-set - [completed] - artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-materialize.json
-  - apply-change-set - [completed] - artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-apply.json
-  - File: replace src/demo-app/render/render-surface-frame.ts - Update the .dark-mode CSS to ensure the input field has a dark background and light text, improving contrast and readability in dark mode.
-- QA verification: completed - QA verification passed 2 commands.
-  - Targeted work items: work-1-verify-dark-mode-input-field-readability-intent-poc-app
-  - Completed work items: work-1-verify-dark-mode-input-field-readability-intent-poc-app, work-1-verify-dark-mode-input-field-readability-intent-poc-app
-  - typecheck - [completed] - artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-typecheck.log
-  - generated-playwright - [completed] - artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-generated-playwright.log
-  - File operations: none
+- None
 
 ## Counts
 

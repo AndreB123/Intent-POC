@@ -112,8 +112,8 @@ const availableSources: Record<string, Pick<SourceConfig, "aliases" | "capture" 
 };
 
 const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
-  "demo-catalog": {
-    aliases: ["demo-catalog", "catalog"],
+  "intent-poc-app": {
+    aliases: ["surface library", "surface-library", "library"],
     planning: buildPlanningFixture({
       repoId: "intent-poc",
       repoLabel: "Intent POC",
@@ -130,7 +130,7 @@ const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "captu
       waitAfterLoadMs: 500,
       injectCss: [],
       defaultFullPage: true,
-      items: [{ id: "library-index", name: "Demo Catalog Index", path: "/library", maskSelectors: [], delayMs: 0 }]
+      items: [{ id: "library-index", name: "Surface Library Index", path: "/library", maskSelectors: [], delayMs: 0 }]
     }
   },
   "example-storybook": {
@@ -157,8 +157,8 @@ const ambiguousDemoSources: Record<string, Pick<SourceConfig, "aliases" | "captu
 };
 
 const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
-  "demo-catalog": {
-    aliases: ["demo", "demo-app", "demo-catalog"],
+  "intent-poc-app": {
+    aliases: ["intent-poc-app", "surface library", "surface-library", "library"],
     planning: buildPlanningFixture({
       repoId: "intent-poc",
       repoLabel: "Intent POC",
@@ -176,17 +176,17 @@ const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture
       injectCss: [],
       defaultFullPage: true,
       items: [
-        { id: "library-index", name: "Demo Catalog Index", path: "/library", maskSelectors: [], delayMs: 0 },
+        { id: "library-index", name: "Surface Library Index", path: "/library", maskSelectors: [], delayMs: 0 },
         {
           id: "component-button-primary",
-          name: "Demo Primary Button",
+          name: "Primary Button",
           path: "/library/component-button-primary",
           maskSelectors: [],
           delayMs: 0
         },
         {
           id: "page-analytics-overview",
-          name: "Demo Analytics Overview",
+          name: "Analytics Overview",
           path: "/library/page-analytics-overview",
           maskSelectors: [],
           delayMs: 0
@@ -198,7 +198,7 @@ const demoCatalogSources: Record<string, Pick<SourceConfig, "aliases" | "capture
 
 const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
   "intent-poc-app": {
-    aliases: ["intent-poc-app", "demo", "demo-app", "demo-catalog", "demo-components", "components", "surface-catalog"],
+    aliases: ["intent-poc-app", "intent-studio", "studio", "surface library", "surface-library", "library", "components"],
     planning: buildPlanningFixture({
       repoId: "intent-poc",
       repoLabel: "Intent POC",
@@ -237,10 +237,10 @@ const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "captur
       injectCss: [],
       defaultFullPage: false,
       items: [
-        { id: "library-index", name: "Demo Catalog Index", path: "/library", fullPage: true, maskSelectors: [], delayMs: 0 },
+        { id: "library-index", name: "Surface Library Index", path: "/library", fullPage: true, maskSelectors: [], delayMs: 0 },
         {
           id: "component-button-primary",
-          name: "Demo Primary Button",
+          name: "Primary Button",
           path: "/library/component-button-primary",
           locator: "[data-testid='component-button-primary']",
           waitForSelector: "[data-testid='component-button-primary']",
@@ -249,7 +249,7 @@ const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "captur
         },
         {
           id: "page-analytics-overview",
-          name: "Demo Analytics Overview",
+          name: "Analytics Overview",
           path: "/library/page-analytics-overview",
           fullPage: true,
           maskSelectors: [],
@@ -321,7 +321,7 @@ const uiStateRichSources: Record<string, Pick<SourceConfig, "aliases" | "capture
       items: [
         {
           id: "component-button-primary",
-          name: "Demo Primary Button",
+          name: "Primary Button",
           path: "/library/component-button-primary",
           locator: "[data-testid='component-button-primary']",
           waitForSelector: "[data-testid='component-button-primary']",
@@ -495,22 +495,22 @@ test("normalizeIntent carries explicit resume targets into the planning context"
 
 test("normalizeIntent prefers exact source tokens over overlapping aliases", () => {
   const normalized = normalizeIntent({
-    rawPrompt: "Create a baseline screenshot library for the demo-catalog source so that the baseline is reviewable.",
-    defaultSourceId: "demo-catalog",
+    rawPrompt: "Create a baseline screenshot library for the intent-poc-app source so that the baseline is reviewable.",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: ambiguousDemoSources
   });
 
   assert.deepEqual(
     normalized.executionPlan.sources.map((source) => source.sourceId),
-    ["demo-catalog"]
+    ["intent-poc-app"]
   );
-  assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source demo-catalog was referenced directly in the prompt.");
+  assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source intent-poc-app was referenced directly in the prompt.");
 });
 
-test("normalizeIntent preserves the legacy demo-catalog prompt contract on the unified app source", () => {
+test("normalizeIntent preserves the surface-library prompt contract on the unified app source", () => {
   const normalized = normalizeIntent({
-    rawPrompt: "Create a baseline screenshot library for the demo-catalog source so that the baseline is reviewable.",
+    rawPrompt: "Create a baseline screenshot library for the surface library source so that the baseline is reviewable.",
     defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: intentPocAppSources
@@ -518,7 +518,7 @@ test("normalizeIntent preserves the legacy demo-catalog prompt contract on the u
 
   assert.equal(normalized.sourceId, "intent-poc-app");
   assert.equal(normalized.executionPlan.primarySourceId, "intent-poc-app");
-  assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source intent-poc-app matched the prompt alias 'demo-catalog'.");
+  assert.equal(normalized.executionPlan.sources[0]?.selectionReason, "Source intent-poc-app matched the prompt alias 'surface library'.");
   assert.deepEqual(normalized.captureScope, {
     mode: "subset",
     captureIds: ["library-index", "component-button-primary", "page-analytics-overview"]
@@ -527,33 +527,33 @@ test("normalizeIntent preserves the legacy demo-catalog prompt contract on the u
 
 test("normalizeIntent infers the intent studio code surface while preserving source scope", () => {
   const normalized = normalizeIntent({
-    rawPrompt: "Add a dark mode button to the Intent Studio screen in demo-catalog so that the theme toggle is visible.",
-    defaultSourceId: "demo-catalog",
+    rawPrompt: "Add a dark mode button to the Intent Studio screen in intent-poc-app so that the theme toggle is visible.",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: demoCatalogSources
   });
 
-  assert.equal(normalized.sourceId, "demo-catalog");
-  assert.equal(normalized.executionPlan.primarySourceId, "demo-catalog");
-  assert.equal(normalized.codeSurface?.sourceId, "demo-catalog");
+  assert.equal(normalized.sourceId, "intent-poc-app");
+  assert.equal(normalized.executionPlan.primarySourceId, "intent-poc-app");
+  assert.equal(normalized.codeSurface?.sourceId, "intent-poc-app");
   assert.equal(normalized.codeSurface?.id, "intent-studio");
   assert.equal(normalized.codeSurface?.confidence, "high");
 });
 
 test("normalizeIntent keeps ambiguous source-local UI requests broad when the code surface is unclear", () => {
   const normalized = normalizeIntent({
-    rawPrompt: "Add a dark mode button to my application in demo-catalog so the theme control is visible.",
-    defaultSourceId: "demo-catalog",
+    rawPrompt: "Add a dark mode button to my application in intent-poc-app so the theme control is visible.",
+    defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: demoCatalogSources
   });
 
-  assert.equal(normalized.sourceId, "demo-catalog");
+  assert.equal(normalized.sourceId, "intent-poc-app");
   assert.equal(normalized.codeSurface?.id, "shared-source");
   assert.equal(normalized.codeSurface?.confidence, "low");
   assert.deepEqual(
     normalized.codeSurface?.alternatives.map((alternative) => alternative.id),
-    ["intent-studio", "surface-catalog"]
+    ["intent-studio", "surface-library"]
   );
   assert.equal(normalized.normalizationMeta.ambiguity.isAmbiguous, true);
   assert.ok(
@@ -566,7 +566,7 @@ test("normalizeIntentWithAgent preserves Intent Studio layout and collapsible se
     {
       rawPrompt:
         "Move the run intent button directly below the prompt input box and make the work scope and steps sections collapsable and expandable.",
-      defaultSourceId: "demo-catalog",
+      defaultSourceId: "intent-poc-app",
       continueOnCaptureError: false,
       availableSources: demoCatalogSources,
       agent: {
@@ -576,7 +576,7 @@ test("normalizeIntentWithAgent preserves Intent Studio layout and collapsible se
     },
     {
       normalizePromptWithGemini: async () => ({
-        sourceIds: ["demo-catalog"],
+        sourceIds: ["intent-poc-app"],
         codeSurfaceId: "intent-studio"
       }),
       refineIntentPlanWithGemini: async () => ({
@@ -594,7 +594,7 @@ test("normalizeIntentWithAgent preserves Intent Studio layout and collapsible se
             given: ["The user is viewing the prompt run interface"],
             when: ["The prompt run form loads"],
             then: ["The run intent button remains directly below the prompt input"],
-            applicableSourceIds: ["demo-catalog"]
+            applicableSourceIds: ["intent-poc-app"]
           },
           {
             title: "Verify collapsible sections",
@@ -602,7 +602,7 @@ test("normalizeIntentWithAgent preserves Intent Studio layout and collapsible se
             given: ["The user is viewing the prompt run interface", "The work scope and steps sections are currently expanded"],
             when: ["The user clicks the collapse and expand toggles for each section"],
             then: ["Both sections can be collapsed and expanded again", "The prompt run input remains accessible"],
-            applicableSourceIds: ["demo-catalog"]
+            applicableSourceIds: ["intent-poc-app"]
           }
         ]
       })
@@ -974,14 +974,14 @@ test("normalizeIntentWithAgent overrides a weak Gemini capture surface hint when
     {
       rawPrompt:
         "The space under the prompt run input box and instructions must be collapsable. We want to simplify the prompt run box so users can use it easier.",
-      defaultSourceId: "demo-catalog",
+      defaultSourceId: "intent-poc-app",
       continueOnCaptureError: false,
       availableSources: demoCatalogSources,
       agent: geminiAgent
     },
     {
       normalizePromptWithGemini: async () => ({
-        sourceIds: ["demo-catalog"],
+        sourceIds: ["intent-poc-app"],
         codeSurfaceId: "capture-and-evidence"
       })
     }
@@ -991,20 +991,20 @@ test("normalizeIntentWithAgent overrides a weak Gemini capture surface hint when
   assert.equal(normalized.businessIntent.workItems[0]?.playwright.specs[0]?.checkpoints[0]?.path, "/");
 });
 
-test("normalizeIntentWithAgent preserves full demo-catalog capture scope when Gemini narrows a conceptual prompt", async () => {
+test("normalizeIntentWithAgent preserves full intent-poc-app capture scope when Gemini narrows a conceptual prompt", async () => {
   const normalized = await normalizeIntentWithAgent(
     {
-      rawPrompt: "Compare the demo-catalog evidence so we can tell whether the dark mode work is visible.",
-      defaultSourceId: "demo-catalog",
+      rawPrompt: "Compare the intent-poc-app evidence so we can tell whether the dark mode work is visible.",
+      defaultSourceId: "intent-poc-app",
       continueOnCaptureError: false,
       availableSources: demoCatalogSources,
       agent: geminiAgent
     },
     {
       normalizePromptWithGemini: async () => ({
-        sourceIds: ["demo-catalog"],
+        sourceIds: ["intent-poc-app"],
         captureIdsBySource: {
-          "demo-catalog": ["library-index"]
+          "intent-poc-app": ["library-index"]
         }
       })
     }
@@ -1021,14 +1021,14 @@ test("normalizeIntentWithAgent preserves full demo-catalog capture scope when Ge
   assert.equal(normalized.executionPlan.sources[0]?.warnings.length, 1);
   assert.ok(
     normalized.executionPlan.sources[0]?.warnings[0]?.includes(
-      "Gemini suggested narrowing demo-catalog captures to library-index"
+      "Gemini suggested narrowing intent-poc-app captures to library-index"
     )
   );
 });
 
 test("normalizeIntent resolves source-level UI state requirements into the plan and Playwright specs", () => {
   const normalized = normalizeIntent({
-    rawPrompt: "Compare the demo-catalog evidence in dark mode so we can verify the theme styling.",
+    rawPrompt: "Compare the surface library evidence in dark mode so we can verify the theme styling.",
     defaultSourceId: "intent-poc-app",
     continueOnCaptureError: false,
     availableSources: intentPocAppSources
@@ -1099,17 +1099,17 @@ test("normalizeIntent resolves multiple UI states when the prompt requests more 
 test("normalizeIntentWithAgent still narrows capture scope when the prompt explicitly names a capture", async () => {
   const normalized = await normalizeIntentWithAgent(
     {
-      rawPrompt: "Compare only page-analytics-overview in demo-catalog so we can inspect that page.",
-      defaultSourceId: "demo-catalog",
+      rawPrompt: "Compare only page-analytics-overview in intent-poc-app so we can inspect that page.",
+      defaultSourceId: "intent-poc-app",
       continueOnCaptureError: false,
       availableSources: demoCatalogSources,
       agent: geminiAgent
     },
     {
       normalizePromptWithGemini: async () => ({
-        sourceIds: ["demo-catalog"],
+        sourceIds: ["intent-poc-app"],
         captureIdsBySource: {
-          "demo-catalog": ["library-index"]
+          "intent-poc-app": ["library-index"]
         }
       })
     }
@@ -1153,7 +1153,7 @@ test("normalizeIntentWithAgent narrows generic evidence specs to the scenario-ma
         scenarios: [
           {
             title: "Capture visual evidence for primary button component",
-            goal: "Capture the demo primary button component for review.",
+            goal: "Capture the primary button component for review.",
             given: ["The built-in demo surfaces are available."],
             when: ["The screenshot flow runs for the primary button component."],
             then: ["The primary button component is captured for review."],

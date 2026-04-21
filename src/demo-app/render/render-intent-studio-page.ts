@@ -1,6 +1,7 @@
 import { AGENT_STAGE_DEFINITIONS, AGENT_STAGE_SEQUENCE, GEMINI_MODEL_OPTIONS } from "../../intent/agent-stage-config";
 import { renderSelectionCard } from "../shared/render-content-cards";
 import { renderButton, renderTextInput } from "../shared/render-controls";
+import { renderStudioGuideCards, renderStudioLifecyclePanel } from "../shared/render-studio-panels";
 
 function escapeHtml(value: string): string {
   return value
@@ -47,6 +48,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
   const configPath = escapeHtml(input.configPath);
   const agentStageFields = renderAgentStageFields();
   const stageIdsJson = JSON.stringify(AGENT_STAGE_SEQUENCE);
+  const studioGuideCards = renderStudioGuideCards();
+  const studioLifecyclePanel = renderStudioLifecyclePanel();
 
   return `<!doctype html>
 <html lang="en">
@@ -1268,31 +1271,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                   <div class="panel-copy">How to use the Intent Studio to manage your development workflow.</div>
                 </div>
               </div>
-              <div class="prompt-grid">
-                <div class="field-wide">
-                  ${renderSelectionCard({
-                    title: "How Work Scope Works",
-                    badge: { label: "guide", toneClass: "target-ready" },
-                    lines: [
-                      { html: "<strong>Work scope</strong> constrains which configured repos or apps can participate in the run. It does not change how screenshots are handled after capture." },
-                      { text: "Rename cards and update repo context directly in the Source Metadata editor. Use the YAML config when you need to add, remove, or structurally rewire sources." },
-                      { text: "When multiple sources are checked, the planner creates one evidence lane per selected source inside the same business run." }
-                    ]
-                  })}
-                </div>
-                <div class="field-wide">
-                  ${renderSelectionCard({
-                    title: "Default work scope",
-                    titleId: "selection-title",
-                    badge: { label: "optional", toneClass: "target-ready", id: "selection-status" },
-                    lines: [
-                      { text: "The runner can choose sources from your prompt, then fall back to the config default if needed.", id: "selection-summary" },
-                      { text: "Blank work scope falls back to prompt matching, business-wide expansion, then config default.", id: "selection-defaults" },
-                      { text: "Use the Work Scope selector in the Run Workspace tab to understand what each source actually does before you constrain the run.", id: "selection-details" }
-                    ]
-                  })}
-                </div>
-              </div>
+              <div class="prompt-grid">${studioGuideCards}</div>
             </section>
           </div>
         </div>
@@ -1305,48 +1284,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 <div class="panel-copy">Business run stages from prompt to delivery.</div>
               </div>
             </div>
-            <div class="lifecycle-stack">
-              <div class="lifecycle-step" id="step-normalization">
-                <div class="lifecycle-step-title">1. Prompt Interpretation <span class="lifecycle-step-status" id="step-normalization-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content">
-                  <div class="plan-intent-text" id="plan-intent-text"></div>
-                  <div class="plan-intent-outcome" id="plan-intent-outcome"></div>
-                  <div class="plan-note" id="plan-plan-notes"></div>
-                </div>
-              </div>
-              <div class="lifecycle-step" id="step-linear">
-                <div class="lifecycle-step-title">2. Linear Scoping <span class="lifecycle-step-status" id="step-linear-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content" id="plan-linear"></div>
-              </div>
-              <div class="lifecycle-step" id="step-bdd">
-                <div class="lifecycle-step-title">3. BDD Planning <span class="lifecycle-step-status" id="step-bdd-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content">
-                  <div id="plan-criteria"></div>
-                  <div id="plan-scenarios"></div>
-                </div>
-              </div>
-              <div class="lifecycle-step" id="step-tdd">
-                <div class="lifecycle-step-title">4. TDD Planning <span class="lifecycle-step-status" id="step-tdd-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content" id="plan-work-items"></div>
-              </div>
-              <div class="lifecycle-step" id="step-plan">
-                <div class="lifecycle-step-title">5. Planned Execution <span class="lifecycle-step-status" id="step-plan-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content">
-                  <div class="plan-note" id="plan-execution-note"></div>
-                  <div id="plan-sources"></div>
-                  <div id="plan-tools"></div>
-                  <div id="plan-destinations"></div>
-                </div>
-              </div>
-              <div class="lifecycle-step" id="step-implementation">
-                <div class="lifecycle-step-title">6. Implementation <span class="lifecycle-step-status" id="step-implementation-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content" id="plan-implementation"></div>
-              </div>
-              <div class="lifecycle-step" id="step-qa">
-                <div class="lifecycle-step-title">7. QA Verification <span class="lifecycle-step-status" id="step-qa-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content" id="plan-qa"></div>
-              </div>
-            </div>
+            ${studioLifecyclePanel}
           </section>
 
           <section class="panel">

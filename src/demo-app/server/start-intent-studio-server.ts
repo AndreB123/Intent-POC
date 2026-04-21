@@ -18,12 +18,13 @@ import { NormalizedIntent, IntentLifecycleStatus } from "../../intent/intent-typ
 import { RunIntentEvent, RunIntentResult, runIntent } from "../../orchestrator/run-intent";
 import { pathExists } from "../../shared/fs";
 import { renderIntentStudioPage } from "../render/render-intent-studio-page";
-import { renderSurfaceCatalogIndex, renderSurfacePage } from "../render/render-surface-page";
+import { renderLibraryArchitectureDocsPage, renderLibraryPlanningDocsPage, renderSurfaceLibraryIndex, renderSurfacePage } from "../render/render-surface-page";
 import { SURFACE_CATALOG } from "../model/catalog";
 import { LibraryVariant } from "../model/types";
 
 export interface IntentStudioServer {
   baseUrl: string;
+  setVariant: (variant: LibraryVariant) => void;
   close: () => Promise<void>;
 }
 
@@ -1134,7 +1135,19 @@ export async function startIntentStudioServer(
 
     if (req.method === "GET" && route === "/library") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(renderSurfaceCatalogIndex(SURFACE_CATALOG, effectiveVariant));
+      res.end(renderSurfaceLibraryIndex(SURFACE_CATALOG, effectiveVariant));
+      return;
+    }
+
+    if (req.method === "GET" && route === "/library/planning-docs") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(renderLibraryPlanningDocsPage(effectiveVariant));
+      return;
+    }
+
+    if (req.method === "GET" && route === "/library/architecture-docs") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(renderLibraryArchitectureDocsPage(effectiveVariant));
       return;
     }
 
@@ -1268,6 +1281,9 @@ export async function startIntentStudioServer(
 
   return {
     baseUrl,
+    setVariant(nextVariant: LibraryVariant) {
+      variant = nextVariant;
+    },
     close: async () => {
       await new Promise<void>((resolve, reject) => {
         for (const client of clients) {

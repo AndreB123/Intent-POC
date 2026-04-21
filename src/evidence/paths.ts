@@ -35,14 +35,41 @@ export interface RunPaths {
   sourceRuns: Record<string, SourceRunPaths>;
 }
 
-async function removeTransientRunArtifacts(loadedConfig: LoadedConfig, sourceIds: string[]): Promise<void> {
+export interface CreateRunPathsOptions {
+  publishToLibrary?: boolean;
+}
+
+function resolveSourceCapturesDir(input: {
+  loadedConfig: LoadedConfig;
+  sourceId: string;
+  sourceDir: string;
+  baselineSourceDir: string;
+  options?: CreateRunPathsOptions;
+}): string {
+  const sourceConfig = input.loadedConfig.config.sources[input.sourceId];
+
+  if (input.options?.publishToLibrary || sourceConfig?.capture.publishToLibrary) {
+    return input.baselineSourceDir;
+  }
+
+  return path.join(input.sourceDir, "captures");
+}
+
+async function removeTransientRunArtifacts(
+  loadedConfig: LoadedConfig,
+  sourceIds: string[],
+  options: CreateRunPathsOptions = {}
+): Promise<void> {
   const artifactRoot = loadedConfig.config.artifacts.root;
   const transientDirectories = [
     path.join(artifactRoot, "runs"),
     path.join(artifactRoot, "logs"),
     ...sourceIds.flatMap((sourceId) => [
       path.join(artifactRoot, "sources", sourceId, "attempts"),
-      path.join(artifactRoot, "sources", sourceId, "logs")
+      path.join(artifactRoot, "sources", sourceId, "logs"),
+      ...((options.publishToLibrary || loadedConfig.config.sources[sourceId]?.capture.publishToLibrary)
+        ? [path.join(artifactRoot, "sources", sourceId, "captures")]
+        : [])
     ])
   ];
 
@@ -51,7 +78,8 @@ async function removeTransientRunArtifacts(loadedConfig: LoadedConfig, sourceIds
 
 export async function createRunPaths(
   loadedConfig: LoadedConfig,
-  sourceIds: string[]
+  sourceIds: string[],
+  options: CreateRunPathsOptions = {}
 ): Promise<RunPaths> {
   const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
   const sourceScope = sourceIds.length === 1 ? sourceIds[0] : `${sourceIds.length}-sources`;
@@ -63,13 +91,20 @@ export async function createRunPaths(
   const logsDir = path.join(artifactRoot, "logs");
 
   if (loadedConfig.config.artifacts.cleanBeforeRun) {
-    await removeTransientRunArtifacts(loadedConfig, sourceIds);
+    await removeTransientRunArtifacts(loadedConfig, sourceIds, options);
   }
 
   const sourceRuns = Object.fromEntries(
     sourceIds.map((sourceId) => {
       const sourceDir = path.join(sourcesDir, sourceId);
       const baselineSourceDir = path.join(libraryRoot, sourceId);
+      const capturesDir = resolveSourceCapturesDir({
+        loadedConfig,
+        sourceId,
+        sourceDir,
+        baselineSourceDir,
+        options
+      });
 
       return [
         sourceId,
@@ -79,7 +114,7 @@ export async function createRunPaths(
           sourceId,
           sourceDir,
           attemptsDir: path.join(sourceDir, "attempts"),
-          capturesDir: path.join(sourceDir, "captures"),
+          capturesDir,
           diffsDir: path.join(sourceDir, "diffs"),
           logsDir: path.join(sourceDir, "logs"),
           manifestPath: path.join(sourceDir, "manifest.json"),

@@ -30,7 +30,10 @@ export async function updateScreenshotLibrary(input: {
     const relativePath = capture.relativeOutputPath ?? `${capture.captureId}.png`;
     const destinationPath = path.join(sourceLibraryRoot, relativePath);
     await ensureDirectory(path.dirname(destinationPath));
-    await copyFile(capture.outputPath, destinationPath);
+
+    if (path.resolve(capture.outputPath) !== path.resolve(destinationPath)) {
+      await copyFile(capture.outputPath, destinationPath);
+    }
   }
 
   await writeJsonFile(path.join(sourceLibraryRoot, "manifest.json"), {

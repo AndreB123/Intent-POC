@@ -8,6 +8,10 @@ interface IntentPocBddSampleExpectation {
   selectionReason: string;
   orchestrationStrategy: NormalizedIntent["executionPlan"]["orchestrationStrategy"];
   captureScope: NormalizedIntent["captureScope"];
+  uiStateRequirements: Array<{
+    stateId: string;
+    requestedValue?: string;
+  }>;
   executionReviewNotes: string[];
   planningReviewNotes: string[];
   repoCandidates: Array<{
@@ -37,8 +41,9 @@ export interface IntentPocBddSampleContract {
 }
 
 const prompt = [
-  "Create a baseline screenshot library for the demo-catalog source.",
-  "The plan must turn the request into acceptance-ready work for the built-in catalog experience.",
+  "Create a baseline screenshot library for the surface library source.",
+  "The plan must turn the request into acceptance-ready work for the built-in surface library.",
+  "The captured evidence should reflect dark mode during verification.",
   "It should publish a reviewable evidence package for GitHub and documentation stakeholders.",
   "It needs to leave a visible business process gate for baseline review.",
   "Do this so that product and engineering leads can inspect the baseline without reading implementation details."
@@ -47,7 +52,8 @@ const prompt = [
 const desiredOutcome = "product and engineering leads can inspect the baseline without reading implementation details";
 
 const acceptanceCriteria = [
-  "turn the request into acceptance-ready work for the built-in catalog experience",
+  "turn the request into acceptance-ready work for the built-in surface library",
+  "reflect dark mode during verification",
   "publish a reviewable evidence package for GitHub and documentation stakeholders",
   "leave a visible business process gate for baseline review",
   desiredOutcome,
@@ -94,13 +100,16 @@ export const INTENT_POC_BDD_SAMPLE = {
     sourceId: "intent-poc-app",
     summary: "change behavior for intent-poc-app",
     desiredOutcome,
-    selectionReason: "Source intent-poc-app matched the prompt alias 'demo-catalog'.",
+    selectionReason: "Source intent-poc-app matched the prompt alias 'surface library'.",
     orchestrationStrategy: "single-source",
     captureScope: {
       mode: "subset",
       captureIds: ["library-index", "component-button-primary", "page-analytics-overview"]
     },
+    uiStateRequirements: [{ stateId: "theme-mode", requestedValue: "dark" }],
     executionReviewNotes: [
+      "Source intent-poc-app: The surface library supports a dark mode toggle that should be activated explicitly when requested.",
+      "Source intent-poc-app: The toggle updates the surface library query state before screenshots are captured.",
       "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
     ],
     planningReviewNotes: [],

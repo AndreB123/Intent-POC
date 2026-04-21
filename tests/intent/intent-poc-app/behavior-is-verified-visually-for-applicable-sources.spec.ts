@@ -13,7 +13,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-color-chip']");
       const target = page.locator("[data-testid='primitive-color-chip']");
       await expect(target, "The target '[data-testid='primitive-color-chip']' is visible for Color Chip.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-1-primitive-color-chip.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-1-primitive-color-chip.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -22,7 +22,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-typography']");
       const target = page.locator("[data-testid='primitive-typography']");
       await expect(target, "The target '[data-testid='primitive-typography']' is visible for Typography Scale.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-2-primitive-typography.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-2-primitive-typography.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -31,7 +31,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-pill-tag']");
       const target = page.locator("[data-testid='primitive-pill-tag']");
       await expect(target, "The target '[data-testid='primitive-pill-tag']' is visible for Pill Tag.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-3-primitive-pill-tag.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-3-primitive-pill-tag.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -40,7 +40,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-input-field']");
       const target = page.locator("[data-testid='primitive-input-field']");
       await expect(target, "The target '[data-testid='primitive-input-field']' is visible for Input Field.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-4-primitive-input-field.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-4-primitive-input-field.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -49,7 +49,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-button-set']");
       const target = page.locator("[data-testid='primitive-button-set']");
       await expect(target, "The target '[data-testid='primitive-button-set']' is visible for Button Set.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-5-primitive-button-set.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-5-primitive-button-set.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -58,7 +58,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-avatar-stack']");
       const target = page.locator("[data-testid='primitive-avatar-stack']");
       await expect(target, "The target '[data-testid='primitive-avatar-stack']' is visible for Avatar Stack.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-6-primitive-avatar-stack.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-6-primitive-avatar-stack.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -67,7 +67,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-status-indicator']");
       const target = page.locator("[data-testid='primitive-status-indicator']");
       await expect(target, "The target '[data-testid='primitive-status-indicator']' is visible for Status Indicator.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-7-primitive-status-indicator.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-7-primitive-status-indicator.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -76,7 +76,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-spacing-scale']");
       const target = page.locator("[data-testid='primitive-spacing-scale']");
       await expect(target, "The target '[data-testid='primitive-spacing-scale']' is visible for Spacing Scale.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-8-primitive-spacing-scale.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-8-primitive-spacing-scale.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -85,7 +85,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-icon-list']");
       const target = page.locator("[data-testid='primitive-icon-list']");
       await expect(target, "The target '[data-testid='primitive-icon-list']' is visible for Icon List.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-9-primitive-icon-list.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-9-primitive-icon-list.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -94,16 +94,16 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='primitive-kpi-block']");
       const target = page.locator("[data-testid='primitive-kpi-block']");
       await expect(target, "The target '[data-testid='primitive-kpi-block']' is visible for KPI Block.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-10-primitive-kpi-block.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-10-primitive-kpi-block.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
-    await test.step("Demo Primary Button", async () => {
+    await test.step("Primary Button", async () => {
       await page.goto(new URL("/library/component-button-primary", baseUrl).toString(), { waitUntil: "load" });
       await page.waitForSelector("[data-testid='component-button-primary']");
       const target = page.locator("[data-testid='component-button-primary']");
-      await expect(target, "The target '[data-testid='component-button-primary']' is visible for Demo Primary Button.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-11-component-button-primary.png");
+      await expect(target, "The target '[data-testid='component-button-primary']' is visible for Primary Button.").toBeVisible();
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-11-component-button-primary.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -112,7 +112,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-button-secondary']");
       const target = page.locator("[data-testid='component-button-secondary']");
       await expect(target, "The target '[data-testid='component-button-secondary']' is visible for Secondary Button.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-12-component-button-secondary.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-12-component-button-secondary.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -121,7 +121,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-button-danger']");
       const target = page.locator("[data-testid='component-button-danger']");
       await expect(target, "The target '[data-testid='component-button-danger']' is visible for Danger Button.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-13-component-button-danger.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-13-component-button-danger.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -130,7 +130,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-card-highlight']");
       const target = page.locator("[data-testid='component-card-highlight']");
       await expect(target, "The target '[data-testid='component-card-highlight']' is visible for Highlight Card.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-14-component-card-highlight.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-14-component-card-highlight.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -139,7 +139,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-card-compact']");
       const target = page.locator("[data-testid='component-card-compact']");
       await expect(target, "The target '[data-testid='component-card-compact']' is visible for Compact Card.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-15-component-card-compact.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-15-component-card-compact.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -148,7 +148,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-banner-info']");
       const target = page.locator("[data-testid='component-banner-info']");
       await expect(target, "The target '[data-testid='component-banner-info']' is visible for Info Banner.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-16-component-banner-info.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-16-component-banner-info.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -157,7 +157,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-banner-warning']");
       const target = page.locator("[data-testid='component-banner-warning']");
       await expect(target, "The target '[data-testid='component-banner-warning']' is visible for Warning Banner.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-17-component-banner-warning.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-17-component-banner-warning.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -166,7 +166,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-modal-shell']");
       const target = page.locator("[data-testid='component-modal-shell']");
       await expect(target, "The target '[data-testid='component-modal-shell']' is visible for Modal Shell.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-18-component-modal-shell.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-18-component-modal-shell.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -175,7 +175,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-table-row']");
       const target = page.locator("[data-testid='component-table-row']");
       await expect(target, "The target '[data-testid='component-table-row']' is visible for Table Row.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-19-component-table-row.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-19-component-table-row.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -184,7 +184,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-search-bar']");
       const target = page.locator("[data-testid='component-search-bar']");
       await expect(target, "The target '[data-testid='component-search-bar']' is visible for Search Bar.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-20-component-search-bar.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-20-component-search-bar.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -193,7 +193,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-stat-tile']");
       const target = page.locator("[data-testid='component-stat-tile']");
       await expect(target, "The target '[data-testid='component-stat-tile']' is visible for Stat Tile.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-21-component-stat-tile.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-21-component-stat-tile.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -202,7 +202,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-nav-tabs']");
       const target = page.locator("[data-testid='component-nav-tabs']");
       await expect(target, "The target '[data-testid='component-nav-tabs']' is visible for Nav Tabs.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-22-component-nav-tabs.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-22-component-nav-tabs.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -211,7 +211,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-toast-success']");
       const target = page.locator("[data-testid='component-toast-success']");
       await expect(target, "The target '[data-testid='component-toast-success']' is visible for Success Toast.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-23-component-toast-success.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-23-component-toast-success.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -220,7 +220,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-toast-error']");
       const target = page.locator("[data-testid='component-toast-error']");
       await expect(target, "The target '[data-testid='component-toast-error']' is visible for Error Toast.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-24-component-toast-error.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-24-component-toast-error.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -229,7 +229,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-form-section']");
       const target = page.locator("[data-testid='component-form-section']");
       await expect(target, "The target '[data-testid='component-form-section']' is visible for Form Section.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-25-component-form-section.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-25-component-form-section.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -238,7 +238,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='component-user-list-item']");
       const target = page.locator("[data-testid='component-user-list-item']");
       await expect(target, "The target '[data-testid='component-user-list-item']' is visible for User List Item.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-26-component-user-list-item.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-26-component-user-list-item.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -247,7 +247,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-dashboard-summary']");
       const target = page.locator("[data-testid='view-dashboard-summary']");
       await expect(target, "The target '[data-testid='view-dashboard-summary']' is visible for Dashboard Summary View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-27-view-dashboard-summary.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-27-view-dashboard-summary.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -256,7 +256,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-list-overview']");
       const target = page.locator("[data-testid='view-list-overview']");
       await expect(target, "The target '[data-testid='view-list-overview']' is visible for List Overview View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-28-view-list-overview.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-28-view-list-overview.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -265,7 +265,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-settings-panel']");
       const target = page.locator("[data-testid='view-settings-panel']");
       await expect(target, "The target '[data-testid='view-settings-panel']' is visible for Settings Panel View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-29-view-settings-panel.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-29-view-settings-panel.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -274,7 +274,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-empty-results']");
       const target = page.locator("[data-testid='view-empty-results']");
       await expect(target, "The target '[data-testid='view-empty-results']' is visible for Empty Results View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-30-view-empty-results.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-30-view-empty-results.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -283,7 +283,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-campaign-table']");
       const target = page.locator("[data-testid='view-campaign-table']");
       await expect(target, "The target '[data-testid='view-campaign-table']' is visible for Campaign Table View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-31-view-campaign-table.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-31-view-campaign-table.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -292,7 +292,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-notifications-center']");
       const target = page.locator("[data-testid='view-notifications-center']");
       await expect(target, "The target '[data-testid='view-notifications-center']' is visible for Notifications Center View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-32-view-notifications-center.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-32-view-notifications-center.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -301,7 +301,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-user-directory']");
       const target = page.locator("[data-testid='view-user-directory']");
       await expect(target, "The target '[data-testid='view-user-directory']' is visible for User Directory View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-33-view-user-directory.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-33-view-user-directory.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -310,7 +310,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-revenue-kpis']");
       const target = page.locator("[data-testid='view-revenue-kpis']");
       await expect(target, "The target '[data-testid='view-revenue-kpis']' is visible for Revenue KPIs View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-34-view-revenue-kpis.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-34-view-revenue-kpis.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -319,7 +319,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-onboarding-checklist']");
       const target = page.locator("[data-testid='view-onboarding-checklist']");
       await expect(target, "The target '[data-testid='view-onboarding-checklist']' is visible for Onboarding Checklist View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-35-view-onboarding-checklist.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-35-view-onboarding-checklist.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -328,7 +328,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-approval-queue']");
       const target = page.locator("[data-testid='view-approval-queue']");
       await expect(target, "The target '[data-testid='view-approval-queue']' is visible for Approval Queue View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-36-view-approval-queue.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-36-view-approval-queue.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -337,7 +337,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-audit-log']");
       const target = page.locator("[data-testid='view-audit-log']");
       await expect(target, "The target '[data-testid='view-audit-log']' is visible for Audit Log View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-37-view-audit-log.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-37-view-audit-log.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -346,16 +346,16 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='view-billing-overview']");
       const target = page.locator("[data-testid='view-billing-overview']");
       await expect(target, "The target '[data-testid='view-billing-overview']' is visible for Billing Overview View.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-38-view-billing-overview.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-38-view-billing-overview.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
-    await test.step("Demo Analytics Overview", async () => {
+    await test.step("Analytics Overview", async () => {
       await page.goto(new URL("/library/page-analytics-overview", baseUrl).toString(), { waitUntil: "load" });
       await page.waitForSelector("[data-testid='page-analytics-overview']");
       const target = page.locator("[data-testid='page-analytics-overview']");
-      await expect(target, "The target '[data-testid='page-analytics-overview']' is visible for Demo Analytics Overview.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-39-page-analytics-overview.png");
+      await expect(target, "The target '[data-testid='page-analytics-overview']' is visible for Analytics Overview.").toBeVisible();
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-39-page-analytics-overview.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -364,7 +364,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='page-account-list']");
       const target = page.locator("[data-testid='page-account-list']");
       await expect(target, "The target '[data-testid='page-account-list']' is visible for Account List Page.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-40-page-account-list.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-40-page-account-list.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -373,7 +373,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='page-campaign-editor']");
       const target = page.locator("[data-testid='page-campaign-editor']");
       await expect(target, "The target '[data-testid='page-campaign-editor']' is visible for Campaign Editor Page.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-41-page-campaign-editor.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-41-page-campaign-editor.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -382,7 +382,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='page-system-settings']");
       const target = page.locator("[data-testid='page-system-settings']");
       await expect(target, "The target '[data-testid='page-system-settings']' is visible for System Settings Page.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-42-page-system-settings.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-42-page-system-settings.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -391,7 +391,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='page-operations-center']");
       const target = page.locator("[data-testid='page-operations-center']");
       await expect(target, "The target '[data-testid='page-operations-center']' is visible for Operations Center Page.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-43-page-operations-center.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-43-page-operations-center.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -400,7 +400,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='page-user-management']");
       const target = page.locator("[data-testid='page-user-management']");
       await expect(target, "The target '[data-testid='page-user-management']' is visible for User Management Page.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-44-page-user-management.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-44-page-user-management.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -409,7 +409,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='page-incident-review']");
       const target = page.locator("[data-testid='page-incident-review']");
       await expect(target, "The target '[data-testid='page-incident-review']' is visible for Incident Review Page.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-45-page-incident-review.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-45-page-incident-review.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -418,14 +418,14 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await page.waitForSelector("[data-testid='page-revenue-forecast']");
       const target = page.locator("[data-testid='page-revenue-forecast']");
       await expect(target, "The target '[data-testid='page-revenue-forecast']' is visible for Revenue Forecast Page.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-46-page-revenue-forecast.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-46-page-revenue-forecast.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
-    await test.step("Demo Catalog Index", async () => {
+    await test.step("Surface Library Index", async () => {
       await page.goto(new URL("/library", baseUrl).toString(), { waitUntil: "networkidle" });
       await expect(page.locator("body"), "The page '/library' is ready for evidence review.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources", "shot-47-library-index.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-behavior-is-verified-visually-for-applicable-sources-spec", "shot-47-library-index.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });
     });

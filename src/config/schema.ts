@@ -55,7 +55,7 @@ const captureItemSchema = z.object({
   delayMs: z.number().int().nonnegative().default(0)
 });
 
-const captureCatalogSchema = z.enum(["demo-surface-catalog"]);
+const captureCatalogSchema = z.enum(["surface-library"]);
 
 const captureSchema = z
   .object({
@@ -71,7 +71,7 @@ const captureSchema = z
     if (!capture.catalog && capture.items.length === 0) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "At least one capture item or a built-in catalog is required.",
+        message: "At least one capture item or a built-in surface library capture set is required.",
         path: ["items"]
       });
     }

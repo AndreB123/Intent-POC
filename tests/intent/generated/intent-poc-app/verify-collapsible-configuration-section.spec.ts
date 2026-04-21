@@ -6,13 +6,13 @@ import { expect, test } from "playwright/test";
 const baseUrl = process.env.INTENT_POC_BASE_URL ?? "http://127.0.0.1:6006";
 const screenshotRoot = process.env.INTENT_POC_E2E_SCREENSHOT_ROOT ?? "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library";
 
-test.describe("Intent-driven flow for demo-catalog", () => {
+test.describe("Intent-driven flow for intent-poc-app", () => {
   test("Verify collapsable configuration section", async ({ page }) => {
     await test.step("Intent Studio Prompt Run", async () => {
       await page.goto(new URL("/", baseUrl).toString(), { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#prompt-input");
       await expect(page.locator("body"), "The Intent Studio prompt input is visible and ready for interaction.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/generated-demo-catalog-verify-collapsable-configuration-section-spec", "shot-1-verify-collapsable-configuration-section-intent-studio.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/generated-intent-poc-app-verify-collapsible-configuration-section-spec", "shot-1-verify-collapsable-configuration-section-intent-studio.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });
     });
@@ -20,7 +20,7 @@ test.describe("Intent-driven flow for demo-catalog", () => {
       await page.waitForSelector("#agent-stages-grid");
       const target = page.locator("#agent-stages-grid");
       await expect(target, "The optional configuration section is visible before interaction.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/generated-demo-catalog-verify-collapsable-configuration-section-spec", "shot-2-verify-collapsable-configuration-section-configuration-visible.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/generated-intent-poc-app-verify-collapsible-configuration-section-spec", "shot-2-verify-collapsable-configuration-section-configuration-visible.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });
     });
@@ -29,7 +29,7 @@ test.describe("Intent-driven flow for demo-catalog", () => {
       const target = page.locator("#toggle-stages-visibility");
       await expect(target, "The collapse toggle is available for the optional configuration section.").toBeVisible();
       await target.click();
-      const screenshotPath = path.join(screenshotRoot, "bdd/generated-demo-catalog-verify-collapsable-configuration-section-spec", "shot-3-verify-collapsable-configuration-section-collapse-toggle.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/generated-intent-poc-app-verify-collapsible-configuration-section-spec", "shot-3-verify-collapsable-configuration-section-collapse-toggle.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });
     });
@@ -37,7 +37,7 @@ test.describe("Intent-driven flow for demo-catalog", () => {
       await page.waitForSelector("#agent-stages-grid", { state: "hidden" });
       const target = page.locator("#agent-stages-grid");
       await expect(target, "A generated Playwright spec captures reviewable screenshots so QA can run this verification automatically.").toBeHidden();
-      const screenshotPath = path.join(screenshotRoot, "bdd/generated-demo-catalog-verify-collapsable-configuration-section-spec", "shot-4-verify-collapsable-configuration-section-collapsed-state.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/generated-intent-poc-app-verify-collapsible-configuration-section-spec", "shot-4-verify-collapsable-configuration-section-collapsed-state.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });
     });

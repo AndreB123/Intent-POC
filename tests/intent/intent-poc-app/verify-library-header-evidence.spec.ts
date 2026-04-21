@@ -13,6 +13,6 @@ test.describe('Demo Catalog Evidence', () => {
     expect(box!.x).toBeLessThan(200);
     expect(box!.y).toBeLessThan(100);
     
-    await expect(page).toHaveScreenshot('demo-catalog-header.png');
+    await expect(page).toHaveScreenshot('intent-poc-app-header.png');
   });
 });

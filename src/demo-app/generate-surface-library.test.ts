@@ -1,9 +1,9 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { getLegacyDemoArtifactPaths } from "./generate-demo-library";
+import { getLegacyLibraryArtifactPaths } from "./generate-surface-library";
 
-test("getLegacyDemoArtifactPaths includes obsolete top-level demo library roots", () => {
-  assert.deepEqual(getLegacyDemoArtifactPaths("/repo"), [
+test("getLegacyLibraryArtifactPaths includes obsolete top-level library roots", () => {
+  assert.deepEqual(getLegacyLibraryArtifactPaths("/repo"), [
     "/repo/artifacts/runs/demo-baseline-captures",
     "/repo/artifacts/runs/demo-baseline-diffs",
     "/repo/artifacts/runs/demo-compare-captures",
