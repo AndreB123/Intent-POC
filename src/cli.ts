@@ -74,7 +74,11 @@ program
 program
   .command("demo")
   .description("Start the built-in Intent Studio UI with the demo library and live run status.")
-  .option("-c, --config <path>", "Config file used by the studio when starting runs.", "./intent-poc.yaml")
+  .option(
+    "-c, --config <path>",
+    "Config file used by the studio when starting runs.",
+    "./intent-poc.local-no-linear.yaml"
+  )
   .option("--host <host>", "Host to bind the demo server.", "127.0.0.1")
   .option("-p, --port <port>", "Port to bind the demo server.", parsePort, 6010)
   .option("-v, --variant <variant>", "Initial demo variant: v1 or v2.", parseVariant, "v1")

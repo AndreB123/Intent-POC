@@ -39,6 +39,13 @@ export interface CreateRunPathsOptions {
   publishToLibrary?: boolean;
 }
 
+export interface ReviewedIntentDraftPaths {
+  controllerRoot: string;
+  reviewedIntentId: string;
+  draftsDir: string;
+  draftPath: string;
+}
+
 function resolveSourceCapturesDir(input: {
   loadedConfig: LoadedConfig;
   sourceId: string;
@@ -174,6 +181,20 @@ export function toFileUrlPath(relativePath?: string): string | undefined {
   }
 
   return `/files/${encodeURIComponent(relativePath)}`;
+}
+
+export function createReviewedIntentDraftPaths(
+  loadedConfig: LoadedConfig,
+  reviewedIntentId: string
+): ReviewedIntentDraftPaths {
+  const draftsDir = path.join(loadedConfig.config.artifacts.root, "business", "intent-drafts");
+
+  return {
+    controllerRoot: loadedConfig.configDir,
+    reviewedIntentId,
+    draftsDir,
+    draftPath: path.join(draftsDir, `${reviewedIntentId}.json`)
+  };
 }
 
 export async function retainRecentRuns(runRoot: string, keepCount: number): Promise<void> {

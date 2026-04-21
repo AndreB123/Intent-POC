@@ -6,24 +6,28 @@ import {
   ResolvedAgentStageConfig,
   resolveAgentStageConfig
 } from "./agent-stage-config";
-import { CodeSurfaceId, CodeSurfaceSelection, inferCodeSurface, isCodeSurfaceId } from "./code-surface";
+import { CodeSurfaceId, CodeSurfaceSelection, getCodeSurfaceImplementationHints, inferCodeSurface, isCodeSurfaceId } from "./code-surface";
 import {
   normalizePromptWithGemini,
   PromptNormalizationHints,
   PromptNormalizerSourceDescriptor
 } from "./gemini-prompt-normalizer";
 import { refineIntentPlanWithGemini, GeminiIntentPlanningRefinement } from "./gemini-intent-planner";
+import { REPO_MEMORY_CATALOG } from "./repo-memory-catalog";
 import {
   AcceptanceCriterion,
   AgentStageMeta,
   BDDScenario,
   IntentPlanningDepth,
+  IntentDecomposition,
   NormalizedIntent,
   NormalizationMeta,
   NormalizationSource,
+  PlanningScopingDetails,
   PlaywrightCheckpoint,
   PlaywrightSpecArtifact,
   ResolvedUiStateRequirement,
+  ScopingContextPack,
   TDDWorkItem
 } from "./intent-types";
 
@@ -60,6 +64,7 @@ interface NormalizationResolution {
   codeSurfaceId?: CodeSurfaceId;
   codeSurfaceAlternatives?: CodeSurfaceId[];
   captureIdsBySource: Record<string, string[] | undefined>;
+  scopingDetails?: PlanningScopingDetails;
   normalizationSource: NormalizationSource;
   normalizationWarnings: string[];
 }
@@ -81,6 +86,7 @@ interface IntentDraft {
   acceptanceCriteria: AcceptanceCriterion[];
   scenarios: BDDScenario[];
   workItems: NormalizedIntent["businessIntent"]["workItems"];
+  decomposition?: NormalizedIntent["businessIntent"]["decomposition"];
   destinations: NormalizedIntent["executionPlan"]["destinations"];
   tools: NormalizedIntent["executionPlan"]["tools"];
   repoCandidates: NormalizedIntent["planning"]["repoCandidates"];
@@ -114,6 +120,7 @@ interface PlaywrightSpecBuildResult {
 
 interface WorkItemBuildResult {
   workItems: NormalizedIntent["businessIntent"]["workItems"];
+  decomposition?: NormalizedIntent["businessIntent"]["decomposition"];
   warnings: string[];
 }
 
@@ -176,6 +183,102 @@ function matchesPromptValue(normalizedPrompt: string, promptTokens: Set<string>,
   }
 
   return normalizedPrompt.includes(normalizedValue);
+}
+
+function collectPromptPhraseMatches(
+  normalizedPrompt: string,
+  promptTokens: Set<string>,
+  phrases: string[]
+): string[] {
+  return dedupeValues(
+    phrases
+      .map((phrase) => phrase.trim())
+      .filter((phrase) => phrase.length > 0 && matchesPromptValue(normalizedPrompt, promptTokens, phrase))
+  );
+}
+
+function collectPromptTokenMatches(promptTokens: Set<string>, text: string): string[] {
+  return dedupeValues(
+    (text.toLowerCase().match(/[a-z0-9]+(?:[-_][a-z0-9]+)*/g) ?? []).filter(
+      (token) => token.length > 3 && promptTokens.has(token)
+    )
+  );
+}
+
+const REPO_MEMORY_NOISE_TOKENS = new Set([
+  "should",
+  "source",
+  "business",
+  "review",
+  "visible",
+  "without",
+  "details",
+  "current",
+  "prompt",
+  "plan",
+  "work",
+  "needs",
+  "leave",
+  "built",
+  "reading"
+]);
+
+function collectRepoMemoryTokenMatches(promptTokens: Set<string>, text: string): string[] {
+  return collectPromptTokenMatches(promptTokens, text).filter((token) => !REPO_MEMORY_NOISE_TOKENS.has(token));
+}
+
+function buildRepoMemoryHints(input: {
+  normalizedPrompt: string;
+  promptTokens: Set<string>;
+  sourcePlans: NormalizedIntent["executionPlan"]["sources"];
+  codeSurface: CodeSurfaceSelection;
+}) {
+  const selectedSourceIds = new Set(input.sourcePlans.map((sourcePlan) => sourcePlan.sourceId));
+
+  return REPO_MEMORY_CATALOG.map((entry) => {
+    const titleMatches = collectPromptPhraseMatches(input.normalizedPrompt, input.promptTokens, [
+      entry.title,
+      entry.id,
+      ...entry.tags
+    ]);
+    const surfaceMatches = entry.surfaceIds.includes(input.codeSurface.id);
+    const sourceMatches = entry.sourceIds.some((sourceId) => selectedSourceIds.has(sourceId));
+    const noteMatches = entry.notes.map((note) => ({
+      note,
+      matchedTerms: collectRepoMemoryTokenMatches(input.promptTokens, note)
+    }));
+    const bestNoteMatch = noteMatches.sort((left, right) => right.matchedTerms.length - left.matchedTerms.length)[0];
+    const matchedTerms = dedupeValues([
+      ...titleMatches,
+      ...((titleMatches.length > 0 || surfaceMatches) ? (bestNoteMatch?.matchedTerms ?? []).slice(0, 2) : [])
+    ]);
+
+    if (titleMatches.length === 0 && !(surfaceMatches && sourceMatches && (bestNoteMatch?.matchedTerms.length ?? 0) >= 2)) {
+      return null;
+    }
+
+    const score =
+      matchedTerms.length * 3 +
+      (surfaceMatches ? 2 : 0) +
+      (sourceMatches ? 1 : 0) +
+      (bestNoteMatch?.matchedTerms.length ?? 0);
+
+    return {
+      memoryId: entry.id,
+      title: entry.title,
+      sourcePath: entry.sourcePath,
+      note: bestNoteMatch?.note ?? entry.notes[0] ?? "",
+      reason:
+        matchedTerms.length > 0
+          ? `Matched repo memory terms: ${matchedTerms.join(", ")}.`
+          : `Selected for ${input.codeSurface.label}.`,
+      score
+    };
+  })
+    .filter((hint) => hint !== null)
+    .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+    .slice(0, 3)
+    .map(({ score: _score, ...hint }) => hint);
 }
 
 function pickMentionedSources(
@@ -296,23 +399,58 @@ function summarizeIntent(sourceIds: string[]): string {
   return `change behavior for ${scope}`;
 }
 
+function inferDesiredOutcomeFromPrompt(prompt: string): string | undefined {
+  const firstSentence = prompt
+    .split(/[.!?](?:\s|$)/)
+    .map((segment) => segment.trim())
+    .find((segment) => segment.length > 0);
+
+  if (!firstSentence) {
+    return undefined;
+  }
+
+  const normalized = firstSentence
+    .replace(/^(?:please\s+)?(?:can|could|would)\s+you\s+/i, "")
+    .replace(/^(?:help\s+me\s+)?(?:fix|update|change|add|make|ensure)\s+/i, "")
+    .replace(/^(?:i|we)\s+(?:need|want)\s+/i, "")
+    .replace(/^(?:make\s+sure|ensure)\s+/i, "")
+    .replace(/\b(?:right now|currently)\b.*$/i, "")
+    .replace(/\bbut\s+we\s+(?:do\s+not|don't|dont|want|need)\b.*$/i, "")
+    .replace(/^[,.;:\s]+|[,.;:\s]+$/g, "")
+    .trim();
+
+  if (normalized.length < 8) {
+    return undefined;
+  }
+
+  const sentence = /[.!?]$/.test(normalized) ? normalized : `${normalized}.`;
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+}
+
 function createPlanId(prefix: string, input: string, index: number): string {
   const segment = sanitizeFileSegment(input) || `${prefix}-${index + 1}`;
   return `${prefix}-${index + 1}-${segment}`;
 }
 
 function extractDesiredOutcome(prompt: string): string {
+  const normalizeOutcome = (value: string): string =>
+    value
+      .split(/[.!?](?:\s|$)/)[0]!
+      .trim()
+      .replace(/^[,.;:\s]+/, "")
+      .replace(/[.\s]+$/, "");
+
   const desiredOutcomeMatch = prompt.match(/\bso that\b(.+)/i);
   if (desiredOutcomeMatch) {
-    return desiredOutcomeMatch[1].trim().replace(/^[,.;:\s]+/, "").replace(/[.\s]+$/, "");
+    return normalizeOutcome(desiredOutcomeMatch[1]);
   }
 
-  const mustMatch = prompt.match(/\b(?:must|should|needs to|need to)\b(.+)/i);
+  const mustMatch = prompt.match(/\b(?:must|should|needs to|need to|i need|we need|i want|we want|make sure|ensure)\b(.+)/i);
   if (mustMatch) {
-    return mustMatch[1].trim().replace(/^[,.;:\s]+/, "").replace(/[.\s]+$/, "");
+    return normalizeOutcome(mustMatch[1]);
   }
 
-  return "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.";
+  return inferDesiredOutcomeFromPrompt(prompt) ?? "The requested behavior works as described in the selected repo scope.";
 }
 
 function extractPromptCriteria(prompt: string): string[] {
@@ -1734,6 +1872,129 @@ function buildWorkItemVerification(scenario: BDDScenario): string {
   return "A generated Playwright spec captures reviewable screenshots so QA can run this verification automatically.";
 }
 
+function buildEmptyIntentDecomposition(): IntentDecomposition {
+  return {
+    objectives: [],
+    workstreams: [],
+    tasks: [],
+    subtasks: [],
+    verificationTasks: []
+  };
+}
+
+function buildIntentDecomposition(input: {
+  statement: string;
+  desiredOutcome: string;
+  sourceIds: string[];
+  workItems: TDDWorkItem[];
+  scenarios: NormalizedIntent["businessIntent"]["scenarios"];
+}): IntentDecomposition {
+  if (input.workItems.length === 0) {
+    return buildEmptyIntentDecomposition();
+  }
+
+  const objectiveId = createPlanId("objective", input.statement, 0);
+  const workstreams = input.sourceIds.map((sourceId, sourceIndex) => {
+    const sourceWorkItems = input.workItems.filter((workItem) => workItem.sourceIds.includes(sourceId));
+    const workstreamId = createPlanId("workstream", sourceId, sourceIndex);
+    const tasksByScenario = new Map<string, TDDWorkItem[]>();
+
+    for (const workItem of sourceWorkItems) {
+      const taskKey = workItem.scenarioIds[0] ?? `source-${sourceId}`;
+      const existingTaskWorkItems = tasksByScenario.get(taskKey);
+      if (existingTaskWorkItems) {
+        existingTaskWorkItems.push(workItem);
+      } else {
+        tasksByScenario.set(taskKey, [workItem]);
+      }
+    }
+
+    const tasks = Array.from(tasksByScenario.entries()).map(([taskKey, taskWorkItems], taskIndex) => {
+      const scenario = input.scenarios.find((candidate) => candidate.id === taskKey);
+      const taskId = createPlanId("task", `${sourceId}-${taskKey}`, taskIndex);
+      const subtasks: IntentDecomposition["subtasks"] = taskWorkItems.map((workItem, subtaskIndex) => {
+        const subtaskId = createPlanId("subtask", workItem.id, subtaskIndex);
+        workItem.execution.objectiveId = objectiveId;
+        workItem.execution.workstreamId = workstreamId;
+        workItem.execution.taskId = taskId;
+        workItem.execution.subtaskId = subtaskId;
+
+        return {
+          id: subtaskId,
+          title: workItem.title,
+          summary: workItem.description,
+          scenarioIds: workItem.scenarioIds,
+          sourceIds: workItem.sourceIds,
+          workItemIds: [workItem.id],
+          verificationTaskIds: [createPlanId("verify", workItem.id, subtaskIndex)],
+          dependsOnSubtaskIds: []
+        };
+      });
+
+      for (let subtaskIndex = 0; subtaskIndex < taskWorkItems.length; subtaskIndex += 1) {
+        const workItem = taskWorkItems[subtaskIndex];
+        const subtask = subtasks[subtaskIndex];
+        if (!workItem || !subtask) {
+          continue;
+        }
+
+        subtask.dependsOnSubtaskIds = taskWorkItems
+          .filter((candidate) => workItem.execution.dependsOnWorkItemIds.includes(candidate.id))
+          .map((candidate) => candidate.execution.subtaskId)
+          .filter((dependencyId): dependencyId is string => Boolean(dependencyId));
+      }
+
+      return {
+        task: {
+          id: taskId,
+          title: scenario?.title ?? `Deliver ${sourceId}`,
+          summary: scenario?.goal ?? `Execute the planned change set for ${sourceId}.`,
+          sourceIds: [sourceId],
+          scenarioIds: taskWorkItems.flatMap((workItem) => workItem.scenarioIds),
+          workItemIds: taskWorkItems.map((workItem) => workItem.id),
+          subtaskIds: subtasks.map((subtask) => subtask.id),
+          verificationTaskIds: subtasks.flatMap((subtask) => subtask.verificationTaskIds)
+        },
+        subtasks,
+        verificationTasks: subtasks.map((subtask) => ({
+          id: subtask.verificationTaskIds[0] ?? createPlanId("verify", subtask.id, 0),
+          title: `Verify ${subtask.title}`,
+          summary: `Verify the user-visible outcome for ${subtask.title}.`,
+          sourceIds: subtask.sourceIds,
+          workItemIds: subtask.workItemIds
+        }))
+      };
+    });
+
+    return {
+      workstream: {
+        id: workstreamId,
+        title: `Source workstream: ${sourceId}`,
+        summary: `Deliver the reviewed intent in ${sourceId}.`,
+        sourceIds: [sourceId],
+        taskIds: tasks.map((entry) => entry.task.id)
+      },
+      tasks
+    };
+  });
+
+  return {
+    objectives: [
+      {
+        id: objectiveId,
+        title: input.statement,
+        summary: input.statement,
+        desiredOutcome: input.desiredOutcome,
+        workstreamIds: workstreams.map((entry) => entry.workstream.id)
+      }
+    ],
+    workstreams: workstreams.map((entry) => entry.workstream),
+    tasks: workstreams.flatMap((entry) => entry.tasks.map((taskEntry) => taskEntry.task)),
+    subtasks: workstreams.flatMap((entry) => entry.tasks.flatMap((taskEntry) => taskEntry.subtasks)),
+    verificationTasks: workstreams.flatMap((entry) => entry.tasks.flatMap((taskEntry) => taskEntry.verificationTasks))
+  };
+}
+
 function buildWorkItems(input: {
   codeSurface: CodeSurfaceSelection;
   rawPrompt: string;
@@ -1754,8 +2015,7 @@ function buildWorkItems(input: {
   });
 
   if (orchestratorVerificationMode === "mocked-state-playwright") {
-    return {
-      workItems: input.sourceIds.map((sourceId, index) => {
+    const workItems: TDDWorkItem[] = input.sourceIds.map((sourceId, index) => {
         const scenarioIds = input.scenarios
           .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
           .map((scenario) => scenario.id);
@@ -1800,14 +2060,23 @@ function buildWorkItems(input: {
             specs: playwrightSpecs.specs
           }
         };
+      });
+
+    return {
+      workItems,
+      decomposition: buildIntentDecomposition({
+        statement: input.rawPrompt,
+        desiredOutcome: input.desiredOutcome,
+        sourceIds: input.sourceIds,
+        workItems,
+        scenarios: input.scenarios
       }),
       warnings: dedupeValues(warnings)
     };
   }
 
   if (orchestratorVerificationMode === "targeted-code-validation") {
-    return {
-      workItems: input.sourceIds.map((sourceId, index) => {
+    const workItems: TDDWorkItem[] = input.sourceIds.map((sourceId, index) => {
         const scenarioIds = input.scenarios
           .filter((scenario) => scenario.applicableSourceIds.includes(sourceId))
           .map((scenario) => scenario.id);
@@ -1831,6 +2100,16 @@ function buildWorkItems(input: {
             specs: []
           }
         };
+      });
+
+    return {
+      workItems,
+      decomposition: buildIntentDecomposition({
+        statement: input.rawPrompt,
+        desiredOutcome: input.desiredOutcome,
+        sourceIds: input.sourceIds,
+        workItems,
+        scenarios: input.scenarios
       }),
       warnings: []
     };
@@ -1950,8 +2229,17 @@ function buildWorkItems(input: {
     ];
   });
 
+  const workItems = [...scenarioItems, ...fallbackSourceItems];
+
   return {
-    workItems: [...scenarioItems, ...fallbackSourceItems],
+    workItems,
+    decomposition: buildIntentDecomposition({
+      statement: input.rawPrompt,
+      desiredOutcome: input.desiredOutcome,
+      sourceIds: input.sourceIds,
+      workItems,
+      scenarios: input.scenarios
+    }),
     warnings: dedupeValues(warnings)
   };
 }
@@ -2420,6 +2708,36 @@ function sanitizeHintWarnings(warnings: string[] | undefined): string[] {
   );
 }
 
+function sanitizeScopingDetails(scopingDetails: PlanningScopingDetails | undefined): PlanningScopingDetails | undefined {
+  if (!scopingDetails) {
+    return undefined;
+  }
+
+  const sectionNames: Array<keyof PlanningScopingDetails> = [
+    "repoContext",
+    "sourceScope",
+    "adaptiveBoundaries",
+    "minimumSuccess",
+    "baseline",
+    "verificationObligations"
+  ];
+  const sanitizedSections: Partial<PlanningScopingDetails> = {};
+
+  for (const sectionName of sectionNames) {
+    const sanitizedEntries = dedupeValues(
+      (scopingDetails[sectionName] ?? [])
+        .map((entry) => sanitizeText(entry))
+        .filter((entry): entry is string => Boolean(entry))
+    );
+
+    if (sanitizedEntries.length > 0) {
+      sanitizedSections[sectionName] = sanitizedEntries;
+    }
+  }
+
+  return Object.keys(sanitizedSections).length > 0 ? sanitizedSections : undefined;
+}
+
 function buildStageMeta(
   stage: ResolvedAgentStageConfig,
   status: AgentStageMeta["status"],
@@ -2664,6 +2982,7 @@ function buildAgentResolution(
     codeSurfaceId: hints.codeSurfaceId,
     codeSurfaceAlternatives: sanitizeCodeSurfaceIds(hints.codeSurfaceAlternatives),
     captureIdsBySource,
+    scopingDetails: sanitizeScopingDetails(hints.scopingDetails),
     normalizationSource: "llm",
     normalizationWarnings
   };
@@ -2715,6 +3034,225 @@ function pickCaptureScopeForSource(
   };
 }
 
+function buildSourcePlans(input: {
+  trimmedPrompt: string;
+  desiredOutcome: string;
+  acceptanceCriteriaDescriptions: string[];
+  options: NormalizeIntentOptions;
+  resolution: NormalizationResolution;
+}): NormalizedIntent["executionPlan"]["sources"] {
+  return input.resolution.sourceIds.map((sourceId) => {
+    const captureSelection = pickCaptureScopeForSource(input.trimmedPrompt, sourceId, input.options, input.resolution);
+    const uiStateRequirements = resolveUiStateRequirements({
+      source: input.options.availableSources[sourceId],
+      promptText: input.trimmedPrompt,
+      desiredOutcome: input.desiredOutcome,
+      acceptanceCriteria: input.acceptanceCriteriaDescriptions
+    });
+
+    return {
+      sourceId,
+      selectionReason: describeSelectionReason(
+        input.resolution.selectionReason,
+        sourceId,
+        input.resolution.promptMatchValues[sourceId]
+      ),
+      captureScope: captureSelection.captureScope,
+      warnings: [
+        ...captureSelection.warnings,
+        ...(uiStateRequirements.length > 0
+          ? [
+              `Requested UI states: ${uiStateRequirements
+                .map((requirement) =>
+                  requirement.requestedValue ? `${requirement.stateId}=${requirement.requestedValue}` : requirement.stateId
+                )
+                .join(", ")}.`
+            ]
+          : [])
+      ],
+      uiStateRequirements: uiStateRequirements.length > 0 ? uiStateRequirements : undefined
+    };
+  });
+}
+
+function buildScopingContextPack(input: {
+  trimmedPrompt: string;
+  options: NormalizeIntentOptions;
+  resolution: NormalizationResolution;
+  codeSurface: CodeSurfaceSelection;
+  sourcePlans: NormalizedIntent["executionPlan"]["sources"];
+}): ScopingContextPack {
+  const normalizedPrompt = input.trimmedPrompt.toLowerCase();
+  const promptTokens = tokenizePrompt(input.trimmedPrompt);
+  const sourceMatches = input.sourcePlans.map((sourcePlan) => {
+    const source = input.options.availableSources[sourcePlan.sourceId];
+    const matchedTerms = dedupeValues([
+      ...collectPromptPhraseMatches(normalizedPrompt, promptTokens, [sourcePlan.sourceId, ...source.aliases]),
+      ...(input.resolution.promptMatchValues[sourcePlan.sourceId]
+        ? [input.resolution.promptMatchValues[sourcePlan.sourceId]!]
+        : [])
+    ]);
+
+    return {
+      sourceId: sourcePlan.sourceId,
+      matchedTerms,
+      reason: sourcePlan.selectionReason
+    };
+  });
+
+  const primaryImplementationHints = getCodeSurfaceImplementationHints(input.codeSurface.id);
+  const primarySurfaceMatchedTerms = collectPromptPhraseMatches(normalizedPrompt, promptTokens, [
+    input.codeSurface.label,
+    input.codeSurface.id,
+    ...primaryImplementationHints.keywords
+  ]);
+  const primarySurface = {
+    sourceId: input.codeSurface.sourceId,
+    id: input.codeSurface.id,
+    label: input.codeSurface.label,
+    confidence: input.codeSurface.confidence,
+    rationale: input.codeSurface.rationale,
+    matchedTerms: primarySurfaceMatchedTerms,
+    primaryPaths: primaryImplementationHints.primaryPathPrefixes.slice(0, 2),
+    adjacentPaths: primaryImplementationHints.adjacentPathPrefixes.slice(0, 2)
+  };
+
+  const alternativeSurfaces = input.codeSurface.alternatives.map((alternative) => {
+    const implementationHints = getCodeSurfaceImplementationHints(alternative.id);
+    return {
+      sourceId: input.codeSurface.sourceId,
+      id: alternative.id,
+      label: alternative.label,
+      confidence: "low" as const,
+      rationale: alternative.reason,
+      matchedTerms: collectPromptPhraseMatches(normalizedPrompt, promptTokens, [
+        alternative.label,
+        alternative.id,
+        ...implementationHints.keywords
+      ]),
+      primaryPaths: implementationHints.primaryPathPrefixes.slice(0, 2),
+      adjacentPaths: implementationHints.adjacentPathPrefixes.slice(0, 2)
+    };
+  });
+
+  const pathHints = dedupeValues([
+    ...primarySurface.primaryPaths,
+    ...(input.codeSurface.confidence === "high" ? [] : primarySurface.adjacentPaths)
+  ]).map((path) => ({
+    sourceId: input.codeSurface.sourceId,
+    path,
+    reason: primarySurface.primaryPaths.includes(path)
+      ? `Primary implementation path for ${input.codeSurface.label}.`
+      : `Adjacent path to confirm ownership for ${input.codeSurface.label}.`
+  }));
+
+  const uiStateHints = input.sourcePlans.flatMap((sourcePlan) =>
+    (sourcePlan.uiStateRequirements ?? []).map((requirement) => ({
+      sourceId: sourcePlan.sourceId,
+      stateId: requirement.stateId,
+      label: requirement.label,
+      reason: requirement.reason,
+      verificationStrategies: requirement.verificationStrategies,
+      notes: requirement.notes
+    }))
+  );
+
+  const captureHints = input.sourcePlans.flatMap((sourcePlan) =>
+    sourcePlan.captureScope.mode === "subset" && sourcePlan.captureScope.captureIds.length > 0
+      ? [
+          {
+            sourceId: sourcePlan.sourceId,
+            captureIds: sourcePlan.captureScope.captureIds,
+            reason: `Prompt already narrows verification to ${sourcePlan.captureScope.captureIds.join(", ")}.`
+          }
+        ]
+      : []
+  );
+
+  const verificationHints = input.sourcePlans.flatMap((sourcePlan) => {
+    const source = input.options.availableSources[sourcePlan.sourceId];
+    const relevantUiStates = uiStateHints.filter((hint) => hint.sourceId === sourcePlan.sourceId);
+
+    return source.planning.verificationNotes.flatMap((note) => {
+      const matchedTerms = dedupeValues([
+        ...collectPromptTokenMatches(promptTokens, note),
+        ...relevantUiStates.flatMap((hint) => collectPromptPhraseMatches(normalizedPrompt, promptTokens, [hint.stateId, hint.label ?? ""])),
+        ...primarySurfaceMatchedTerms
+      ]);
+
+      if (matchedTerms.length === 0 && relevantUiStates.length === 0 && captureHints.every((hint) => hint.sourceId !== sourcePlan.sourceId)) {
+        return [];
+      }
+
+      return [
+        {
+          sourceId: sourcePlan.sourceId,
+          note,
+          reason:
+            relevantUiStates.length > 0
+              ? `Supports verification for requested UI state context in ${sourcePlan.sourceId}.`
+              : `Matched prompt terms: ${matchedTerms.join(", ")}.`
+        }
+      ];
+    });
+  });
+
+  const repoNoteHints = input.sourcePlans.flatMap((sourcePlan) => {
+    const source = input.options.availableSources[sourcePlan.sourceId];
+    return source.planning.notes.flatMap((note) => {
+      const matchedTerms = dedupeValues([
+        ...collectPromptTokenMatches(promptTokens, note),
+        ...primarySurfaceMatchedTerms
+      ]);
+
+      if (matchedTerms.length === 0) {
+        return [];
+      }
+
+      return [
+        {
+          sourceId: sourcePlan.sourceId,
+          note,
+          reason: `Matched prompt terms: ${matchedTerms.join(", ")}.`
+        }
+      ];
+    });
+  });
+
+  const repoMemoryHints = buildRepoMemoryHints({
+    normalizedPrompt,
+    promptTokens,
+    sourcePlans: input.sourcePlans,
+    codeSurface: input.codeSurface
+  });
+
+  const unresolvedQuestions = dedupeValues([
+    ...(input.codeSurface.confidence !== "high" ? [input.codeSurface.rationale] : []),
+    ...(primarySurface.primaryPaths.length === 0 && input.codeSurface.confidence === "low"
+      ? ["No concrete owning file was identified from the prompt yet."]
+      : [])
+  ]);
+
+  return {
+    matchedPromptTerms: dedupeValues([
+      ...sourceMatches.flatMap((match) => match.matchedTerms),
+      ...primarySurfaceMatchedTerms,
+      ...alternativeSurfaces.flatMap((surface) => surface.matchedTerms),
+      ...uiStateHints.flatMap((hint) => collectPromptPhraseMatches(normalizedPrompt, promptTokens, [hint.stateId, hint.label ?? ""]))
+    ]),
+    sourceMatches,
+    primarySurface,
+    alternativeSurfaces,
+    pathHints,
+    uiStateHints,
+    verificationHints,
+    repoNoteHints,
+    repoMemoryHints,
+    captureHints,
+    unresolvedQuestions
+  };
+}
+
 function buildIntentDraft(
   trimmedPrompt: string,
   options: NormalizeIntentOptions,
@@ -2742,41 +3280,18 @@ function buildIntentDraft(
           acceptanceCriteria,
           codeSurface
         });
-  const sourcePlans = resolution.sourceIds.map((sourceId) => {
-    const captureSelection = pickCaptureScopeForSource(trimmedPrompt, sourceId, options, resolution);
-    const uiStateRequirements = resolveUiStateRequirements({
-      source: options.availableSources[sourceId],
-      promptText: trimmedPrompt,
-      desiredOutcome,
-      acceptanceCriteria: acceptanceCriteria.map((criterion) => criterion.description)
-    });
-
-    return {
-      sourceId,
-      selectionReason: describeSelectionReason(resolution.selectionReason, sourceId, resolution.promptMatchValues[sourceId]),
-      captureScope: captureSelection.captureScope,
-      warnings: [
-        ...captureSelection.warnings,
-        ...(uiStateRequirements.length > 0
-          ? [
-              `Requested UI states: ${uiStateRequirements
-                .map((requirement) =>
-                  requirement.requestedValue
-                    ? `${requirement.stateId}=${requirement.requestedValue}`
-                    : requirement.stateId
-                )
-                .join(", ")}.`
-            ]
-          : [])
-      ],
-      uiStateRequirements: uiStateRequirements.length > 0 ? uiStateRequirements : undefined
-    };
+  const sourcePlans = buildSourcePlans({
+    trimmedPrompt,
+    desiredOutcome,
+    acceptanceCriteriaDescriptions: acceptanceCriteria.map((criterion) => criterion.description),
+    options,
+    resolution
   });
   const primaryCaptureScope =
     sourcePlans[0]?.captureScope ?? pickCaptureIds(trimmedPrompt, options.availableSources[primarySourceId].capture.items);
   const workItemPlan =
     planningDepth === "scoping"
-      ? { workItems: [], warnings: [] }
+      ? { workItems: [], decomposition: buildEmptyIntentDecomposition(), warnings: [] }
       : buildWorkItems({
           codeSurface,
           rawPrompt: trimmedPrompt,
@@ -2851,6 +3366,7 @@ function buildIntentDraft(
     acceptanceCriteria,
     scenarios,
     workItems,
+    decomposition: workItemPlan.decomposition,
     destinations,
     tools,
     repoCandidates,
@@ -2878,6 +3394,13 @@ function buildNormalizedIntent(
     hintedAlternativeIds: resolution.codeSurfaceAlternatives
   });
   const draft = buildIntentDraft(trimmedPrompt, options, resolution, codeSurface, input.planningRefinement);
+  const scopingContext = buildScopingContextPack({
+    trimmedPrompt,
+    options,
+    resolution,
+    codeSurface,
+    sourcePlans: draft.sourcePlans
+  });
   const intentId = `${new Date().toISOString().replace(/[.:]/g, "-")}-${sanitizeFileSegment(draft.summary)}`;
   const requestedPlanningDepth = options.planningDepth ?? "full";
   const normalizationWarnings = dedupeValues([
@@ -2899,10 +3422,13 @@ function buildNormalizedIntent(
       desiredOutcome: draft.desiredOutcome,
       acceptanceCriteria: draft.acceptanceCriteria,
       scenarios: draft.scenarios,
-      workItems: draft.workItems
+      workItems: draft.workItems,
+      decomposition: draft.decomposition
     },
     planning: {
       repoCandidates: draft.repoCandidates,
+      scopingContext,
+      scopingDetails: resolution.scopingDetails,
       plannerSections: buildPlannerSections(resolution.sourceIds),
       reviewNotes: draft.planningReviewNotes,
       linearPlan: options.resumeIssue
@@ -3025,6 +3551,26 @@ export async function normalizeIntentWithAgent(
   const promptStageSources = requestedSourceIds
     ? Object.fromEntries(requestedSourceIds.map((sourceId) => [sourceId, options.availableSources[sourceId]]))
     : options.availableSources;
+  const rulesCodeSurface = inferCodeSurface({
+    prompt: trimmedPrompt,
+    primarySourceId: rulesResolution.sourceIds[0] ?? options.defaultSourceId,
+    sourceIds: rulesResolution.sourceIds,
+    hintedCodeSurfaceId: rulesResolution.codeSurfaceId,
+    hintedAlternativeIds: rulesResolution.codeSurfaceAlternatives
+  });
+  const promptStageScopingContext = buildScopingContextPack({
+    trimmedPrompt,
+    options,
+    resolution: rulesResolution,
+    codeSurface: rulesCodeSurface,
+    sourcePlans: buildSourcePlans({
+      trimmedPrompt,
+      desiredOutcome: rulesResolution.desiredOutcome,
+      acceptanceCriteriaDescriptions: [],
+      options,
+      resolution: rulesResolution
+    })
+  });
 
   let resolution = rulesResolution;
   const stageMetas: AgentStageMeta[] = [];
@@ -3047,6 +3593,7 @@ export async function normalizeIntentWithAgent(
         defaultSourceId: options.defaultSourceId,
         availableSources: promptStageSources,
         requestedSourceIds,
+        scopingContext: promptStageScopingContext,
         stage: promptStage
       });
 

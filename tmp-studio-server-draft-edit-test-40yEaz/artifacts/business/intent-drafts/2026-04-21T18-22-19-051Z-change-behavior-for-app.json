@@ -1,0 +1,520 @@
+{
+  "reviewedIntentId": "2026-04-21T18-22-19-051Z-change-behavior-for-app",
+  "status": "draft",
+  "createdAt": "2026-04-21T18:22:19.051Z",
+  "updatedAt": "2026-04-21T18:22:19.065Z",
+  "prompt": "Create a review-first baseline plan for screenshots.",
+  "requestedSourceIds": [
+    "screenshots"
+  ],
+  "normalizedIntent": {
+    "intentId": "2026-04-21T18-22-19-051Z-change-behavior-for-app",
+    "receivedAt": "2026-04-21T18:22:19.064Z",
+    "rawPrompt": "Create a review-first baseline plan for screenshots.",
+    "summary": "change behavior for screenshots",
+    "intentType": "change-behavior",
+    "codeSurface": {
+      "sourceId": "screenshots",
+      "id": "capture-and-evidence",
+      "label": "Capture And Evidence",
+      "confidence": "high",
+      "rationale": "The prompt is centered on screenshots, evidence, or comparison outputs within screenshots.",
+      "alternatives": [
+        {
+          "id": "surface-library",
+          "label": "Surface Library",
+          "reason": "Evidence requests can still originate from a surface-library change."
+        }
+      ]
+    },
+    "businessIntent": {
+      "statement": "Create a review-first baseline plan for screenshots.",
+      "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
+      "acceptanceCriteria": [
+        {
+          "id": "ac-1-intent-is-translated-into-executable-work-for-screenshots",
+          "description": "Intent is translated into executable work for screenshots.",
+          "origin": "inferred"
+        },
+        {
+          "id": "ac-2-evidence-is-captured-and-packaged-for-review",
+          "description": "Evidence is captured and packaged for review.",
+          "origin": "inferred"
+        },
+        {
+          "id": "ac-3-results-are-packaged-so-they-can-be-distributed-consistently-with-the-desired-ou",
+          "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..",
+          "origin": "inferred"
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "scenario-1-intent-is-translated-into-acceptance-ready-work",
+          "title": "Intent is translated into acceptance-ready work",
+          "goal": "Turn the raw business statement into reviewable BDD structure.",
+          "given": [
+            "A business intent has been captured: Create a review-first baseline plan for screenshots.",
+            "The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders."
+          ],
+          "when": [
+            "The planner decomposes the intent into acceptance criteria and scenarios.",
+            "Applicable sources and destinations are identified from the prompt and configuration."
+          ],
+          "then": [
+            "Intent is translated into executable work for screenshots.",
+            "Evidence is captured and packaged for review."
+          ],
+          "applicableSourceIds": [
+            "screenshots"
+          ]
+        },
+        {
+          "id": "scenario-2-behavior-is-verified-visually-for-applicable-sources",
+          "title": "Behavior is verified visually for applicable sources",
+          "goal": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+          "given": [
+            "Source screenshots is available for execution."
+          ],
+          "when": [
+            "TDD planning prepares Playwright screenshot verification for the applicable sources.",
+            "The runner maps the requested behavior into QA-runnable visual checkpoints."
+          ],
+          "then": [
+            "QA can run a Playwright screenshot flow to verify behavior for screenshots.",
+            "Each applicable source has executable visual verification coverage with reviewable screenshots."
+          ],
+          "applicableSourceIds": [
+            "screenshots"
+          ]
+        },
+        {
+          "id": "scenario-3-results-are-distributed-consistently",
+          "title": "Results are distributed consistently",
+          "goal": "Make the outputs visible in the places that matter to stakeholders.",
+          "given": [
+            "Execution produces evidence, summaries, and progress state.",
+            "Distribution destinations are known before execution begins."
+          ],
+          "when": [
+            "The run reaches the distribution stage.",
+            "Publishing destinations receive the resulting evidence and summaries."
+          ],
+          "then": [
+            "Stakeholders can inspect the outcome through a consistent package tied to the intent.",
+            "Distribution remains decoupled from any single source-specific workflow."
+          ],
+          "applicableSourceIds": [
+            "screenshots"
+          ]
+        }
+      ],
+      "workItems": [
+        {
+          "id": "work-1-behavior-is-verified-visually-for-applicable-sources-screenshots",
+          "type": "playwright-spec",
+          "verificationMode": "tracked-playwright",
+          "title": "Behavior is verified visually for applicable sources",
+          "description": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+          "scenarioIds": [
+            "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+          ],
+          "sourceIds": [
+            "screenshots"
+          ],
+          "userVisibleOutcome": "QA can run a Playwright screenshot flow to verify behavior for screenshots.",
+          "verification": "QA can run a Playwright screenshot flow to verify behavior for screenshots.",
+          "execution": {
+            "order": 1,
+            "dependsOnWorkItemIds": [],
+            "objectiveId": "objective-1-create-a-review-first-baseline-plan-for-screenshots",
+            "workstreamId": "workstream-1-screenshots",
+            "taskId": "task-1-screenshots-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+            "subtaskId": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-screenshots"
+          },
+          "playwright": {
+            "generatedBy": "rules",
+            "specs": [
+              {
+                "framework": "playwright",
+                "sourceId": "screenshots",
+                "relativeSpecPath": "screenshots/behavior-is-verified-visually-for-applicable-sources.spec.ts",
+                "suiteName": "Intent-driven flow for screenshots",
+                "testName": "Behavior is verified visually for applicable sources",
+                "scenarioIds": [
+                  "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+                ],
+                "checkpoints": [
+                  {
+                    "id": "checkpoint-1-hidden",
+                    "label": "hidden",
+                    "action": "goto",
+                    "assertion": "The page '/hidden' is ready for evidence review.",
+                    "screenshotId": "shot-1-hidden",
+                    "path": "/hidden",
+                    "captureId": "hidden",
+                    "waitUntil": "networkidle"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "decomposition": {
+        "objectives": [
+          {
+            "id": "objective-1-create-a-review-first-baseline-plan-for-screenshots",
+            "title": "Create a review-first baseline plan for screenshots.",
+            "summary": "Create a review-first baseline plan for screenshots.",
+            "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
+            "workstreamIds": [
+              "workstream-1-screenshots"
+            ]
+          }
+        ],
+        "workstreams": [
+          {
+            "id": "workstream-1-screenshots",
+            "title": "Source workstream: screenshots",
+            "summary": "Deliver the reviewed intent in screenshots.",
+            "sourceIds": [
+              "screenshots"
+            ],
+            "taskIds": [
+              "task-1-screenshots-scenario-2-behavior-is-verified-visually-for-applicable-sources"
+            ]
+          }
+        ],
+        "tasks": [
+          {
+            "id": "task-1-screenshots-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+            "title": "Behavior is verified visually for applicable sources",
+            "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+            "sourceIds": [
+              "screenshots"
+            ],
+            "scenarioIds": [
+              "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+            ],
+            "workItemIds": [
+              "work-1-behavior-is-verified-visually-for-applicable-sources-screenshots"
+            ],
+            "subtaskIds": [
+              "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-screenshots"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-screenshots"
+            ]
+          }
+        ],
+        "subtasks": [
+          {
+            "id": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-screenshots",
+            "title": "Behavior is verified visually for applicable sources",
+            "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+            "scenarioIds": [
+              "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+            ],
+            "sourceIds": [
+              "screenshots"
+            ],
+            "workItemIds": [
+              "work-1-behavior-is-verified-visually-for-applicable-sources-screenshots"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-screenshots"
+            ],
+            "dependsOnSubtaskIds": []
+          }
+        ],
+        "verificationTasks": [
+          {
+            "id": "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-screenshots",
+            "title": "Verify Behavior is verified visually for applicable sources",
+            "summary": "Verify the user-visible outcome for Behavior is verified visually for applicable sources.",
+            "sourceIds": [
+              "screenshots"
+            ],
+            "workItemIds": [
+              "work-1-behavior-is-verified-visually-for-applicable-sources-screenshots"
+            ]
+          }
+        ]
+      }
+    },
+    "planning": {
+      "repoCandidates": [
+        {
+          "repoId": "intent-poc",
+          "label": "Intent POC",
+          "role": "current repo",
+          "sourceIds": [
+            "app",
+            "screenshots"
+          ],
+          "selectionStatus": "selected",
+          "reason": "Source screenshots was selected in the requested source scope.",
+          "summary": "Current workspace scope.",
+          "sourceTypes": [
+            "local"
+          ],
+          "locations": [
+            "/home/andre/Desktop/GeniusMonkey/Intent POC/tmp-studio-server-draft-edit-test-40yEaz"
+          ],
+          "refs": [],
+          "notes": [
+            "Configured visual captures across linked sources: 2."
+          ],
+          "captureCount": 2
+        }
+      ],
+      "plannerSections": [
+        {
+          "id": "idd-plan",
+          "title": "IDD Plan",
+          "scope": "business",
+          "summary": "Planner-owned business plan with acceptance criteria, repo context, execution lanes, and delivery notes."
+        },
+        {
+          "id": "idd-source-lane-screenshots",
+          "title": "IDD Source Lane: screenshots",
+          "scope": "source",
+          "sourceId": "screenshots",
+          "summary": "Planner-owned lane for screenshots, intended for downstream implementation and verification handoff."
+        }
+      ],
+      "reviewNotes": [],
+      "linearPlan": {
+        "mode": "new"
+      }
+    },
+    "executionPlan": {
+      "primarySourceId": "screenshots",
+      "sources": [
+        {
+          "sourceId": "screenshots",
+          "selectionReason": "Source screenshots was selected in the requested source scope.",
+          "captureScope": {
+            "mode": "all",
+            "captureIds": []
+          },
+          "warnings": []
+        }
+      ],
+      "destinations": [
+        {
+          "id": "controller-artifacts",
+          "type": "controller",
+          "label": "Controller artifacts",
+          "status": "active",
+          "reason": "Local evidence bundles are always written by the controller.",
+          "details": [
+            "Stores plan, manifests, logs, captures, and summaries on disk."
+          ]
+        },
+        {
+          "id": "linear-parent-issue",
+          "type": "linear",
+          "label": "Linear parent issue",
+          "status": "planned",
+          "reason": "Linear is the preferred destination for the BDD/TDD plan, but it is currently disabled in config.",
+          "details": [
+            "Carries the business intent, acceptance criteria, scenarios, work items, and execution updates.",
+            "Enable config.linear.enabled to publish automatically."
+          ]
+        },
+        {
+          "id": "source-workspace",
+          "type": "source-workspace",
+          "label": "Source workspace publication",
+          "status": "inactive",
+          "reason": "Workspace publishing is disabled until artifacts.storageMode is set to 'both'.",
+          "details": [
+            "Useful when evidence should live beside the source repository."
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "id": "linear-scoping",
+          "type": "linear-scoping",
+          "label": "Linear-first scoping",
+          "enabled": true,
+          "reason": "The runner creates resumable Linear business and source lanes before the detailed planner pass expands BDD and TDD output.",
+          "details": [
+            "Detailed planner output is written back onto the same parent and source-lane issues after scoping completes."
+          ]
+        },
+        {
+          "id": "bdd-planning",
+          "type": "intent-planning",
+          "label": "BDD planning",
+          "enabled": true,
+          "reason": "The system converts the raw prompt into reviewable acceptance criteria and scenarios after Linear scoping completes.",
+          "details": [
+            "Deterministic by default, with optional Gemini refinement when configured."
+          ]
+        },
+        {
+          "id": "playwright-tdd",
+          "type": "playwright-tdd",
+          "label": "Playwright TDD generation",
+          "enabled": true,
+          "reason": "Applicable sources now produce Playwright-first executable test plans and checkpoint screenshots.",
+          "details": [
+            "Generated specs are intended for checked-in repo storage with overwrite semantics."
+          ]
+        },
+        {
+          "id": "screenshot-evidence",
+          "type": "screenshot",
+          "label": "Visual verification",
+          "enabled": true,
+          "reason": "Applicable sources currently expose visual checkpoints and capture definitions.",
+          "details": [
+            "Playwright screenshots remain one execution tool rather than the top-level product model."
+          ]
+        },
+        {
+          "id": "environment-deployment",
+          "type": "environment-deployment",
+          "label": "Environment deployment",
+          "enabled": false,
+          "reason": "A generic local or Kubernetes deployment stage is planned but not yet wired into the runner.",
+          "details": [
+            "This will become the shared path for local, minikube, and k3s-backed execution."
+          ]
+        },
+        {
+          "id": "implementation",
+          "type": "implementation",
+          "label": "Implementation loop",
+          "enabled": false,
+          "reason": "Implementation retries are available, but the current config keeps this stage disabled.",
+          "details": [
+            "When QA is also enabled, failed verification can loop back into another implementation attempt."
+          ]
+        },
+        {
+          "id": "qa-verification",
+          "type": "qa-verification",
+          "label": "QA verification",
+          "enabled": false,
+          "reason": "QA verification is available, but the current config keeps this stage disabled.",
+          "details": [
+            "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
+          ]
+        },
+        {
+          "id": "reporting",
+          "type": "reporting",
+          "label": "Evidence reporting",
+          "enabled": true,
+          "reason": "Every run produces summaries and machine-readable manifests.",
+          "details": [
+            "Reports become distribution inputs for destinations like Linear and GitHub."
+          ]
+        },
+        {
+          "id": "linear-publishing",
+          "type": "linear-publishing",
+          "label": "Linear publishing",
+          "enabled": false,
+          "reason": "Linear publishing is planned, but config currently disables it.",
+          "details": [
+            "Intended to carry the parent issue for BDD, AC, and TDD structure."
+          ]
+        }
+      ],
+      "orchestrationStrategy": "single-source",
+      "reviewNotes": [
+        "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
+      ]
+    },
+    "sourceId": "screenshots",
+    "captureScope": {
+      "mode": "all",
+      "captureIds": []
+    },
+    "artifacts": {
+      "requireScreenshots": true,
+      "requireManifest": true,
+      "requireHashes": true
+    },
+    "linear": {
+      "createIssue": true,
+      "issueTitle": "IDD: Create a review-first baseline plan for screenshots."
+    },
+    "execution": {
+      "continueOnCaptureError": false
+    },
+    "normalizationMeta": {
+      "source": "rules",
+      "warnings": [
+        "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
+      ],
+      "requestedPlanningDepth": "full",
+      "effectivePlanningDepth": "full",
+      "ambiguity": {
+        "isAmbiguous": false,
+        "reasons": []
+      },
+      "stages": [
+        {
+          "stageId": "promptNormalization",
+          "label": "Prompt Interpretation",
+          "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": []
+        },
+        {
+          "stageId": "linearScoping",
+          "label": "Linear Scoping",
+          "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "rules",
+          "warnings": []
+        },
+        {
+          "stageId": "bddPlanning",
+          "label": "BDD Planning",
+          "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "rules",
+          "warnings": []
+        },
+        {
+          "stageId": "tddPlanning",
+          "label": "TDD Planning",
+          "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "rules",
+          "warnings": []
+        },
+        {
+          "stageId": "implementation",
+          "label": "Implementation",
+          "description": "Apply the planned changes against the scoped source workspace.",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": []
+        },
+        {
+          "stageId": "qaVerification",
+          "label": "QA Verification",
+          "description": "Verify implementation output, tests, and evidence before completion or retry.",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": []
+        }
+      ]
+    }
+  }
+}

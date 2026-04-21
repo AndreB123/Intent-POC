@@ -182,3 +182,35 @@ test("buildSourceSummaryMarkdown labels mocked-state Playwright work items clear
   assert.match(markdown, /QA-runnable Playwright spec with mocked Studio app state/);
   assert.match(markdown, /mocked Studio app state/);
 });
+
+test("buildSourceSummaryMarkdown surfaces the IDD decomposition for the current source", () => {
+  const rootDir = "/tmp/intent-poc-summary";
+  const config = buildBehaviorTestConfig(rootDir, {
+    sources: {
+      "intent-poc-app": buildIntentPocAppBehaviorSource(rootDir)
+    },
+    defaultSourceId: "intent-poc-app"
+  });
+  const normalizedIntent = normalizeIntent({
+    rawPrompt: "Create a baseline screenshot library for the surface library source so that the baseline is reviewable.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: config.sources
+  });
+
+  const markdown = buildSourceSummaryMarkdown({
+    config,
+    paths: buildSourcePaths(rootDir),
+    normalizedIntent,
+    linearIssue: null,
+    captures: [],
+    status: "planned",
+    attempts: []
+  });
+
+  assert.match(markdown, /## IDD Decomposition/);
+  assert.match(markdown, /### Objective:/);
+  assert.match(markdown, /#### Workstream:/);
+  assert.match(markdown, /##### Task:/);
+  assert.match(markdown, /###### Subtask:/);
+});

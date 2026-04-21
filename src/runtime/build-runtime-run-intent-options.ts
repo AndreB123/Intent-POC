@@ -44,6 +44,7 @@ export async function buildRuntimeRunIntentOptions(
   return {
     configPath: input.configPath,
     intent: input.intent,
+    normalizedIntent: input.normalizedIntent,
     sourceIds,
     publishToLibrary,
     agentOverrides: input.agentOverrides,

@@ -1,6 +1,7 @@
 import { AppConfig } from "../config/schema";
 import { CaptureOutcome } from "../capture/capture-target";
 import { ComparisonStatus, ComparisonSummary } from "../compare/run-comparison";
+import { buildIntentDecompositionMarkdown } from "../intent/decomposition-markdown";
 import { NormalizedIntent } from "../intent/intent-types";
 import { LinearIssueRef } from "../linear/linear-client";
 import { writeTextFile } from "../shared/fs";
@@ -215,6 +216,13 @@ export function buildSourceSummaryMarkdown(input: {
       )
       .join("\n\n") || "- None",
     "",
+    `## IDD Decomposition`,
+    "",
+    buildIntentDecompositionMarkdown({
+      normalizedIntent: input.normalizedIntent,
+      sourceId: input.paths.sourceId
+    }),
+    "",
     `## TDD Work Items`,
     "",
     input.normalizedIntent.businessIntent.workItems
@@ -357,6 +365,10 @@ export function buildBusinessSummaryMarkdown(input: {
           ].join("\n")
       )
       .join("\n\n"),
+    "",
+    `## IDD Decomposition`,
+    "",
+    buildIntentDecompositionMarkdown({ normalizedIntent: input.normalizedIntent }),
     "",
     `## TDD Work Items`,
     "",

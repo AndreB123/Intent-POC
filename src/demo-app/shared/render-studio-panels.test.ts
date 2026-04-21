@@ -22,6 +22,7 @@ test("renderStudioLifecyclePanel Given the shared lifecycle docs panel When rend
   assert.match(html, /id="plan-scenarios"/);
   assert.match(html, /id="step-tdd"/);
   assert.match(html, /id="step-tdd-status"/);
+  assert.match(html, /id="plan-decomposition"/);
   assert.match(html, /id="plan-work-items"/);
   assert.match(html, /5\. Planned Execution/);
 });

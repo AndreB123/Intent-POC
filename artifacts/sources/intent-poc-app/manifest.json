@@ -1,12 +1,11 @@
 {
   "version": 1,
-  "runId": "2026-04-21T06-35-05-259Z-intent-poc-app",
-  "timestamp": "2026-04-21T06:35:39.763Z",
-  "status": "failed",
-  "error": "QA verification failed for source 'intent-poc-app' on attempt 1: Command failed (1). Progress: completed 0/1 targeted work items; pending work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.",
+  "runId": "2026-04-21T22-49-50-258Z-intent-poc-app",
+  "timestamp": "2026-04-21T22:51:09.593Z",
+  "status": "completed",
   "intent": {
-    "intentId": "2026-04-21T06-35-05-259Z-change-behavior-for-intent-poc-app",
-    "receivedAt": "2026-04-21T06:35:05.259Z",
+    "intentId": "2026-04-21T22-49-50-256Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-21T22:49:50.256Z",
     "rawPrompt": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
     "summary": "change behavior for intent-poc-app",
     "intentType": "change-behavior",
@@ -26,7 +25,7 @@
     },
     "businessIntent": {
       "statement": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
-      "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
+      "desiredOutcome": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
       "acceptanceCriteria": [
         {
           "id": "ac-1-intent-is-translated-into-executable-work-for-intent-poc-app",
@@ -40,7 +39,7 @@
         },
         {
           "id": "ac-3-results-are-packaged-so-they-can-be-distributed-consistently-with-the-desired-ou",
-          "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..",
+          "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Create a baseline for the deterministic screenshot library for the built-in surface library..",
           "origin": "inferred"
         }
       ],
@@ -51,7 +50,7 @@
           "goal": "Turn the raw business statement into reviewable BDD structure.",
           "given": [
             "A business intent has been captured: Create a baseline for the deterministic screenshot library for the built-in surface library.",
-            "The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders."
+            "The desired outcome is explicit: Create a baseline for the deterministic screenshot library for the built-in surface library."
           ],
           "when": [
             "The planner decomposes the intent into acceptance criteria and scenarios.",
@@ -122,7 +121,11 @@
           "verification": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
           "execution": {
             "order": 1,
-            "dependsOnWorkItemIds": []
+            "dependsOnWorkItemIds": [],
+            "objectiveId": "objective-1-create-a-baseline-for-the-deterministic-screenshot-library-for-the-built-in-surf",
+            "workstreamId": "workstream-1-intent-poc-app",
+            "taskId": "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+            "subtaskId": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
           },
           "playwright": {
             "generatedBy": "rules",
@@ -763,7 +766,88 @@
             ]
           }
         }
-      ]
+      ],
+      "decomposition": {
+        "objectives": [
+          {
+            "id": "objective-1-create-a-baseline-for-the-deterministic-screenshot-library-for-the-built-in-surf",
+            "title": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+            "summary": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+            "desiredOutcome": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+            "workstreamIds": [
+              "workstream-1-intent-poc-app"
+            ]
+          }
+        ],
+        "workstreams": [
+          {
+            "id": "workstream-1-intent-poc-app",
+            "title": "Source workstream: intent-poc-app",
+            "summary": "Deliver the reviewed intent in intent-poc-app.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "taskIds": [
+              "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources"
+            ]
+          }
+        ],
+        "tasks": [
+          {
+            "id": "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+            "title": "Behavior is verified visually for applicable sources",
+            "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "scenarioIds": [
+              "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+            ],
+            "workItemIds": [
+              "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+            ],
+            "subtaskIds": [
+              "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+            ]
+          }
+        ],
+        "subtasks": [
+          {
+            "id": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
+            "title": "Behavior is verified visually for applicable sources",
+            "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+            "scenarioIds": [
+              "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+            ],
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+            ],
+            "dependsOnSubtaskIds": []
+          }
+        ],
+        "verificationTasks": [
+          {
+            "id": "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
+            "title": "Verify Behavior is verified visually for applicable sources",
+            "summary": "Verify the user-visible outcome for Behavior is verified visually for applicable sources.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+            ]
+          }
+        ]
+      }
     },
     "planning": {
       "repoCandidates": [
@@ -792,6 +876,121 @@
           "captureCount": 48
         }
       ],
+      "scopingContext": {
+        "matchedPromptTerms": [
+          "surface library",
+          "library",
+          "Surface Library",
+          "surface"
+        ],
+        "sourceMatches": [
+          {
+            "sourceId": "intent-poc-app",
+            "matchedTerms": [
+              "surface library",
+              "library"
+            ],
+            "reason": "Source intent-poc-app was selected in the requested source scope."
+          }
+        ],
+        "primarySurface": {
+          "sourceId": "intent-poc-app",
+          "id": "surface-library",
+          "label": "Surface Library",
+          "confidence": "high",
+          "rationale": "The prompt points to surface-library behavior inside intent-poc-app.",
+          "matchedTerms": [
+            "Surface Library",
+            "surface",
+            "library"
+          ],
+          "primaryPaths": [
+            "src/demo-app/render/render-surface-frame.ts",
+            "src/demo-app/render/render-surface-page.ts"
+          ],
+          "adjacentPaths": [
+            "src/demo-app/model/catalog.ts",
+            "src/demo-app/model/types.ts"
+          ]
+        },
+        "alternativeSurfaces": [
+          {
+            "sourceId": "intent-poc-app",
+            "id": "intent-studio",
+            "label": "Intent Studio",
+            "confidence": "low",
+            "rationale": "The library request may also touch the Studio shell if the prompt is using Studio language loosely.",
+            "matchedTerms": [],
+            "primaryPaths": [
+              "src/demo-app/render/render-intent-studio-page.ts"
+            ],
+            "adjacentPaths": [
+              "src/demo-app/server/start-intent-studio-server.ts",
+              "src/demo-app/serve-demo-app.ts"
+            ]
+          }
+        ],
+        "pathHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/render/render-surface-frame.ts",
+            "reason": "Primary implementation path for Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/render/render-surface-page.ts",
+            "reason": "Primary implementation path for Surface Library."
+          }
+        ],
+        "uiStateHints": [],
+        "verificationHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+            "reason": "Matched prompt terms: screenshot, Surface Library, surface, library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+            "reason": "Matched prompt terms: Surface Library, surface, library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+            "reason": "Matched prompt terms: screenshot, Surface Library, surface, library."
+          }
+        ],
+        "repoNoteHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+            "reason": "Matched prompt terms: built-in, surface, library, Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
+            "reason": "Matched prompt terms: surface, library, screenshot, Surface Library."
+          }
+        ],
+        "repoMemoryHints": [
+          {
+            "memoryId": "demo-runtime",
+            "title": "Demo Runtime",
+            "sourcePath": "/memories/repo/domains/demo-runtime.md",
+            "note": "/library stays a stable screenshot surface and should reuse shared render layers.",
+            "reason": "Matched repo memory terms: library, screenshot."
+          },
+          {
+            "memoryId": "artifact-contract",
+            "title": "Artifact Contract",
+            "sourcePath": "/memories/repo/domains/artifact-contract.md",
+            "note": "Persistent artifacts live under artifacts/business, artifacts/sources/<sourceId>, and artifacts/library/<sourceId>.",
+            "reason": "Matched repo memory terms: library, baseline."
+          }
+        ],
+        "captureHints": [],
+        "unresolvedQuestions": []
+      },
       "plannerSections": [
         {
           "id": "idd-plan",
@@ -1045,7 +1244,7 @@
   },
   "businessIntent": {
     "statement": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
-    "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
+    "desiredOutcome": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
     "acceptanceCriteria": [
       {
         "id": "ac-1-intent-is-translated-into-executable-work-for-intent-poc-app",
@@ -1059,7 +1258,7 @@
       },
       {
         "id": "ac-3-results-are-packaged-so-they-can-be-distributed-consistently-with-the-desired-ou",
-        "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..",
+        "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Create a baseline for the deterministic screenshot library for the built-in surface library..",
         "origin": "inferred"
       }
     ],
@@ -1070,7 +1269,7 @@
         "goal": "Turn the raw business statement into reviewable BDD structure.",
         "given": [
           "A business intent has been captured: Create a baseline for the deterministic screenshot library for the built-in surface library.",
-          "The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders."
+          "The desired outcome is explicit: Create a baseline for the deterministic screenshot library for the built-in surface library."
         ],
         "when": [
           "The planner decomposes the intent into acceptance criteria and scenarios.",
@@ -1141,7 +1340,11 @@
         "verification": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
         "execution": {
           "order": 1,
-          "dependsOnWorkItemIds": []
+          "dependsOnWorkItemIds": [],
+          "objectiveId": "objective-1-create-a-baseline-for-the-deterministic-screenshot-library-for-the-built-in-surf",
+          "workstreamId": "workstream-1-intent-poc-app",
+          "taskId": "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+          "subtaskId": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
         },
         "playwright": {
           "generatedBy": "rules",
@@ -1782,7 +1985,88 @@
           ]
         }
       }
-    ]
+    ],
+    "decomposition": {
+      "objectives": [
+        {
+          "id": "objective-1-create-a-baseline-for-the-deterministic-screenshot-library-for-the-built-in-surf",
+          "title": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+          "summary": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+          "desiredOutcome": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+          "workstreamIds": [
+            "workstream-1-intent-poc-app"
+          ]
+        }
+      ],
+      "workstreams": [
+        {
+          "id": "workstream-1-intent-poc-app",
+          "title": "Source workstream: intent-poc-app",
+          "summary": "Deliver the reviewed intent in intent-poc-app.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "taskIds": [
+            "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources"
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "id": "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+          "title": "Behavior is verified visually for applicable sources",
+          "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "scenarioIds": [
+            "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+          ],
+          "workItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "subtaskIds": [
+            "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ]
+        }
+      ],
+      "subtasks": [
+        {
+          "id": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
+          "title": "Behavior is verified visually for applicable sources",
+          "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+          "scenarioIds": [
+            "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "dependsOnSubtaskIds": []
+        }
+      ],
+      "verificationTasks": [
+        {
+          "id": "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
+          "title": "Verify Behavior is verified visually for applicable sources",
+          "summary": "Verify the user-visible outcome for Behavior is verified visually for applicable sources.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ]
+        }
+      ]
+    }
   },
   "executionPlan": {
     "primarySourceId": "intent-poc-app",
@@ -1936,12 +2220,12 @@
       "captureIds": []
     },
     "configuredCaptureCount": 48,
-    "executedCaptureCount": 0,
+    "executedCaptureCount": 48,
     "sourceType": "local",
     "rootDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "appDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "baseUrl": "http://127.0.0.1:6006",
-    "gitCommit": "454898a5fa1419994356306fbec5eb682725781a",
+    "gitCommit": "42301e9bc8e5dbfb3913b990a19841abd1ef5cfa",
     "generatedPlaywrightTests": [
       "tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts"
     ]
@@ -1949,21 +2233,20 @@
   "attempts": [
     {
       "attemptNumber": 1,
-      "startedAt": "2026-04-21T06:35:05.276Z",
-      "finishedAt": "2026-04-21T06:35:39.763Z",
-      "status": "failed",
-      "failureStage": "qaVerification",
+      "startedAt": "2026-04-21T22:49:50.302Z",
+      "finishedAt": "2026-04-21T22:50:18.577Z",
+      "status": "completed",
       "targetedWorkItemIds": [
         "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
       ],
-      "completedInAttemptWorkItemIds": [],
-      "pendingTargetedWorkItemIds": [
+      "completedInAttemptWorkItemIds": [
         "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
       ],
-      "completedWorkItemIds": [],
-      "remainingWorkItemIds": [
+      "pendingTargetedWorkItemIds": [],
+      "completedWorkItemIds": [
         "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
       ],
+      "remainingWorkItemIds": [],
       "implementation": {
         "status": "skipped",
         "summary": "Implementation stage is disabled for this run.",
@@ -1974,22 +2257,23 @@
         "fileOperations": []
       },
       "qaVerification": {
-        "status": "failed",
-        "summary": "QA verification failed while running 'generated-playwright'.",
-        "error": "Command failed (1).",
+        "status": "completed",
+        "summary": "QA verification passed 2 commands.",
         "targetedWorkItemIds": [
           "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
         ],
-        "completedWorkItemIds": [],
+        "completedWorkItemIds": [
+          "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+        ],
         "remainingWorkItemIds": [],
         "commands": [
           {
             "label": "typecheck",
             "command": "npm run typecheck",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-21T06:35:05.299Z",
-            "finishedAt": "2026-04-21T06:35:08.246Z",
-            "durationMs": 2947,
+            "startedAt": "2026-04-21T22:49:53.427Z",
+            "finishedAt": "2026-04-21T22:50:02.917Z",
+            "durationMs": 9490,
             "status": "completed",
             "exitCode": 0,
             "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-typecheck.log"
@@ -1998,12 +2282,11 @@
             "label": "generated-playwright",
             "command": "npx playwright test \"tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts\"",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-21T06:35:08.246Z",
-            "finishedAt": "2026-04-21T06:35:39.762Z",
-            "durationMs": 31516,
-            "status": "failed",
-            "exitCode": 1,
-            "error": "Command failed (1).",
+            "startedAt": "2026-04-21T22:50:02.919Z",
+            "finishedAt": "2026-04-21T22:50:18.574Z",
+            "durationMs": 15655,
+            "status": "completed",
+            "exitCode": 0,
             "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-generated-playwright.log"
           }
         ],
@@ -2025,7 +2308,966 @@
     "disableAnimations": true,
     "extraHTTPHeaders": {}
   },
-  "captures": [],
+  "captures": [
+    {
+      "captureId": "primitive-color-chip",
+      "name": "Color Chip",
+      "path": "/library/primitive-color-chip",
+      "url": "http://127.0.0.1:6006/library/primitive-color-chip",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-color-chip.png",
+      "relativeOutputPath": "components/primitive-color-chip.png",
+      "durationMs": 1145,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-color-chip']",
+      "status": "captured",
+      "hash": "99232a2d6c2b49c3c845f3ffb9b76c25be8c9adaf1ac9c1bf1e3ec11fca0a8eb",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-typography",
+      "name": "Typography Scale",
+      "path": "/library/primitive-typography",
+      "url": "http://127.0.0.1:6006/library/primitive-typography",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-typography.png",
+      "relativeOutputPath": "components/primitive-typography.png",
+      "durationMs": 1140,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-typography']",
+      "status": "captured",
+      "hash": "d25b5e62951e40dfe3df0ab2f16c169f4f9d57db7f3e00d1fd352a1c0c9c6a16",
+      "width": 1148,
+      "height": 191,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-pill-tag",
+      "name": "Pill Tag",
+      "path": "/library/primitive-pill-tag",
+      "url": "http://127.0.0.1:6006/library/primitive-pill-tag",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-pill-tag.png",
+      "relativeOutputPath": "components/primitive-pill-tag.png",
+      "durationMs": 1091,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-pill-tag']",
+      "status": "captured",
+      "hash": "72663f698ef0c5c1db8fba0375b619afa922712f5bd9553ca34d1e2ce438a7dc",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-input-field",
+      "name": "Input Field",
+      "path": "/library/primitive-input-field",
+      "url": "http://127.0.0.1:6006/library/primitive-input-field",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-input-field.png",
+      "relativeOutputPath": "components/primitive-input-field.png",
+      "durationMs": 1069,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-input-field']",
+      "status": "captured",
+      "hash": "be7951b328e2ff26b6217d84ee8d27373ac3c95ff203a2a2fa78eb5df4f36434",
+      "width": 1148,
+      "height": 137,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-button-set",
+      "name": "Button Set",
+      "path": "/library/primitive-button-set",
+      "url": "http://127.0.0.1:6006/library/primitive-button-set",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-button-set.png",
+      "relativeOutputPath": "components/primitive-button-set.png",
+      "durationMs": 1070,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-button-set']",
+      "status": "captured",
+      "hash": "6039d6408f2e512ba2e96cd6adca74a694984ea994f26b9c4d78694fba253b24",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-avatar-stack",
+      "name": "Avatar Stack",
+      "path": "/library/primitive-avatar-stack",
+      "url": "http://127.0.0.1:6006/library/primitive-avatar-stack",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-avatar-stack.png",
+      "relativeOutputPath": "components/primitive-avatar-stack.png",
+      "durationMs": 1094,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-avatar-stack']",
+      "status": "captured",
+      "hash": "2c3781096819cd07482f3b78745d83f8ce19467efdde79cfae115ea6ee1ccb0d",
+      "width": 1148,
+      "height": 133,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-status-indicator",
+      "name": "Status Indicator",
+      "path": "/library/primitive-status-indicator",
+      "url": "http://127.0.0.1:6006/library/primitive-status-indicator",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-status-indicator.png",
+      "relativeOutputPath": "components/primitive-status-indicator.png",
+      "durationMs": 1107,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-status-indicator']",
+      "status": "captured",
+      "hash": "75399e8f22c05619857392180480a03464e1e28e07cc7f465b7f66eb3dff9854",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-spacing-scale",
+      "name": "Spacing Scale",
+      "path": "/library/primitive-spacing-scale",
+      "url": "http://127.0.0.1:6006/library/primitive-spacing-scale",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-spacing-scale.png",
+      "relativeOutputPath": "components/primitive-spacing-scale.png",
+      "durationMs": 1086,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-spacing-scale']",
+      "status": "captured",
+      "hash": "ece02510ffe2ab7b3f747cdd9573060cce71fc66e546f8b7b488fa22afc9afb2",
+      "width": 1148,
+      "height": 275,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-icon-list",
+      "name": "Icon List",
+      "path": "/library/primitive-icon-list",
+      "url": "http://127.0.0.1:6006/library/primitive-icon-list",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-icon-list.png",
+      "relativeOutputPath": "components/primitive-icon-list.png",
+      "durationMs": 1093,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-icon-list']",
+      "status": "captured",
+      "hash": "c2e2e4e4d08a7d4f339545003c55a09154c4f20283c2dbf05da982ae686091cd",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-kpi-block",
+      "name": "KPI Block",
+      "path": "/library/primitive-kpi-block",
+      "url": "http://127.0.0.1:6006/library/primitive-kpi-block",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-kpi-block.png",
+      "relativeOutputPath": "components/primitive-kpi-block.png",
+      "durationMs": 1069,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-kpi-block']",
+      "status": "captured",
+      "hash": "69be0a5cd947da70513b0da2d459e4997a5f7895ba21072aa2f5aaa3beb18edc",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-primary",
+      "name": "Primary Button",
+      "path": "/library/component-button-primary",
+      "url": "http://127.0.0.1:6006/library/component-button-primary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-primary.png",
+      "relativeOutputPath": "components/component-button-primary.png",
+      "durationMs": 963,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-primary']",
+      "status": "captured",
+      "hash": "93ea2d086a1fec0c56c2216d985ef8353b6373ed0bf3b96f7863453916ccf547",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-secondary",
+      "name": "Secondary Button",
+      "path": "/library/component-button-secondary",
+      "url": "http://127.0.0.1:6006/library/component-button-secondary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-secondary.png",
+      "relativeOutputPath": "components/component-button-secondary.png",
+      "durationMs": 1001,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-secondary']",
+      "status": "captured",
+      "hash": "d8244c5b9a65577cda392e5573bf268efdb958df94a6081795d48da62c2cf2f7",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-danger",
+      "name": "Danger Button",
+      "path": "/library/component-button-danger",
+      "url": "http://127.0.0.1:6006/library/component-button-danger",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-danger.png",
+      "relativeOutputPath": "components/component-button-danger.png",
+      "durationMs": 949,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-danger']",
+      "status": "captured",
+      "hash": "e1c36ee544ae199151ccc19da3836d823ba8e45276c274ebc2fbd342c412b706",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-card-highlight",
+      "name": "Highlight Card",
+      "path": "/library/component-card-highlight",
+      "url": "http://127.0.0.1:6006/library/component-card-highlight",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-highlight.png",
+      "relativeOutputPath": "components/component-card-highlight.png",
+      "durationMs": 948,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-card-highlight']",
+      "status": "captured",
+      "hash": "e93bb3b4b099b2cdd88940626233b4460b7537be6fd515cd83c117eab22c717a",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-card-compact",
+      "name": "Compact Card",
+      "path": "/library/component-card-compact",
+      "url": "http://127.0.0.1:6006/library/component-card-compact",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-compact.png",
+      "relativeOutputPath": "components/component-card-compact.png",
+      "durationMs": 940,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-card-compact']",
+      "status": "captured",
+      "hash": "5f78d2077d08d1c3c2f0c808d481084c9fe0ce187457d248fa2fce2ab27b05e9",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-banner-info",
+      "name": "Info Banner",
+      "path": "/library/component-banner-info",
+      "url": "http://127.0.0.1:6006/library/component-banner-info",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-info.png",
+      "relativeOutputPath": "components/component-banner-info.png",
+      "durationMs": 947,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-banner-info']",
+      "status": "captured",
+      "hash": "f4c8ae979424e832e5b448759cb1a48ab3a77cf04b429eaf077e515a561d2800",
+      "width": 1148,
+      "height": 151,
+      "warnings": []
+    },
+    {
+      "captureId": "component-banner-warning",
+      "name": "Warning Banner",
+      "path": "/library/component-banner-warning",
+      "url": "http://127.0.0.1:6006/library/component-banner-warning",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-warning.png",
+      "relativeOutputPath": "components/component-banner-warning.png",
+      "durationMs": 940,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-banner-warning']",
+      "status": "captured",
+      "hash": "2b89bdd3ae109db4056d999b2c0422d66ede7b9797f74491f7228dce00d98db9",
+      "width": 1148,
+      "height": 151,
+      "warnings": []
+    },
+    {
+      "captureId": "component-modal-shell",
+      "name": "Modal Shell",
+      "path": "/library/component-modal-shell",
+      "url": "http://127.0.0.1:6006/library/component-modal-shell",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-modal-shell.png",
+      "relativeOutputPath": "components/component-modal-shell.png",
+      "durationMs": 934,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-modal-shell']",
+      "status": "captured",
+      "hash": "d27890dae57c421cb7ffd350ff359bff8acc00d13244a3e2db2c401133a67516",
+      "width": 1148,
+      "height": 196,
+      "warnings": []
+    },
+    {
+      "captureId": "component-table-row",
+      "name": "Table Row",
+      "path": "/library/component-table-row",
+      "url": "http://127.0.0.1:6006/library/component-table-row",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-table-row.png",
+      "relativeOutputPath": "components/component-table-row.png",
+      "durationMs": 926,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-table-row']",
+      "status": "captured",
+      "hash": "219afe3fba3cbed8b153a3f2a8f17cbeeb50209b8ea6d74ea24df17305be6639",
+      "width": 1148,
+      "height": 169,
+      "warnings": []
+    },
+    {
+      "captureId": "component-search-bar",
+      "name": "Search Bar",
+      "path": "/library/component-search-bar",
+      "url": "http://127.0.0.1:6006/library/component-search-bar",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-search-bar.png",
+      "relativeOutputPath": "components/component-search-bar.png",
+      "durationMs": 970,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-search-bar']",
+      "status": "captured",
+      "hash": "9b3954c5d8ef53b4b84b206b027ecf49a73b5fe5496e6eb19890bc4df19b8561",
+      "width": 1148,
+      "height": 137,
+      "warnings": []
+    },
+    {
+      "captureId": "component-stat-tile",
+      "name": "Stat Tile",
+      "path": "/library/component-stat-tile",
+      "url": "http://127.0.0.1:6006/library/component-stat-tile",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-stat-tile.png",
+      "relativeOutputPath": "components/component-stat-tile.png",
+      "durationMs": 931,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-stat-tile']",
+      "status": "captured",
+      "hash": "acc1d920cba619622f569ae9e4889977669b6c83e9b1d6c38a6a4cea8be9b4ee",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-nav-tabs",
+      "name": "Nav Tabs",
+      "path": "/library/component-nav-tabs",
+      "url": "http://127.0.0.1:6006/library/component-nav-tabs",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-nav-tabs.png",
+      "relativeOutputPath": "components/component-nav-tabs.png",
+      "durationMs": 972,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-nav-tabs']",
+      "status": "captured",
+      "hash": "52b7a4dc3c4158416328fbe95f06834c0e9dfce73fc1fec45ee6220bff0fe3d8",
+      "width": 1148,
+      "height": 131,
+      "warnings": []
+    },
+    {
+      "captureId": "component-toast-success",
+      "name": "Success Toast",
+      "path": "/library/component-toast-success",
+      "url": "http://127.0.0.1:6006/library/component-toast-success",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-success.png",
+      "relativeOutputPath": "components/component-toast-success.png",
+      "durationMs": 947,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-toast-success']",
+      "status": "captured",
+      "hash": "0b0abe0641f66b88e3b746079dabb3b00be951133f68b05a11344c265d7ec796",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-toast-error",
+      "name": "Error Toast",
+      "path": "/library/component-toast-error",
+      "url": "http://127.0.0.1:6006/library/component-toast-error",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-error.png",
+      "relativeOutputPath": "components/component-toast-error.png",
+      "durationMs": 928,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-toast-error']",
+      "status": "captured",
+      "hash": "13b54b25f2295d9781a410f45ceb6c8a572121e07b825b3eb2810ed05f951179",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-form-section",
+      "name": "Form Section",
+      "path": "/library/component-form-section",
+      "url": "http://127.0.0.1:6006/library/component-form-section",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-form-section.png",
+      "relativeOutputPath": "components/component-form-section.png",
+      "durationMs": 966,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-form-section']",
+      "status": "captured",
+      "hash": "8f59db07ac4f3e044dafdd5602eff5ca59b6e2235e98e9d754c8423caa9283fe",
+      "width": 1148,
+      "height": 300,
+      "warnings": []
+    },
+    {
+      "captureId": "component-user-list-item",
+      "name": "User List Item",
+      "path": "/library/component-user-list-item",
+      "url": "http://127.0.0.1:6006/library/component-user-list-item",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-user-list-item.png",
+      "relativeOutputPath": "components/component-user-list-item.png",
+      "durationMs": 926,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-user-list-item']",
+      "status": "captured",
+      "hash": "38de89f252e50f87a5546512bf0a4091e407fbb4da3738d6917fed4d7b5e323e",
+      "width": 1148,
+      "height": 155,
+      "warnings": []
+    },
+    {
+      "captureId": "component-activity-timeline",
+      "name": "Activity Timeline",
+      "path": "/library/component-activity-timeline",
+      "url": "http://127.0.0.1:6006/library/component-activity-timeline",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-activity-timeline.png",
+      "relativeOutputPath": "components/component-activity-timeline.png",
+      "durationMs": 937,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-activity-timeline']",
+      "status": "captured",
+      "hash": "5a6fbfbb76e6342d315db70c8b989e142d44cd10a37db2600233c4052c574ca9",
+      "width": 1148,
+      "height": 159,
+      "warnings": []
+    },
+    {
+      "captureId": "view-dashboard-summary",
+      "name": "Dashboard Summary View",
+      "path": "/library/view-dashboard-summary",
+      "url": "http://127.0.0.1:6006/library/view-dashboard-summary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-dashboard-summary.png",
+      "relativeOutputPath": "views/view-dashboard-summary.png",
+      "durationMs": 940,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-dashboard-summary']",
+      "status": "captured",
+      "hash": "5423f70af11c37b5836e0df7fd356bea0785095520d5b3c906d67afd3c6ab2ad",
+      "width": 1148,
+      "height": 342,
+      "warnings": []
+    },
+    {
+      "captureId": "view-list-overview",
+      "name": "List Overview View",
+      "path": "/library/view-list-overview",
+      "url": "http://127.0.0.1:6006/library/view-list-overview",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-list-overview.png",
+      "relativeOutputPath": "views/view-list-overview.png",
+      "durationMs": 962,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-list-overview']",
+      "status": "captured",
+      "hash": "14b0adc5d95ec4c55762c424e12f0a024a0c1848676fc69054c8ff65ca221abd",
+      "width": 1148,
+      "height": 283,
+      "warnings": []
+    },
+    {
+      "captureId": "view-settings-panel",
+      "name": "Settings Panel View",
+      "path": "/library/view-settings-panel",
+      "url": "http://127.0.0.1:6006/library/view-settings-panel",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-settings-panel.png",
+      "relativeOutputPath": "views/view-settings-panel.png",
+      "durationMs": 962,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-settings-panel']",
+      "status": "captured",
+      "hash": "469a3356d2aae50b3df630fa5017504f8f2aec4ec1a4917b62bd8bcf52c70b2c",
+      "width": 1148,
+      "height": 349,
+      "warnings": []
+    },
+    {
+      "captureId": "view-empty-results",
+      "name": "Empty Results View",
+      "path": "/library/view-empty-results",
+      "url": "http://127.0.0.1:6006/library/view-empty-results",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-empty-results.png",
+      "relativeOutputPath": "views/view-empty-results.png",
+      "durationMs": 957,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-empty-results']",
+      "status": "captured",
+      "hash": "14c06fdfa43085ca3d93f3e599dee33ae3845079b3e4b7401b8d6aca77f01216",
+      "width": 1148,
+      "height": 221,
+      "warnings": []
+    },
+    {
+      "captureId": "view-campaign-table",
+      "name": "Campaign Table View",
+      "path": "/library/view-campaign-table",
+      "url": "http://127.0.0.1:6006/library/view-campaign-table",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-campaign-table.png",
+      "relativeOutputPath": "views/view-campaign-table.png",
+      "durationMs": 944,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-campaign-table']",
+      "status": "captured",
+      "hash": "42623944908cec3aefdeb2f1c63bc91ba3a5d0692a63e691253c5df23b21b442",
+      "width": 1148,
+      "height": 299,
+      "warnings": []
+    },
+    {
+      "captureId": "view-notifications-center",
+      "name": "Notifications Center View",
+      "path": "/library/view-notifications-center",
+      "url": "http://127.0.0.1:6006/library/view-notifications-center",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-notifications-center.png",
+      "relativeOutputPath": "views/view-notifications-center.png",
+      "durationMs": 965,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-notifications-center']",
+      "status": "captured",
+      "hash": "1db35105e8da92384bf358646c16c65969103618b3fab99ff5361ddad2f1229c",
+      "width": 1148,
+      "height": 342,
+      "warnings": []
+    },
+    {
+      "captureId": "view-user-directory",
+      "name": "User Directory View",
+      "path": "/library/view-user-directory",
+      "url": "http://127.0.0.1:6006/library/view-user-directory",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-user-directory.png",
+      "relativeOutputPath": "views/view-user-directory.png",
+      "durationMs": 1020,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-user-directory']",
+      "status": "captured",
+      "hash": "5468629af8c19c63801e12be93fcfde0497808e203138b6697d21cacb164b239",
+      "width": 1148,
+      "height": 335,
+      "warnings": []
+    },
+    {
+      "captureId": "view-revenue-kpis",
+      "name": "Revenue KPIs View",
+      "path": "/library/view-revenue-kpis",
+      "url": "http://127.0.0.1:6006/library/view-revenue-kpis",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-revenue-kpis.png",
+      "relativeOutputPath": "views/view-revenue-kpis.png",
+      "durationMs": 1085,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-revenue-kpis']",
+      "status": "captured",
+      "hash": "e9e122c0dc157eca745543ff59d670ca9f4e6d545c0c994d17171bb93bb863d8",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "view-onboarding-checklist",
+      "name": "Onboarding Checklist View",
+      "path": "/library/view-onboarding-checklist",
+      "url": "http://127.0.0.1:6006/library/view-onboarding-checklist",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-onboarding-checklist.png",
+      "relativeOutputPath": "views/view-onboarding-checklist.png",
+      "durationMs": 1109,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-onboarding-checklist']",
+      "status": "captured",
+      "hash": "cf868a11318264eabe0e38dc1ec82b182a4bcbe90681560b8e4d370d99156eb4",
+      "width": 1148,
+      "height": 349,
+      "warnings": []
+    },
+    {
+      "captureId": "view-approval-queue",
+      "name": "Approval Queue View",
+      "path": "/library/view-approval-queue",
+      "url": "http://127.0.0.1:6006/library/view-approval-queue",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-approval-queue.png",
+      "relativeOutputPath": "views/view-approval-queue.png",
+      "durationMs": 1107,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-approval-queue']",
+      "status": "captured",
+      "hash": "3d970a44365ca6729ad8c976cbf53acea5a3246dfaa3c247db32694dd33aff7c",
+      "width": 1148,
+      "height": 387,
+      "warnings": []
+    },
+    {
+      "captureId": "view-audit-log",
+      "name": "Audit Log View",
+      "path": "/library/view-audit-log",
+      "url": "http://127.0.0.1:6006/library/view-audit-log",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-audit-log.png",
+      "relativeOutputPath": "views/view-audit-log.png",
+      "durationMs": 1058,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-audit-log']",
+      "status": "captured",
+      "hash": "dc153638a61f36bb7af3afa054cdd9f2765b512a50e00ed08d8f06a96c51cb3f",
+      "width": 1148,
+      "height": 335,
+      "warnings": []
+    },
+    {
+      "captureId": "view-billing-overview",
+      "name": "Billing Overview View",
+      "path": "/library/view-billing-overview",
+      "url": "http://127.0.0.1:6006/library/view-billing-overview",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-billing-overview.png",
+      "relativeOutputPath": "views/view-billing-overview.png",
+      "durationMs": 1042,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-billing-overview']",
+      "status": "captured",
+      "hash": "3b81ebc30e9c769dc7cae5cf08f78b7fb440d26e3bd1b4585aedb4418a3b8cb7",
+      "width": 1148,
+      "height": 223,
+      "warnings": []
+    },
+    {
+      "captureId": "page-analytics-overview",
+      "name": "Analytics Overview",
+      "path": "/library/page-analytics-overview",
+      "url": "http://127.0.0.1:6006/library/page-analytics-overview",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-analytics-overview.png",
+      "relativeOutputPath": "pages/page-analytics-overview.png",
+      "durationMs": 1203,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "b4bea81d1937c819318fed3743ab68ceb91ac2795f49f9257260976e234df407",
+      "width": 1440,
+      "height": 900,
+      "warnings": []
+    },
+    {
+      "captureId": "page-account-list",
+      "name": "Account List Page",
+      "path": "/library/page-account-list",
+      "url": "http://127.0.0.1:6006/library/page-account-list",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-account-list.png",
+      "relativeOutputPath": "pages/page-account-list.png",
+      "durationMs": 1183,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-account-list']",
+      "status": "captured",
+      "hash": "e2593f1e7f68bf64193b7fb48508099d0c602cbddd1c57a237e7d6b5b8837a00",
+      "width": 1148,
+      "height": 575,
+      "warnings": []
+    },
+    {
+      "captureId": "page-campaign-editor",
+      "name": "Campaign Editor Page",
+      "path": "/library/page-campaign-editor",
+      "url": "http://127.0.0.1:6006/library/page-campaign-editor",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-campaign-editor.png",
+      "relativeOutputPath": "pages/page-campaign-editor.png",
+      "durationMs": 1168,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-campaign-editor']",
+      "status": "captured",
+      "hash": "71f9bdcb1698147b726f521cc81610e916272e735ee59430828ab82b4deee3d7",
+      "width": 1148,
+      "height": 693,
+      "warnings": []
+    },
+    {
+      "captureId": "page-system-settings",
+      "name": "System Settings Page",
+      "path": "/library/page-system-settings",
+      "url": "http://127.0.0.1:6006/library/page-system-settings",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-system-settings.png",
+      "relativeOutputPath": "pages/page-system-settings.png",
+      "durationMs": 1162,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-system-settings']",
+      "status": "captured",
+      "hash": "b1d2b25ff18dc416da7e79131ed26a83b6926f28d6009c12e150470ef2e25bd1",
+      "width": 1148,
+      "height": 526,
+      "warnings": []
+    },
+    {
+      "captureId": "page-operations-center",
+      "name": "Operations Center Page",
+      "path": "/library/page-operations-center",
+      "url": "http://127.0.0.1:6006/library/page-operations-center",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-operations-center.png",
+      "relativeOutputPath": "pages/page-operations-center.png",
+      "durationMs": 1186,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-operations-center']",
+      "status": "captured",
+      "hash": "3a7a61ea52f574aa24ae2cf1ef2beee96e4bab52486349f3fde46284f2335001",
+      "width": 1148,
+      "height": 891,
+      "warnings": []
+    },
+    {
+      "captureId": "page-user-management",
+      "name": "User Management Page",
+      "path": "/library/page-user-management",
+      "url": "http://127.0.0.1:6006/library/page-user-management",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-user-management.png",
+      "relativeOutputPath": "pages/page-user-management.png",
+      "durationMs": 1182,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-user-management']",
+      "status": "captured",
+      "hash": "1ab1b4885c1603545e91b1a7750c81688904a02c4810db7f1694f501cb6b5c1c",
+      "width": 1148,
+      "height": 679,
+      "warnings": []
+    },
+    {
+      "captureId": "page-incident-review",
+      "name": "Incident Review Page",
+      "path": "/library/page-incident-review",
+      "url": "http://127.0.0.1:6006/library/page-incident-review",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-incident-review.png",
+      "relativeOutputPath": "pages/page-incident-review.png",
+      "durationMs": 1155,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-incident-review']",
+      "status": "captured",
+      "hash": "3ab1390955fd36bb28ad4d2828268fd988e20277499cf96240766e1b7b06a74b",
+      "width": 1148,
+      "height": 634,
+      "warnings": []
+    },
+    {
+      "captureId": "page-revenue-forecast",
+      "name": "Revenue Forecast Page",
+      "path": "/library/page-revenue-forecast",
+      "url": "http://127.0.0.1:6006/library/page-revenue-forecast",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-revenue-forecast.png",
+      "relativeOutputPath": "pages/page-revenue-forecast.png",
+      "durationMs": 1144,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-revenue-forecast']",
+      "status": "captured",
+      "hash": "8b7c99310436544b172bf170fc74910f9ccf1868c1068cd78a22517bced2e37d",
+      "width": 1148,
+      "height": 551,
+      "warnings": []
+    },
+    {
+      "captureId": "library-index",
+      "name": "Surface Library Index",
+      "path": "/library",
+      "url": "http://127.0.0.1:6006/library",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/library-index.png",
+      "relativeOutputPath": "library-index.png",
+      "durationMs": 1378,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "9b84a68b1332ae17e0ccc86a0d3663371c7e1c8adce26fc6e40ed5afd4cd231a",
+      "width": 1440,
+      "height": 1843,
+      "warnings": []
+    }
+  ],
   "warnings": [],
   "comparisonIssues": []
 }

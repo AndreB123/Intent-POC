@@ -5,6 +5,7 @@ import test from "node:test";
 import { loadConfig } from "../../config/load-config";
 import { toFileUrlPath } from "../../evidence/paths";
 import { normalizeIntent } from "../../intent/normalize-intent";
+import { ReviewedIntentArtifact } from "../../intent/intent-types";
 import { RunIntentOptions, RunIntentResult } from "../../orchestrator/run-intent";
 import { startIntentStudioServer } from "./start-intent-studio-server";
 
@@ -32,7 +33,14 @@ async function waitForState<T>(
   throw new Error(`Timed out waiting for studio state after ${timeoutMs}ms.`);
 }
 
-async function writeStudioConfig(configPath: string, tmpDir: string): Promise<void> {
+async function writeStudioConfig(
+  configPath: string,
+  tmpDir: string,
+  options: {
+    agentProvider?: string;
+    agentApiKeyEnv?: string;
+  } = {}
+): Promise<void> {
   await fs.writeFile(
     configPath,
     [
@@ -46,6 +54,8 @@ async function writeStudioConfig(configPath: string, tmpDir: string): Promise<vo
       "  commentOnCompletion: false",
       "agent:",
       "  mode: bounded-runner",
+      ...(options.agentProvider ? [`  provider: ${options.agentProvider}`] : []),
+      ...(options.agentApiKeyEnv ? [`  apiKeyEnv: ${options.agentApiKeyEnv}`] : []),
       "sources:",
       "  app:",
       "    planning:",
@@ -201,6 +211,7 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   assert.match(planningDocsHtml, /id="step-bdd"/);
   assert.match(planningDocsHtml, /id="plan-criteria"/);
   assert.match(planningDocsHtml, /id="step-tdd"/);
+  assert.match(planningDocsHtml, /id="plan-decomposition"/);
   assert.match(planningDocsHtml, /id="plan-work-items"/);
 
   const removedAliasResponse = await fetch(`${server.baseUrl}/library/studio-planning-docs`);
@@ -275,6 +286,512 @@ test("startIntentStudioServer rejects Studio requests that enable implementation
   assert.equal(stateResponse.status, 200);
   const state = (await stateResponse.json()) as { currentRun: unknown };
   assert.equal(state.currentRun, null);
+});
+
+test("startIntentStudioServer rejects planning preview when live Gemini prompt normalization is configured without access", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir, {
+    agentProvider: "gemini",
+    agentApiKeyEnv: "MISSING_GEMINI_KEY"
+  });
+
+  const geminiEnvNames = ["MISSING_GEMINI_KEY", "GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"] as const;
+  const previousGeminiEnv = Object.fromEntries(
+    geminiEnvNames.map((envName) => [envName, process.env[envName]])
+  ) as Record<(typeof geminiEnvNames)[number], string | undefined>;
+
+  for (const envName of geminiEnvNames) {
+    delete process.env[envName];
+  }
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    for (const envName of geminiEnvNames) {
+      if (previousGeminiEnv[envName] === undefined) {
+        delete process.env[envName];
+      } else {
+        process.env[envName] = previousGeminiEnv[envName];
+      }
+    }
+
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const response = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Add a visual test run indicator to Intent Studio."
+    })
+  });
+
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as { error?: string };
+  assert.match(body.error ?? "", /Prompt Interpretation requires Gemini access/);
+  assert.match(body.error ?? "", /MISSING_GEMINI_KEY/);
+  assert.match(body.error ?? "", /intent-poc\.local-no-linear\.yaml/);
+});
+
+test("startIntentStudioServer accepts prompt-based execution without a reviewed intent draft", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-draft-run-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+  let receivedOptions: RunIntentOptions | undefined;
+
+  await writeStudioConfig(configPath, tmpDir);
+  const loaded = await loadConfig(configPath);
+  const normalizedIntent = normalizeIntent({
+    rawPrompt: "Prepare a reviewable intent draft for the current app.",
+    defaultSourceId: loaded.config.run.sourceId,
+    continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    availableSources: loaded.config.sources,
+    linearEnabled: loaded.config.linear.enabled
+  });
+
+  const mockedRunIntent = async (options: RunIntentOptions): Promise<RunIntentResult> => {
+    receivedOptions = options;
+
+    return {
+      status: "completed",
+      sourceId: "app",
+      dryRun: false,
+      normalizedIntent,
+      paths: {
+        runId: "run-1",
+        controllerRoot: tmpDir,
+        runDir: path.join(tmpDir, "artifacts", "business"),
+        sourcesDir: path.join(tmpDir, "artifacts", "sources"),
+        logsDir: path.join(tmpDir, "artifacts", "logs"),
+        normalizedIntentPath: path.join(tmpDir, "artifacts", "business", "normalized-intent.json"),
+        linearPath: path.join(tmpDir, "artifacts", "business", "linear.json"),
+        planLifecyclePath: path.join(tmpDir, "artifacts", "business", "plan-lifecycle.json"),
+        summaryPath: path.join(tmpDir, "artifacts", "business", "summary.md"),
+        manifestPath: path.join(tmpDir, "artifacts", "business", "manifest.json"),
+        hashesPath: path.join(tmpDir, "artifacts", "business", "hashes.json"),
+        comparisonPath: path.join(tmpDir, "artifacts", "business", "comparison.json"),
+        sourceRuns: {
+          app: {
+            runId: "run-1",
+            sourceId: "app",
+            controllerRoot: tmpDir,
+            sourceDir: path.join(tmpDir, "artifacts", "sources", "app"),
+            attemptsDir: path.join(tmpDir, "artifacts", "sources", "app", "attempts"),
+            capturesDir: path.join(tmpDir, "artifacts", "sources", "app", "captures"),
+            diffsDir: path.join(tmpDir, "artifacts", "sources", "app", "diffs"),
+            logsDir: path.join(tmpDir, "artifacts", "sources", "app", "logs"),
+            baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
+            appLogPath: path.join(tmpDir, "artifacts", "sources", "app", "logs", "app.log"),
+            manifestPath: path.join(tmpDir, "artifacts", "sources", "app", "manifest.json"),
+            hashesPath: path.join(tmpDir, "artifacts", "sources", "app", "hashes.json"),
+            comparisonPath: path.join(tmpDir, "artifacts", "sources", "app", "comparison.json"),
+            summaryPath: path.join(tmpDir, "artifacts", "sources", "app", "summary.md")
+          }
+        }
+      },
+      linearIssue: null,
+      linearPublication: null,
+      sourceRuns: [
+        {
+          sourceId: "app",
+          status: "completed",
+          paths: {
+            runId: "run-1",
+            sourceId: "app",
+            controllerRoot: tmpDir,
+            sourceDir: path.join(tmpDir, "artifacts", "sources", "app"),
+            attemptsDir: path.join(tmpDir, "artifacts", "sources", "app", "attempts"),
+            capturesDir: path.join(tmpDir, "artifacts", "sources", "app", "captures"),
+            diffsDir: path.join(tmpDir, "artifacts", "sources", "app", "diffs"),
+            logsDir: path.join(tmpDir, "artifacts", "sources", "app", "logs"),
+            baselineSourceDir: path.join(tmpDir, "artifacts", "library", "app"),
+            appLogPath: path.join(tmpDir, "artifacts", "sources", "app", "logs", "app.log"),
+            manifestPath: path.join(tmpDir, "artifacts", "sources", "app", "manifest.json"),
+            hashesPath: path.join(tmpDir, "artifacts", "sources", "app", "hashes.json"),
+            comparisonPath: path.join(tmpDir, "artifacts", "sources", "app", "comparison.json"),
+            summaryPath: path.join(tmpDir, "artifacts", "sources", "app", "summary.md")
+          },
+          captures: [],
+          error: undefined,
+          linearIssue: null,
+          generatedPlaywrightTests: [],
+          attempts: [],
+          summaryMarkdown: "# app"
+        }
+      ],
+      captures: [],
+      hasDrift: false,
+      counts: {
+        "baseline-written": 0,
+        unchanged: 0,
+        changed: 0,
+        "missing-baseline": 0,
+        "capture-failed": 0,
+        "diff-error": 0
+      },
+      summaryMarkdown: "# run summary",
+      errors: []
+    };
+  };
+
+  const server = await startIntentStudioServer({ configPath, port: 0, runIntentFn: mockedRunIntent });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const runResponse = await fetch(`${server.baseUrl}/api/runs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Prepare a reviewable intent draft for the current app.",
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(runResponse.status, 202);
+
+  await waitForState<{ currentRun: { status: string } | null }>(
+    server.baseUrl,
+    (state) => state.currentRun?.status === "completed"
+  );
+
+  assert.equal(receivedOptions?.intent, "Prepare a reviewable intent draft for the current app.");
+  assert.deepEqual(receivedOptions?.sourceIds, ["app"]);
+  assert.equal(receivedOptions?.normalizedIntent, undefined);
+});
+
+test("startIntentStudioServer persists draft intent previews for review-first Studio planning", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-plan-draft-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const response = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Prepare a reviewable intent draft for the current app.",
+      sourceIds: ["app"]
+    })
+  });
+
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as {
+    plan?: { intentId: string; summary: string };
+    draft?: {
+      draftId: string;
+      status: string;
+      prompt: string;
+      summary: string;
+      preview?: {
+        repoContext: string[];
+        sourceScope: string[];
+        minimumSuccess: string[];
+      };
+      path: string;
+      fileUrl?: string;
+    };
+  };
+
+  assert.ok(body.plan);
+  assert.ok(body.draft);
+  assert.equal(body.draft?.draftId, body.plan?.intentId);
+  assert.equal(body.draft?.status, "draft");
+  assert.match(body.draft?.prompt ?? "", /^## Intent/m);
+  assert.match(body.draft?.prompt ?? "", /^## Adaptive Boundaries/m);
+  assert.match(body.draft?.prompt ?? "", /^## Minimum Success/m);
+  assert.match(body.draft?.prompt ?? "", /^## Raw Intent/m);
+  assert.equal(Array.isArray(body.draft?.preview?.repoContext), true);
+  assert.equal(Array.isArray(body.draft?.preview?.sourceScope), true);
+  assert.equal(Array.isArray(body.draft?.preview?.minimumSuccess), true);
+  assert.equal(body.draft?.summary, body.plan?.summary);
+  assert.equal(
+    body.draft?.path,
+    path.join("artifacts", "business", "intent-drafts", `${body.plan?.intentId}.json`)
+  );
+  assert.equal(body.draft?.fileUrl, toFileUrlPath(body.draft?.path));
+
+  const persistedDraft = JSON.parse(
+    await fs.readFile(path.join(tmpDir, body.draft?.path ?? ""), "utf8")
+  ) as ReviewedIntentArtifact;
+
+  assert.equal(persistedDraft.prompt, body.draft?.prompt);
+  assert.deepEqual(persistedDraft.requestedSourceIds, ["app"]);
+  assert.equal(persistedDraft.reviewedIntentId, body.plan?.intentId);
+  assert.equal(persistedDraft.normalizedIntent.intentId, body.plan?.intentId);
+});
+
+test("startIntentStudioServer updates and sends reviewed intent drafts before execution", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-draft-edit-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const previewResponse = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Create a review-first baseline plan for app.",
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(previewResponse.status, 200);
+
+  const previewBody = (await previewResponse.json()) as {
+    draft?: {
+      draftId: string;
+      path: string;
+      status: string;
+    };
+  };
+  assert.ok(previewBody.draft?.draftId);
+
+  const draftId = previewBody.draft?.draftId ?? "";
+  const updateResponse = await fetch(`${server.baseUrl}/api/drafts/${encodeURIComponent(draftId)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Create a review-first baseline plan for screenshots.",
+      sourceIds: ["screenshots"]
+    })
+  });
+  assert.equal(updateResponse.status, 200);
+
+  const updateBody = (await updateResponse.json()) as {
+    draft?: {
+      draftId: string;
+      status: string;
+      prompt: string;
+      path: string;
+    };
+  };
+
+  assert.equal(updateBody.draft?.draftId, draftId);
+  assert.equal(updateBody.draft?.status, "draft");
+  assert.equal(updateBody.draft?.prompt, "Create a review-first baseline plan for screenshots.");
+
+  const updatedDraftArtifact = JSON.parse(
+    await fs.readFile(path.join(tmpDir, updateBody.draft?.path ?? ""), "utf8")
+  ) as ReviewedIntentArtifact;
+  assert.equal(updatedDraftArtifact.reviewedIntentId, draftId);
+  assert.equal(updatedDraftArtifact.status, "draft");
+  assert.equal(updatedDraftArtifact.prompt, "Create a review-first baseline plan for screenshots.");
+  assert.deepEqual(updatedDraftArtifact.requestedSourceIds, ["screenshots"]);
+  assert.equal(updatedDraftArtifact.normalizedIntent.intentId, draftId);
+
+  let receivedOptions: RunIntentOptions | undefined;
+  const loaded = await loadConfig(configPath);
+  const normalizedIntent = normalizeIntent({
+    rawPrompt: updatedDraftArtifact.prompt,
+    defaultSourceId: loaded.config.run.sourceId,
+    continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    availableSources: loaded.config.sources,
+    requestedSourceIds: updatedDraftArtifact.requestedSourceIds,
+    linearEnabled: loaded.config.linear.enabled
+  });
+
+  const rerunServer = await startIntentStudioServer({
+    configPath,
+    port: 0,
+    runIntentFn: async (options: RunIntentOptions): Promise<RunIntentResult> => {
+      receivedOptions = options;
+
+      return {
+        status: "completed",
+        sourceId: "screenshots",
+        dryRun: false,
+        normalizedIntent,
+        paths: {
+          runId: "run-draft-1",
+          controllerRoot: tmpDir,
+          runDir: path.join(tmpDir, "artifacts", "business"),
+          sourcesDir: path.join(tmpDir, "artifacts", "sources"),
+          logsDir: path.join(tmpDir, "artifacts", "logs"),
+          normalizedIntentPath: path.join(tmpDir, "artifacts", "business", "normalized-intent.json"),
+          linearPath: path.join(tmpDir, "artifacts", "business", "linear.json"),
+          planLifecyclePath: path.join(tmpDir, "artifacts", "business", "plan-lifecycle.json"),
+          summaryPath: path.join(tmpDir, "artifacts", "business", "summary.md"),
+          manifestPath: path.join(tmpDir, "artifacts", "business", "manifest.json"),
+          hashesPath: path.join(tmpDir, "artifacts", "business", "hashes.json"),
+          comparisonPath: path.join(tmpDir, "artifacts", "business", "comparison.json"),
+          sourceRuns: {
+            screenshots: {
+              runId: "run-draft-1",
+              sourceId: "screenshots",
+              controllerRoot: tmpDir,
+              sourceDir: path.join(tmpDir, "artifacts", "sources", "screenshots"),
+              attemptsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "attempts"),
+              capturesDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "captures"),
+              diffsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "diffs"),
+              logsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs"),
+              baselineSourceDir: path.join(tmpDir, "artifacts", "library", "screenshots"),
+              appLogPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs", "app.log"),
+              manifestPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "manifest.json"),
+              hashesPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "hashes.json"),
+              comparisonPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "comparison.json"),
+              summaryPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "summary.md")
+            }
+          }
+        },
+        linearIssue: null,
+        linearPublication: null,
+        sourceRuns: [
+          {
+            sourceId: "screenshots",
+            status: "completed",
+            paths: {
+              runId: "run-draft-1",
+              sourceId: "screenshots",
+              controllerRoot: tmpDir,
+              sourceDir: path.join(tmpDir, "artifacts", "sources", "screenshots"),
+              attemptsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "attempts"),
+              capturesDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "captures"),
+              diffsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "diffs"),
+              logsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs"),
+              baselineSourceDir: path.join(tmpDir, "artifacts", "library", "screenshots"),
+              appLogPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs", "app.log"),
+              manifestPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "manifest.json"),
+              hashesPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "hashes.json"),
+              comparisonPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "comparison.json"),
+              summaryPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "summary.md")
+            },
+            captures: [],
+            error: undefined,
+            linearIssue: null,
+            generatedPlaywrightTests: [],
+            attempts: [],
+            summaryMarkdown: "# screenshots"
+          }
+        ],
+        captures: [],
+        hasDrift: false,
+        counts: {
+          "baseline-written": 0,
+          unchanged: 0,
+          changed: 0,
+          "missing-baseline": 0,
+          "capture-failed": 0,
+          "diff-error": 0
+        },
+        summaryMarkdown: "# run summary",
+        errors: []
+      };
+    }
+  });
+
+  t.after(async () => {
+    await rerunServer.close();
+  });
+
+  const sendResponse = await fetch(`${server.baseUrl}/api/drafts/${encodeURIComponent(draftId)}/send`, {
+    method: "POST"
+  });
+  assert.equal(sendResponse.status, 200);
+
+  const sendBody = (await sendResponse.json()) as {
+    draft?: {
+      draftId: string;
+      status: string;
+    };
+  };
+  assert.equal(sendBody.draft?.draftId, draftId);
+  assert.equal(sendBody.draft?.status, "sent");
+
+  const sentDraftArtifact = JSON.parse(
+    await fs.readFile(path.join(tmpDir, updateBody.draft?.path ?? ""), "utf8")
+  ) as ReviewedIntentArtifact;
+  assert.equal(sentDraftArtifact.status, "sent");
+
+  const runResponse = await fetch(`${rerunServer.baseUrl}/api/runs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      draftId
+    })
+  });
+  assert.equal(runResponse.status, 202);
+
+  await waitForState<{ currentRun: { status: string } | null }>(
+    rerunServer.baseUrl,
+    (state) => state.currentRun?.status === "completed"
+  );
+
+  assert.equal(receivedOptions?.intent, updatedDraftArtifact.prompt);
+  assert.deepEqual(receivedOptions?.sourceIds, ["screenshots"]);
+  assert.equal(receivedOptions?.normalizedIntent?.intentId, draftId);
+});
+
+test("startIntentStudioServer rejects sending a draft before the reviewed IDD prompt is refreshed into a full plan", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-draft-send-guard-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const previewResponse = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Create a review-first baseline plan for app.",
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(previewResponse.status, 200);
+
+  const previewBody = (await previewResponse.json()) as {
+    draft?: {
+      draftId: string;
+    };
+  };
+  assert.ok(previewBody.draft?.draftId);
+
+  const sendResponse = await fetch(
+    `${server.baseUrl}/api/drafts/${encodeURIComponent(previewBody.draft?.draftId ?? "")}/send`,
+    {
+      method: "POST"
+    }
+  );
+
+  assert.equal(sendResponse.status, 409);
+  const sendBody = (await sendResponse.json()) as { error?: string };
+  assert.match(sendBody.error ?? "", /must be refreshed from the reviewed IDD draft before approval/i);
 });
 
 test("startIntentStudioServer exposes live implementation and QA lifecycle state during a mocked run", async (t) => {
@@ -679,7 +1196,9 @@ test("startIntentStudioServer uses the shared runtime policy when launching trac
   );
 
   assert.equal(receivedOptions?.publishToLibrary, true);
+  assert.equal(receivedOptions?.intent, "Refresh tracked screenshots for the shared library source.");
   assert.deepEqual(receivedOptions?.sourceIds, ["screenshots"]);
+  assert.equal(receivedOptions?.normalizedIntent, undefined);
 });
 
 test("startIntentStudioServer exposes controller-relative capture paths for Studio preview links", async (t) => {

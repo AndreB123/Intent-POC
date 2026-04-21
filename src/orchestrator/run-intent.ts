@@ -24,6 +24,7 @@ import {
   TDDWorkItem,
   IntentLifecycleStatus
 } from "../intent/intent-types";
+import { buildIntentDecompositionMarkdown } from "../intent/decomposition-markdown";
 import {
   ResolvedAgentStageConfig,
   RunAgentConfigOverride,
@@ -92,6 +93,7 @@ export interface RunIntentResult {
 export interface RunIntentOptions {
   configPath: string;
   intent?: string;
+  normalizedIntent?: NormalizedIntent;
   sourceIds?: string[];
   publishToLibrary?: boolean;
   agentOverrides?: RunAgentConfigOverride;
@@ -499,21 +501,92 @@ function sortWorkItemsForExecution(workItems: TDDWorkItem[]): TDDWorkItem[] {
   });
 }
 
+function buildWorkItemExecutionGroupKey(workItem: TDDWorkItem): string {
+  if (!workItem.execution.taskId && !workItem.execution.workstreamId && !workItem.execution.objectiveId) {
+    return "legacy-ready-group";
+  }
+
+  return [
+    workItem.execution.objectiveId ?? "objective:none",
+    workItem.execution.workstreamId ?? "workstream:none",
+    workItem.execution.taskId ?? `task:${workItem.id}`
+  ].join("|");
+}
+
+function compareWorkItemsForSelection(left: TDDWorkItem, right: TDDWorkItem): number {
+  const leftTaskId = left.execution.taskId ?? "";
+  const rightTaskId = right.execution.taskId ?? "";
+  const taskDelta = leftTaskId.localeCompare(rightTaskId);
+  if (taskDelta !== 0) {
+    return taskDelta;
+  }
+
+  const orderDelta = left.execution.order - right.execution.order;
+  if (orderDelta !== 0) {
+    return orderDelta;
+  }
+
+  return left.id.localeCompare(right.id);
+}
+
 function resolveNextExecutableWorkItemChunk(
   workItems: TDDWorkItem[],
   completedWorkItemIds: Set<string>,
   pendingWorkItemIds: Set<string>,
   workItemBatchSize: number
 ): TDDWorkItem[] {
-  return sortWorkItemsForExecution(workItems)
-    .filter((workItem) => {
-      if (!pendingWorkItemIds.has(workItem.id)) {
-        return false;
+  const readyWorkItems = sortWorkItemsForExecution(workItems).filter((workItem) => {
+    if (!pendingWorkItemIds.has(workItem.id)) {
+      return false;
+    }
+
+    return workItem.execution.dependsOnWorkItemIds.every((dependencyId) => completedWorkItemIds.has(dependencyId));
+  });
+
+  if (readyWorkItems.length === 0) {
+    return [];
+  }
+
+  const groupedWorkItems = new Map<string, TDDWorkItem[]>();
+  for (const workItem of readyWorkItems) {
+    const groupKey = buildWorkItemExecutionGroupKey(workItem);
+    const group = groupedWorkItems.get(groupKey);
+    if (group) {
+      group.push(workItem);
+      continue;
+    }
+
+    groupedWorkItems.set(groupKey, [workItem]);
+  }
+
+  const selectedGroup = Array.from(groupedWorkItems.values())
+    .map((group) => [...group].sort(compareWorkItemsForSelection))
+    .sort((left, right) => {
+      const leftAnchor = left[0];
+      const rightAnchor = right[0];
+      if (!leftAnchor || !rightAnchor) {
+        return left.length - right.length;
       }
 
-      return workItem.execution.dependsOnWorkItemIds.every((dependencyId) => completedWorkItemIds.has(dependencyId));
-    })
-    .slice(0, workItemBatchSize);
+      const dependencyDelta =
+        leftAnchor.execution.dependsOnWorkItemIds.length - rightAnchor.execution.dependsOnWorkItemIds.length;
+      if (dependencyDelta !== 0) {
+        return dependencyDelta;
+      }
+
+      const orderDelta = leftAnchor.execution.order - rightAnchor.execution.order;
+      if (orderDelta !== 0) {
+        return orderDelta;
+      }
+
+      if (left.length !== right.length) {
+        return right.length - left.length;
+      }
+
+      return compareWorkItemsForSelection(leftAnchor, rightAnchor);
+    })[0];
+
+  return (selectedGroup ?? []).slice(0, workItemBatchSize);
 }
 
 function buildRemainingWorkItemIds(workItems: TDDWorkItem[], completedWorkItemIds: Set<string>): string[] {
@@ -1240,6 +1313,10 @@ function buildParentIssueDescription(input: {
     "",
     scenarios || "- None",
     "",
+    `## IDD Decomposition`,
+    "",
+    buildIntentDecompositionMarkdown({ normalizedIntent: input.normalizedIntent }),
+    "",
     `## TDD Work Items`,
     "",
     workItems || "- None",
@@ -1314,6 +1391,13 @@ function buildSourceIssueDescription(input: {
     `## Relevant BDD Scenarios`,
     "",
     scenarios || "- None",
+    "",
+    `## IDD Decomposition`,
+    "",
+    buildIntentDecompositionMarkdown({
+      normalizedIntent: input.normalizedIntent,
+      sourceId: input.sourceId
+    }),
     "",
     `## Relevant TDD Work Items`,
     "",
@@ -2316,9 +2400,14 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     const loadedConfig = await dependencies.loadConfig(options.configPath);
     const config = loadedConfig.config;
     const agent = applyAgentOverrides(config.agent, options.agentOverrides);
-    const requestedSourceIds = options.sourceIds?.length ? Array.from(new Set(options.sourceIds)) : undefined;
-    const rawPrompt = options.intent ?? config.run.intent;
-    const resumeIssue = options.resumeIssue ?? config.run.resumeIssue;
+    const reviewedIntent = options.normalizedIntent;
+    const requestedSourceIds = reviewedIntent
+      ? reviewedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId)
+      : options.sourceIds?.length
+        ? Array.from(new Set(options.sourceIds))
+        : undefined;
+    const rawPrompt = reviewedIntent?.rawPrompt ?? options.intent ?? config.run.intent;
+    const resumeIssue = reviewedIntent?.planning.linearPlan.issueReference ?? options.resumeIssue ?? config.run.resumeIssue;
     const dryRun = options.dryRun ?? config.run.dryRun;
 
     emitRunEvent(options, "config", "Configuration loaded.", {
@@ -2327,6 +2416,7 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       linearEnabled: config.linear.enabled,
       sourceCount: Object.keys(config.sources).length,
       requestedSourceIds,
+      reviewedIntentId: reviewedIntent?.intentId,
       agentOverrides: options.agentOverrides,
       resumeIssue
     });
@@ -2366,7 +2456,7 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
     const shouldManageLinearPlan = Boolean(linearClient && (config.linear.createIssueOnStart || resumeIssue));
     let scopingIntent: NormalizedIntent | null = null;
 
-    if (linearClient && shouldManageLinearPlan) {
+    if (!reviewedIntent && linearClient && shouldManageLinearPlan) {
       scopingIntent = await dependencies.normalizeIntent({
         rawPrompt,
         defaultSourceId: config.run.sourceId,
@@ -2421,19 +2511,57 @@ export function createRunIntentRunner(overrides: Partial<RunIntentDependencies> 
       }
     }
 
-    const normalizedIntent = await dependencies.normalizeIntent({
-      rawPrompt,
-      defaultSourceId: config.run.sourceId,
-      continueOnCaptureError: config.run.continueOnCaptureError,
-      agent,
-      requestedSourceIds,
-      resumeIssue,
-      linearEnabled: config.linear.enabled,
-      publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
-      availableSources
-    });
+    const normalizedIntent = reviewedIntent
+      ? reviewedIntent
+      : await dependencies.normalizeIntent({
+          rawPrompt,
+          defaultSourceId: config.run.sourceId,
+          continueOnCaptureError: config.run.continueOnCaptureError,
+          agent,
+          requestedSourceIds,
+          resumeIssue,
+          linearEnabled: config.linear.enabled,
+          publishToSourceWorkspace: config.artifacts.storageMode === "both" && Boolean(config.artifacts.copyToSourcePath),
+          availableSources
+        });
 
-    if (linearClient && shouldManageLinearPlan && scopingIntent) {
+    if (reviewedIntent && linearClient && shouldManageLinearPlan) {
+      linearPublication.parentIssue = await upsertLinearParentIssue({
+        linearClient,
+        options,
+        errors: linearErrors,
+        rawPrompt,
+        normalizedIntent,
+        planningDepth: "full",
+        existingParentIssue: linearPublication.parentIssue,
+        resumeIssue,
+        createIfMissing: Boolean(!resumeIssue && config.linear.createIssueOnStart)
+      });
+
+      if (resumeIssue && !linearPublication.parentIssue) {
+        throw new Error(`Configured resume issue '${resumeIssue}' could not be resolved in Linear.`);
+      }
+
+      if (linearPublication.parentIssue) {
+        emitRunEvent(options, "linear", "Reviewed intent reused for Linear planning.", {
+          identifier: linearPublication.parentIssue.identifier,
+          url: linearPublication.parentIssue.url,
+          planningDepth: "full",
+          reviewedIntentId: normalizedIntent.intentId
+        });
+
+        await upsertLinearSourceIssues({
+          linearClient,
+          options,
+          errors: linearErrors,
+          parentIssue: linearPublication.parentIssue,
+          normalizedIntent,
+          planningDepth: "full",
+          sourceIssues: linearPublication.sourceIssues,
+          loadReusableChildren: Boolean(resumeIssue)
+        });
+      }
+    } else if (linearClient && shouldManageLinearPlan && scopingIntent) {
       const scopedSourceIds = scopingIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
       const plannedSourceIds = normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId);
       const addedSourceIds = plannedSourceIds.filter((sourceId) => !scopedSourceIds.includes(sourceId));

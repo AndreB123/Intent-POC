@@ -276,6 +276,69 @@ test("runSourceAttemptLoop Given multiple dependency-ready work items When batch
   assert.deepEqual(result.attempts[1]?.completedWorkItemIds, ["work-1", "work-2", "work-3"]);
 });
 
+test("runSourceAttemptLoop Given ready work items across different tasks When selecting the next chunk Then it keeps execution within the earliest governed task", async () => {
+  const executedBatches: string[][] = [];
+  const workItemA1 = buildLoopWorkItem("work-a1", 1);
+  workItemA1.execution.objectiveId = "objective-1";
+  workItemA1.execution.workstreamId = "workstream-a";
+  workItemA1.execution.taskId = "task-a";
+  workItemA1.execution.subtaskId = "subtask-a1";
+
+  const workItemA2 = buildLoopWorkItem("work-a2", 2);
+  workItemA2.execution.objectiveId = "objective-1";
+  workItemA2.execution.workstreamId = "workstream-a";
+  workItemA2.execution.taskId = "task-a";
+  workItemA2.execution.subtaskId = "subtask-a2";
+
+  const workItemB1 = buildLoopWorkItem("work-b1", 3);
+  workItemB1.execution.objectiveId = "objective-1";
+  workItemB1.execution.workstreamId = "workstream-b";
+  workItemB1.execution.taskId = "task-b";
+  workItemB1.execution.subtaskId = "subtask-b1";
+
+  const result = await runSourceAttemptLoop<string>({
+    sourceId: "intent-poc-app",
+    workItems: [workItemA1, workItemA2, workItemB1],
+    workItemBatchSize: 2,
+    maxAttempts: 2,
+    retryEnabled: true,
+    executeAttempt: async ({ activeWorkItemIds, completedWorkItemIds, remainingWorkItemIds, attemptNumber }) => {
+      executedBatches.push(activeWorkItemIds);
+
+      const nextCompletedWorkItemIds = [...completedWorkItemIds, ...activeWorkItemIds];
+      const nextRemainingWorkItemIds = remainingWorkItemIds.filter((workItemId) => !activeWorkItemIds.includes(workItemId));
+
+      return {
+        targetedWorkItemIds: activeWorkItemIds,
+        completedWorkItemIds: nextCompletedWorkItemIds,
+        remainingWorkItemIds: nextRemainingWorkItemIds,
+        implementation: {
+          status: "completed",
+          summary: `Implementation pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: nextCompletedWorkItemIds,
+          remainingWorkItemIds: nextRemainingWorkItemIds,
+          commands: [],
+          fileOperations: []
+        },
+        qaVerification: {
+          status: "completed",
+          summary: `QA verification pass ${attemptNumber} completed.`,
+          targetedWorkItemIds: activeWorkItemIds,
+          completedWorkItemIds: nextCompletedWorkItemIds,
+          remainingWorkItemIds: nextRemainingWorkItemIds,
+          commands: [],
+          fileOperations: []
+        },
+        resource: `ready-app-${attemptNumber}`
+      };
+    }
+  });
+
+  assert.equal(result.status, "completed");
+  assert.deepEqual(executedBatches, [["work-a1", "work-a2"], ["work-b1"]]);
+});
+
 test("runSourceAttemptLoop Given a failed batch with partial completion When it retries Then it narrows the retry to unresolved targeted work items", async () => {
   const executedBatches: string[][] = [];
 
@@ -792,6 +855,42 @@ test("runIntent Given a dry run When the plan is valid Then it writes plan lifec
   }
 });
 
+test("runIntent Given a reviewed normalized intent When dry run executes Then it reuses the reviewed plan without re-normalizing", async () => {
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-reviewed-"));
+  const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
+  const reviewedIntent = normalizeIntent({
+    rawPrompt: "Use the reviewed intent as the execution source of truth.",
+    defaultSourceId: loadedConfig.config.run.sourceId,
+    continueOnCaptureError: loadedConfig.config.run.continueOnCaptureError,
+    availableSources: loadedConfig.config.sources,
+    linearEnabled: loadedConfig.config.linear.enabled
+  });
+
+  try {
+    const runIntent = createRunIntentRunner({
+      loadConfig: async () => loadedConfig,
+      normalizeIntent: async () => {
+        throw new Error("Reviewed intent runs should not call normalizeIntent again.");
+      }
+    });
+
+    const result = await runIntent({
+      configPath: loadedConfig.configPath,
+      normalizedIntent: reviewedIntent,
+      dryRun: true
+    });
+
+    assert.equal(result.status, "completed");
+    assert.equal(result.normalizedIntent.intentId, reviewedIntent.intentId);
+    assert.deepEqual(
+      result.normalizedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId),
+      reviewedIntent.executionPlan.sources.map((sourcePlan) => sourcePlan.sourceId)
+    );
+  } finally {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  }
+});
+
 test("runIntent Given a successful source lane When compare execution finishes Then it aggregates counts and writes business artifacts", async () => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-run-intent-success-"));
   const loadedConfig = buildBehaviorTestLoadedConfig(tmpRoot);
@@ -1162,6 +1261,7 @@ test("runIntent Given Linear issue creation on start When dry run executes Then 
     assert.equal(parentDescriptionWrites[0]?.includes("## Linear Scoping"), true);
     assert.equal(parentDescriptionWrites[0]?.includes("## BDD Scenarios"), false);
     assert.equal(parentDescriptionWrites.at(-1)?.includes("## BDD Scenarios"), true);
+    assert.equal(parentDescriptionWrites.at(-1)?.includes("## IDD Decomposition"), true);
     assert.equal(parentDescriptionWrites.at(-1)?.includes("## TDD Work Items"), true);
 
     const sourceIssue = linearPublication.sourceIssues["client-systems-roach-admin"];
@@ -1170,6 +1270,7 @@ test("runIntent Given Linear issue creation on start When dry run executes Then 
     assert.equal(sourceDescriptionWrites[0]?.includes("## Linear Scope"), true);
     assert.equal(sourceDescriptionWrites[0]?.includes("## Relevant BDD Scenarios"), false);
     assert.equal(sourceDescriptionWrites.at(-1)?.includes("## Relevant BDD Scenarios"), true);
+    assert.equal(sourceDescriptionWrites.at(-1)?.includes("## IDD Decomposition"), true);
     assert.equal(sourceDescriptionWrites.at(-1)?.includes("## Relevant TDD Work Items"), true);
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true });

@@ -1165,7 +1165,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               <div class="panel-head">
                 <div>
                   <h2>Prompt Run</h2>
-                  <div class="panel-copy">Define the business intent first. The system will turn it into BDD, TDD, execution sources, and run behavior before anything launches. Use work scope when you need to keep the run inside the current app or a specific set of configured repos.</div>
+                  <div class="panel-copy">Define the business intent first. The first click builds a reviewed IDD draft with repo context, boundaries, baseline, and minimum success. Internal AC, BDD, TDD, and execution planning stay behind the approval step.</div>
                 </div>
                 <span class="status-pill status-ready" id="current-status-pill">Ready</span>
               </div>
@@ -1175,7 +1175,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                   <div class="field-wide">
                     <label for="prompt-input">Intent prompt</label>
                     <textarea id="prompt-input" placeholder="Describe the business intent, what sources or tools it should touch, and what outcome should be verified."></textarea>
-                    <div class="field-note">Work scope is config-backed. Leave every checkbox clear when the planner should infer sources from your prompt, or keep the default scope checked when the run should stay inside the current app. Run behavior is inferred from prompt phrases such as &quot;create baseline&quot; or &quot;approve baseline&quot;, then falls back to <code>run.mode</code>.</div>
+                    <div class="field-note">Work scope is config-backed. Leave every checkbox clear when the planner should infer sources from your prompt, or keep the default scope checked when the run should stay inside the current app. The first click stops at a reviewed IDD draft; the second click approves that draft and starts execution.</div>
                     <div class="form-actions prompt-actions">
                       <label class="toggle">
                         <input id="dry-run-input" type="checkbox" />
@@ -1183,7 +1183,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                       </label>
                       <div class="submit-row">
                         <span class="notice" id="form-note">No run in progress.</span>
-                        ${renderButton({ label: "Run intent", className: "primary-button", id: "submit-button", type: "submit" })}
+                        ${renderButton({ label: "Run intent", className: "primary-button", id: "submit-button", type: "submit", attributes: { disabled: "disabled" } })}
                       </div>
                     </div>
                   </div>
@@ -1412,6 +1412,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         const planExecutionNote = document.getElementById("plan-execution-note");
         const planCriteria = document.getElementById("plan-criteria");
         const planScenarios = document.getElementById("plan-scenarios");
+        const planDecomposition = document.getElementById("plan-decomposition");
         const planWorkItems = document.getElementById("plan-work-items");
         const planSources = document.getElementById("plan-sources");
         const planDestinations = document.getElementById("plan-destinations");
@@ -1432,18 +1433,91 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           ];
         }));
 
-        let promptTouched = false;
         let lastState = null;
-        let previewPlan = null;
-        let planRequestId = 0;
-        let planRequestTimer = null;
         let editorSourceId = null;
         let editorDirty = false;
         let editorSaving = false;
+        let previewPlan = null;
+        let previewDraft = null;
+        let previewDirty = false;
+        let localSubmissionState = null;
+        let hydratingPrompt = false;
+
+        function draftPreview() {
+          return previewDraft && previewDraft.preview ? previewDraft.preview : null;
+        }
+
+        function setPromptValue(value) {
+          hydratingPrompt = true;
+          promptInput.value = value;
+          hydratingPrompt = false;
+        }
+
+        function applyPreview(preview) {
+          previewPlan = preview && preview.plan ? preview.plan : null;
+          previewDraft = preview && preview.draft ? preview.draft : null;
+          previewDirty = false;
+
+          if (previewDraft && typeof previewDraft.prompt === "string") {
+            setPromptValue(previewDraft.prompt);
+          }
+        }
+
+        function getPlanDepth(plan) {
+          return plan && plan.normalizationMeta && plan.normalizationMeta.effectivePlanningDepth
+            ? plan.normalizationMeta.effectivePlanningDepth
+            : "scoping";
+        }
+
+        function getPromptNormalizationStage(plan) {
+          if (!plan || !plan.normalizationMeta || !plan.normalizationMeta.stages) {
+            return null;
+          }
+
+          return plan.normalizationMeta.stages.find(function (stage) {
+            return stage.stageId === "promptNormalization";
+          }) || null;
+        }
+
+        function formatPromptNormalizationSource(stage) {
+          if (!stage) {
+            return "Prompt interpretation source unavailable.";
+          }
+
+          const modelSuffix = stage.model ? " " + stage.model + "." : ".";
+
+          if (stage.source === "llm") {
+            return "Prompt interpretation: live Gemini" + modelSuffix;
+          }
+
+          if (stage.source === "fallback") {
+            return "Prompt interpretation: Gemini fallback to deterministic rules" + modelSuffix;
+          }
+
+          if (stage.source === "rules") {
+            return "Prompt interpretation: deterministic rules-backed draft.";
+          }
+
+          if (stage.source === "skipped") {
+            return "Prompt interpretation: skipped.";
+          }
+
+          return "Prompt interpretation: " + stage.source + modelSuffix;
+        }
+
+        function buildPlanProvenanceNote(plan) {
+          const depthLabel = getPlanDepth(plan) === "full" ? "Full reviewed plan." : "Scoping draft.";
+          return depthLabel + " " + formatPromptNormalizationSource(getPromptNormalizationStage(plan));
+        }
 
         promptInput.addEventListener("input", function () {
-          promptTouched = true;
-          schedulePlanPreview();
+          if (!hydratingPrompt && previewDraft) {
+            previewDirty = promptInput.value !== previewDraft.prompt;
+          }
+          if (lastState) {
+            updateTopLine(lastState);
+            renderPlan(lastState);
+          }
         });
 
         function create(tag, className, text) {
@@ -1914,6 +1988,113 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           return item;
         }
 
+        function renderDraftPreviewList(container, items, emptyText, tag) {
+          renderPlanList(
+            container,
+            items || [],
+            function (item) {
+              return renderPlanItem(item, [], [], tag ? [tag] : []);
+            },
+            emptyText
+          );
+        }
+
+        function findDecompositionEntry(entries, id) {
+          if (!entries || !id) {
+            return null;
+          }
+
+          return entries.find(function (entry) {
+            return entry.id === id;
+          }) || null;
+        }
+
+        function renderDecompositionPlan(container, decomposition, state) {
+          const objectives = decomposition && decomposition.objectives ? decomposition.objectives : [];
+          const workstreams = decomposition && decomposition.workstreams ? decomposition.workstreams : [];
+          const tasks = decomposition && decomposition.tasks ? decomposition.tasks : [];
+          const subtasks = decomposition && decomposition.subtasks ? decomposition.subtasks : [];
+          const verificationTasks = decomposition && decomposition.verificationTasks ? decomposition.verificationTasks : [];
+
+          renderPlanList(
+            container,
+            objectives,
+            function (objective) {
+              const objectiveWorkstreams = (objective.workstreamIds || [])
+                .map(function (workstreamId) {
+                  return findDecompositionEntry(workstreams, workstreamId);
+                })
+                .filter(function (entry) { return Boolean(entry); });
+              const objectiveCopy = [];
+
+              objectiveWorkstreams.forEach(function (workstream) {
+                const sourceLabels = (workstream.sourceIds || []).map(function (sourceId) {
+                  return formatSourceLabel(state, sourceId);
+                });
+                const workstreamTasks = (workstream.taskIds || [])
+                  .map(function (taskId) {
+                    return findDecompositionEntry(tasks, taskId);
+                  })
+                  .filter(function (entry) { return Boolean(entry); });
+
+                objectiveCopy.push(
+                  "Workstream: " + workstream.title + (sourceLabels.length > 0 ? " • Sources: " + sourceLabels.join(", ") : "")
+                );
+
+                workstreamTasks.forEach(function (task) {
+                  const taskVerificationTitles = (task.verificationTaskIds || [])
+                    .map(function (verificationTaskId) {
+                      const verificationTask = findDecompositionEntry(verificationTasks, verificationTaskId);
+                      return verificationTask ? verificationTask.title : null;
+                    })
+                    .filter(function (title) { return Boolean(title); });
+                  const taskSubtasks = (task.subtaskIds || [])
+                    .map(function (subtaskId) {
+                      return findDecompositionEntry(subtasks, subtaskId);
+                    })
+                    .filter(function (entry) { return Boolean(entry); });
+
+                  objectiveCopy.push(
+                    "Task: " + task.title + " • Work items: " + ((task.workItemIds || []).join(", ") || "none")
+                  );
+
+                  if (taskVerificationTitles.length > 0) {
+                    objectiveCopy.push("Task verification: " + taskVerificationTitles.join(", "));
+                  }
+
+                  taskSubtasks.forEach(function (subtask) {
+                    const subtaskVerificationTitles = (subtask.verificationTaskIds || [])
+                      .map(function (verificationTaskId) {
+                        const verificationTask = findDecompositionEntry(verificationTasks, verificationTaskId);
+                        return verificationTask ? verificationTask.title : null;
+                      })
+                      .filter(function (title) { return Boolean(title); });
+                    const dependsOn = subtask.dependsOnSubtaskIds && subtask.dependsOnSubtaskIds.length > 0
+                      ? subtask.dependsOnSubtaskIds.join(", ")
+                      : "none";
+
+                    objectiveCopy.push(
+                      "Subtask: " + subtask.title + " • Work items: " + ((subtask.workItemIds || []).join(", ") || "none")
+                    );
+                    if (subtaskVerificationTitles.length > 0) {
+                      objectiveCopy.push("Subtask verification: " + subtaskVerificationTitles.join(", "));
+                    }
+                    objectiveCopy.push("Subtask dependencies: " + dependsOn);
+                  });
+                });
+              });
+
+              const meta = [
+                "Desired outcome: " + (objective.desiredOutcome || "none"),
+                "Workstreams: " + objectiveWorkstreams.length
+              ];
+
+              return renderPlanItem(objective.title, meta, objectiveCopy, ["hierarchy"]);
+            },
+            "No decomposition defined."
+          );
+        }
+
         function appendLatestChunkMeta(meta, sourceRun) {
           if (!sourceRun) {
             return;
@@ -1938,30 +2119,61 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         function renderPlan(state) {
           const run = state && state.currentRun;
           const activePlan = run && run.intentPlan ? run.intentPlan : previewPlan;
+          const activeDraftPreview = !run ? draftPreview() : null;
 
           updateLifecycleProgress(activePlan, run);
 
           if (!activePlan) {
-            planIntentText.textContent = "Type an intent to preview the plan.";
+            planIntentText.textContent = promptInput.value.trim().length > 0
+              ? "Click Run intent to generate the scoping IDD draft."
+              : "Enter an intent to begin.";
             planIntentOutcome.textContent = "";
             planPlanNotes.textContent = "";
             planExecutionNote.textContent = "";
-            renderPlanList(planLinear, [], null, "Pending prompt…");
-            renderPlanList(planCriteria, [], null, "Pending prompt…");
-            renderPlanList(planScenarios, [], null, "Pending prompt…");
-            renderPlanList(planWorkItems, [], null, "Pending prompt…");
-            renderPlanList(planSources, [], null, "Pending prompt…");
-            renderPlanList(planDestinations, [], null, "Pending prompt…");
-            renderPlanList(planTools, [], null, "Pending prompt…");
-            renderPlanList(planImplementation, [], null, "Pending prompt…");
-            renderPlanList(planQa, [], null, "Pending prompt…");
+            renderPlanList(planLinear, [], null, "Waiting for submitted intent…");
+            renderPlanList(planCriteria, [], null, "Waiting for submitted intent…");
+            renderPlanList(planScenarios, [], null, "Waiting for submitted intent…");
+            renderPlanList(planDecomposition, [], null, "Waiting for submitted intent…");
+            renderPlanList(planWorkItems, [], null, "Waiting for submitted intent…");
+            renderPlanList(planSources, [], null, "Waiting for submitted intent…");
+            renderPlanList(planDestinations, [], null, "Waiting for submitted intent…");
+            renderPlanList(planTools, [], null, "Waiting for submitted intent…");
+            renderPlanList(planImplementation, [], null, "Waiting for submitted intent…");
+            renderPlanList(planQa, [], null, "Waiting for submitted intent…");
+            return;
+          }
+
+          if (activeDraftPreview) {
+            planIntentText.textContent = activeDraftPreview.intent;
+            planIntentOutcome.textContent = "Desired outcome: " + activeDraftPreview.outcome;
+            planPlanNotes.textContent = activeDraftPreview.reviewNotes.length > 0
+              ? buildPlanProvenanceNote(activePlan) + " Notes: " + activeDraftPreview.reviewNotes.join(" ")
+              : buildPlanProvenanceNote(activePlan) + " Review this IDD draft before approval.";
+
+            renderDraftPreviewList(planLinear, activeDraftPreview.repoContext, "Waiting for repo context…", "context");
+            renderDraftPreviewList(planCriteria, activeDraftPreview.sourceScope, "Waiting for source scope…", "scope");
+            renderDraftPreviewList(planScenarios, activeDraftPreview.adaptiveBoundaries, "Waiting for adaptive boundaries…", "boundary");
+            renderDraftPreviewList(planDecomposition, activeDraftPreview.nonGoals, "Waiting for non-goals…", "non-goal");
+            renderDraftPreviewList(planWorkItems, activeDraftPreview.minimumSuccess, "Waiting for minimum success…", "success");
+
+            planExecutionNote.textContent = getPlanDepth(activePlan) === "full"
+              ? "Full reviewed plan ready. Running again will send this reviewed plan into execution."
+              : "Scoping draft ready. Running again will refresh it into the full reviewed plan and then start execution from that reviewed plan.";
+
+            renderDraftPreviewList(planSources, activeDraftPreview.baseline, "Waiting for baseline details…", "baseline");
+            renderDraftPreviewList(planTools, activeDraftPreview.verificationObligations, "Waiting for verification obligations…", "verification");
+            renderDraftPreviewList(planDestinations, activeDraftPreview.deliveryObligations, "Waiting for delivery obligations…", "delivery");
+            renderPlanList(planImplementation, [], null, "Implementation activity will show here after a run starts.");
+            renderPlanList(planQa, [], null, "QA results will show here after a run reaches verification.");
             return;
           }
 
           // 1. Prompt Interpretation
           planIntentText.textContent = activePlan.summary || activePlan.businessIntent.statement;
           planIntentOutcome.textContent = "Workflow: change behavior • Source: " + formatSourceLabel(state, activePlan.sourceId);
-          planPlanNotes.textContent = activePlan.planning.reviewNotes.length > 0 ? "Notes: " + activePlan.planning.reviewNotes.join(" ") : "";
+          planPlanNotes.textContent = activePlan.planning.reviewNotes.length > 0
+            ? buildPlanProvenanceNote(activePlan) + " Notes: " + activePlan.planning.reviewNotes.join(" ")
+            : buildPlanProvenanceNote(activePlan);
 
           // 2. Linear Scoping
           const linearItems = [];
@@ -1992,6 +2204,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           );
 
           // 4. TDD Planning
+          renderDecompositionPlan(planDecomposition, activePlan.businessIntent.decomposition, state);
+
           renderPlanList(
             planWorkItems,
             activePlan.businessIntent.workItems,
@@ -2008,8 +2222,10 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
           // 5. Planned Execution
           planExecutionNote.textContent = run
-            ? "Execution snapshot for the current run. This is the planned source, tool, and destination graph; live work appears in Steps 6 and 7."
-            : "Preview only. The source, tool, and destination graph below shows what will run after you start a session.";
+            ? "Execution snapshot for the current run. This run is executing from the full reviewed plan; live work appears in Steps 6 and 7."
+            : previewDraft
+              ? "Preview of the scoping IDD draft. Edit the prompt above, then click Run intent again to refresh the full reviewed plan and start the session."
+              : "The source, tool, and destination graph below shows the reviewed intent preview for this session.";
 
           renderPlanList(
             planSources,
@@ -2167,13 +2383,34 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         }
 
         function updateLifecycleProgress(activePlan, run) {
+          const previewDraftReady = !run && Boolean(draftPreview());
           const previewPlanReady = !run && activePlan && activePlan.executionPlan.sources.length > 0;
           const steps = [
             { id: "step-normalization", data: activePlan && activePlan.summary },
-            { id: "step-linear", data: activePlan && (activePlan.linear.createIssue || activePlan.planning.linearPlan.issueReference) },
-            { id: "step-bdd", data: activePlan && (activePlan.businessIntent.acceptanceCriteria.length > 0 || activePlan.businessIntent.scenarios.length > 0) },
-            { id: "step-tdd", data: activePlan && activePlan.businessIntent.workItems.length > 0 },
-            { id: "step-plan", data: run && activePlan && activePlan.executionPlan.sources.length > 0 },
+            {
+              id: "step-linear",
+              data: previewDraftReady
+                ? draftPreview() && draftPreview().repoContext.length > 0
+                : activePlan && (activePlan.linear.createIssue || activePlan.planning.linearPlan.issueReference)
+            },
+            {
+              id: "step-bdd",
+              data: previewDraftReady
+                ? draftPreview() && (draftPreview().sourceScope.length > 0 || draftPreview().adaptiveBoundaries.length > 0)
+                : activePlan && (activePlan.businessIntent.acceptanceCriteria.length > 0 || activePlan.businessIntent.scenarios.length > 0)
+            },
+            {
+              id: "step-tdd",
+              data: previewDraftReady
+                ? draftPreview() && (draftPreview().minimumSuccess.length > 0 || draftPreview().verificationObligations.length > 0)
+                : activePlan && activePlan.businessIntent.workItems.length > 0
+            },
+            {
+              id: "step-plan",
+              data: run
+                ? activePlan && activePlan.executionPlan.sources.length > 0
+                : previewDraftReady && draftPreview() && draftPreview().baseline.length > 0
+            },
             { id: "step-implementation", data: run ? isRunFullyImplemented(run) : hasImplementationActivity(run) },
             { id: "step-qa", data: run ? isRunFullyVerified(run) : hasQaActivity(run) }
           ];
@@ -2378,6 +2615,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         function updateTopLine(state) {
           const run = state.currentRun;
           const running = run && run.status === "running";
+          const hasPrompt = promptInput.value.trim().length > 0;
+          const hasDraftReady = Boolean(previewDraft && !run);
           const selectedSources = selectedSourceRecords(state);
           const scopedSourceIds = run && run.requestedSourceIds && run.requestedSourceIds.length > 0
             ? run.requestedSourceIds
@@ -2394,22 +2633,55 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               ? "prompt/config -> " + formatSourceLabel(state, run.sourceId)
               : "prompt/config decides";
           lastUpdate.textContent = formatTime(state.serverTime);
-          currentStatusPill.textContent = run ? run.status : "ready";
+          currentStatusPill.textContent = run
+            ? run.status
+            : hasDraftReady
+              ? getPlanDepth(previewPlan) === "full"
+                ? "full review"
+                : "scoping draft"
+              : "ready";
           currentStatusPill.className = "status-pill " + formatStatusClass(run ? run.status : "ready");
-          runIdNode.textContent = run && run.runId ? run.runId : run ? "Run queued" : "No active run";
-          submitButton.disabled = Boolean(running || state.configError || !hasVisibleSources);
+          runIdNode.textContent = run && run.runId
+            ? run.runId
+            : hasDraftReady && previewDraft
+              ? (getPlanDepth(previewPlan) === "full" ? "Full plan " : "Scoping draft ") + previewDraft.draftId
+              : run
+                ? "Run queued"
+                : "No active run";
+          submitButton.disabled = Boolean(localSubmissionState || running || state.configError || !hasVisibleSources || !hasPrompt);
           formNote.textContent = state.configError
             ? "Fix the config before starting a run."
             : !hasVisibleSources
               ? "Open the config and expose at least one work-scope source."
+            : localSubmissionState === "preview"
+              ? "Generating the scoping IDD draft…"
+            : localSubmissionState === "approve"
+              ? "Refreshing the full reviewed plan with your latest edits…"
+            : localSubmissionState === "run"
+              ? "Sending the full reviewed plan into execution…"
             : running
               ? "Run in progress. The timeline will continue updating live."
-              : "Ready for the next prompt.";
+            : hasDraftReady && !hasPrompt
+              ? "The reviewed IDD prompt is empty. Add content before approving the run."
+            : hasDraftReady
+              ? previewDirty
+                ? "Edit review captured. Click Run intent again to refresh the full reviewed plan and start the session."
+                : "Scoping draft ready. Review it, edit it if needed, then click Run intent again to refresh the full reviewed plan and start the session."
+              : hasPrompt
+                ? "Click Run intent to generate the scoping IDD draft."
+                : "Enter an intent prompt, then click Run intent.";
         }
 
         function renderState(state) {
           const hadPreviousState = lastState !== null;
           lastState = state;
+          if (state.currentRun && previewDraft && state.currentRun.draftId === previewDraft.draftId) {
+            previewDraft = null;
+            previewDirty = false;
+            if (state.currentRun.intentPlan) {
+              previewPlan = state.currentRun.intentPlan;
+            }
+          }
           document.getElementById("config-path").textContent = state.configPath;
 
           if (state.configError) {
@@ -2473,89 +2745,136 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           return response.json();
         }
 
-        async function fetchPlanPreview() {
-          const prompt = promptInput.value.trim();
-          if (!prompt) {
-            previewPlan = null;
-            if (lastState) {
-              renderPlan(lastState);
-            }
-            return;
-          }
-
-          const requestId = ++planRequestId;
-          const response = await fetch("/api/plan", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              prompt,
-              sourceIds: selectedSourceIds().length > 0 ? selectedSourceIds() : undefined,
-              agentOverrides: buildAgentOverrides()
-            })
-          });
-
-          const body = await response.json();
-          if (requestId !== planRequestId) {
-            return;
-          }
-
-          if (!response.ok) {
-            previewPlan = null;
-            formNote.textContent = body.error || "Failed to preview the execution plan.";
-            if (lastState) {
-              renderPlan(lastState);
-            }
-            return;
-          }
-
-          previewPlan = body.plan || null;
-          if (lastState) {
-            renderPlan(lastState);
-          }
-        }
-
-        function schedulePlanPreview() {
-          if (planRequestTimer !== null) {
-            clearTimeout(planRequestTimer);
-          }
-
-          planRequestTimer = window.setTimeout(function () {
-            void fetchPlanPreview();
-          }, 180);
-        }
-
         async function submitRun(event) {
           event.preventDefault();
 
-          const scopedSourceIds = selectedSourceIds();
+          const prompt = promptInput.value.trim();
+          if (!prompt) {
+            formNote.textContent = previewDraft
+              ? "The reviewed IDD prompt is empty. Add content before approving the run."
+              : "Enter an intent prompt before generating the scoping IDD draft.";
+            return;
+          }
 
-          const payload = {
-            prompt: promptInput.value,
-            sourceIds: scopedSourceIds.length > 0 ? scopedSourceIds : undefined,
+          const sourceIds = selectedSourceIds();
+
+          const draftPayload = {
+            prompt,
+            sourceIds: sourceIds.length > 0 ? sourceIds : undefined,
             agentOverrides: buildAgentOverrides(),
             dryRun: dryRunInput.checked
           };
 
-          formNote.textContent = "Submitting run…";
+          if (!previewDraft) {
+            localSubmissionState = "preview";
+            if (lastState) {
+              updateTopLine(lastState);
+            }
+
+            const response = await fetch("/api/plan", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(draftPayload)
+            });
+
+            const body = await response.json();
+            localSubmissionState = null;
+            if (!response.ok) {
+              formNote.textContent = body.error || "Failed to generate the scoping IDD draft.";
+              if (lastState) {
+                updateTopLine(lastState);
+              }
+              return;
+            }
+
+            applyPreview(body);
+            if (lastState) {
+              updateTopLine(lastState);
+              renderPlan(lastState);
+            }
+            formNote.textContent = "Scoping IDD draft ready. Review it, edit it if needed, then click Run intent again to refresh the full reviewed plan and start the session.";
+            return;
+          }
+
+          localSubmissionState = "approve";
+          if (lastState) {
+            updateTopLine(lastState);
+          }
+
+          const updateResponse = await fetch("/api/drafts/" + encodeURIComponent(previewDraft.draftId), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(draftPayload)
+          });
+
+          const updateBody = await updateResponse.json();
+          if (!updateResponse.ok) {
+            localSubmissionState = null;
+            formNote.textContent = updateBody.error || "Failed to refresh the full reviewed plan.";
+            if (lastState) {
+              updateTopLine(lastState);
+            }
+            return;
+          }
+
+          applyPreview(updateBody);
+          if (lastState) {
+            renderPlan(lastState);
+          }
+
+          localSubmissionState = "run";
+          if (lastState) {
+            updateTopLine(lastState);
+          }
+
+          const sendResponse = await fetch("/api/drafts/" + encodeURIComponent(previewDraft.draftId) + "/send", {
+            method: "POST"
+          });
+
+          const sendBody = await sendResponse.json();
+          if (!sendResponse.ok) {
+            localSubmissionState = null;
+            formNote.textContent = sendBody.error || "Failed to approve the reviewed IDD prompt.";
+            if (lastState) {
+              updateTopLine(lastState);
+            }
+            return;
+          }
+
+          previewDraft = Object.assign({}, previewDraft, sendBody.draft || {}, { prompt: promptInput.value });
+          previewDirty = false;
 
           const response = await fetch("/api/runs", {
             method: "POST",
             headers: {
               "Content-Type": "application/json"
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+              draftId: previewDraft.draftId,
+              agentOverrides: buildAgentOverrides(),
+              dryRun: dryRunInput.checked
+            })
           });
 
           const body = await response.json();
+          localSubmissionState = null;
           if (!response.ok) {
             formNote.textContent = body.error || "Run request failed.";
+            if (lastState) {
+              updateTopLine(lastState);
+            }
             return;
           }
 
           dryRunInput.checked = false;
-          formNote.textContent = "Run accepted. Waiting for timeline events…";
+          formNote.textContent = "Run accepted. The reviewed IDD prompt is approved and the timeline will update live.";
+          if (lastState) {
+            updateTopLine(lastState);
+          }
         }
 
         async function submitSourceMetadata(event) {
@@ -2593,7 +2912,6 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             const state = await fetchState();
             renderState(state);
             sourceEditorStatus.textContent = "Saved";
-            schedulePlanPreview();
           } catch (error) {
             sourceEditorStatus.textContent = error instanceof Error ? error.message : String(error);
           } finally {
@@ -2654,7 +2972,6 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             updateTopLine(lastState);
             updateSelectionGuidance(lastState);
           }
-          schedulePlanPreview();
         });
 
         stageIds.forEach(function (stageId) {
@@ -2665,11 +2982,9 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
 
           controls.enabled.addEventListener("change", function () {
             controls.enabled.dataset.dirty = "true";
-            schedulePlanPreview();
           });
 
           controls.select.addEventListener("change", function () {
-            schedulePlanPreview();
           });
         });
 

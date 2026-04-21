@@ -4,6 +4,7 @@ import { toFileUrlPath } from "../evidence/paths";
 import { parsePromptNormalizationHintsResponse } from "./gemini-prompt-normalizer";
 import { normalizeIntent, normalizeIntentWithAgent } from "./normalize-intent";
 import { SourceConfig } from "../config/schema";
+import { NormalizedIntent } from "./intent-types";
 
 const geminiAgent = {
   mode: "bounded-runner" as const,
@@ -493,6 +494,17 @@ test("normalizeIntent can plan across multiple sources for business-wide intent"
   assert.ok(
     normalized.planning.reviewNotes.some((note) => note.includes("shared verification workflow"))
   );
+  assert.equal(normalized.businessIntent.decomposition?.objectives.length, 1);
+  assert.deepEqual(
+    normalized.businessIntent.decomposition?.workstreams.map((workstream) => workstream.sourceIds[0]),
+    ["client-systems-roach-admin", "docs-portal"]
+  );
+  assert.equal(
+    normalized.businessIntent.workItems.every(
+      (workItem) => Boolean(workItem.execution.taskId) && Boolean(workItem.execution.subtaskId)
+    ),
+    true
+  );
 });
 
 test("normalizeIntent carries explicit resume targets into the planning context", () => {
@@ -572,6 +584,35 @@ test("normalizeIntent routes prompt box dark-mode fixes to Intent Studio", () =>
   assert.equal(normalized.codeSurface?.confidence, "high");
 });
 
+test("normalizeIntent routes run-status indicator prompts to Intent Studio", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "i need a visual test run indicator added to the ui so i know what tests are run",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: demoCatalogSources
+  });
+
+  assert.equal(normalized.sourceId, "intent-poc-app");
+  assert.equal(normalized.codeSurface?.sourceId, "intent-poc-app");
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+  assert.equal(normalized.codeSurface?.confidence, "high");
+});
+
+test("normalizeIntent derives a specific desired outcome from plain-language review-first prompts", () => {
+  const normalized = normalizeIntent({
+    rawPrompt:
+      "i need all the fields in the app to stay closed by default unless they are clicked by a user. right now they open as the page loads.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: demoCatalogSources
+  });
+
+  assert.equal(
+    normalized.businessIntent.desiredOutcome,
+    "all the fields in the app to stay closed by default unless they are clicked by a user"
+  );
+});
+
 test("normalizeIntent keeps ambiguous source-local UI requests broad when the code surface is unclear", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Add a dark mode button to my application in intent-poc-app so the theme control is visible.",
@@ -590,6 +631,89 @@ test("normalizeIntent keeps ambiguous source-local UI requests broad when the co
   assert.equal(normalized.normalizationMeta.ambiguity.isAmbiguous, true);
   assert.ok(
     normalized.normalizationMeta.ambiguity.reasons.includes(normalized.codeSurface?.rationale ?? "")
+  );
+  assert.ok(normalized.planning.scopingContext);
+  assert.equal(normalized.planning.scopingContext?.primarySurface?.id, "shared-source");
+  assert.deepEqual(
+    normalized.planning.scopingContext?.alternativeSurfaces.map((alternative) => alternative.id),
+    ["intent-studio", "surface-library"]
+  );
+  assert.deepEqual(normalized.planning.scopingContext?.repoNoteHints, []);
+});
+
+test("normalizeIntent retrieves UI-state and verification context only when the prompt implies it", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Fix the dark mode prompt box in intent-poc-app so typed text stays visible while I write in the textarea.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    planningDepth: "scoping",
+    availableSources: intentPocAppSources
+  });
+
+  assert.ok(normalized.planning.scopingContext);
+  assert.equal(normalized.planning.scopingContext?.primarySurface?.id, "intent-studio");
+  assert.ok(
+    normalized.planning.scopingContext?.primarySurface?.primaryPaths.includes("src/demo-app/render/render-intent-studio-page.ts")
+  );
+  assert.deepEqual(
+    normalized.planning.scopingContext?.uiStateHints.map((hint) => hint.stateId),
+    ["theme-mode"]
+  );
+  assert.ok(
+    normalized.planning.scopingContext?.verificationHints.some((hint) =>
+      hint.note.includes("Verify the requested UI state before trusting screenshot evidence.")
+    )
+  );
+  assert.equal(normalized.planning.scopingContext?.captureHints.length, 0);
+});
+
+test("normalizeIntent retrieves prompt-relevant repo memory notes from the exported catalog", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Fix the dark mode prompt box in intent studio so the theme-mode route keeps text visible.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    planningDepth: "scoping",
+    availableSources: intentPocAppSources
+  });
+
+  assert.ok(normalized.planning.scopingContext);
+  assert.ok(
+    normalized.planning.scopingContext?.repoMemoryHints.some(
+      (hint) =>
+        hint.memoryId === "ui-state-metadata" &&
+        hint.sourcePath === "/memories/repo/ui-state-metadata.md" &&
+        hint.note.includes("theme-mode uses a shared dark query-param contract")
+    )
+  );
+});
+
+test("normalizeIntentWithAgent passes the retrieved scoping context pack into Gemini prompt normalization", async () => {
+  let receivedScopingContext: NormalizedIntent["planning"]["scopingContext"] | undefined;
+
+  await normalizeIntentWithAgent(
+    {
+      rawPrompt: "Add a dark mode button to the Intent Studio screen in intent-poc-app so that the theme toggle is visible.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      planningDepth: "scoping",
+      agent: geminiAgent
+    },
+    {
+      normalizePromptWithGemini: async (input) => {
+        receivedScopingContext = input.scopingContext;
+        return {
+          sourceIds: ["intent-poc-app"],
+          codeSurfaceId: "intent-studio"
+        };
+      }
+    }
+  );
+
+  assert.equal(receivedScopingContext?.primarySurface?.id, "intent-studio");
+  assert.ok((receivedScopingContext?.matchedPromptTerms.length ?? 0) > 0);
+  assert.ok(
+    receivedScopingContext?.pathHints.some((hint) => hint.path === "src/demo-app/render/render-intent-studio-page.ts")
   );
 });
 
@@ -999,6 +1123,57 @@ test("normalizeIntentWithAgent keeps valid Gemini hints when sibling hint fields
       warning.includes("invalid captureIdsBySource hint")
     )
   );
+});
+
+test("parsePromptNormalizationHintsResponse keeps valid scoping detail sections when sibling sections are malformed", () => {
+  const hints = parsePromptNormalizationHintsResponse(
+    JSON.stringify({
+      scopingDetails: {
+        repoContext: ["Inspect the Intent Studio run status area first."],
+        baseline: "not-an-array"
+      }
+    })
+  );
+
+  assert.deepEqual(hints.scopingDetails, {
+    repoContext: ["Inspect the Intent Studio run status area first."]
+  });
+  assert.ok(
+    hints.warnings?.some((warning) => warning.includes("invalid scopingDetails.baseline hints"))
+  );
+});
+
+test("normalizeIntentWithAgent persists valid Gemini scoping details on the normalized intent", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "i need a visual test run indicator in intent studio",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: demoCatalogSources,
+      agent: geminiAgent,
+      planningDepth: "scoping"
+    },
+    {
+      normalizePromptWithGemini: async () =>
+        parsePromptNormalizationHintsResponse(
+          JSON.stringify({
+            sourceIds: ["intent-poc-app"],
+            codeSurfaceId: "intent-studio",
+            scopingDetails: {
+              repoContext: ["Inspect the Intent Studio run-status panel before widening scope."],
+              sourceScope: ["Keep the first pass inside the Studio render path and its adjacent server wiring."],
+              verificationObligations: ["Reuse the current Intent Studio verification path before proposing a new test lane."]
+            }
+          })
+        )
+    }
+  );
+
+  assert.deepEqual(normalized.planning.scopingDetails, {
+    repoContext: ["Inspect the Intent Studio run-status panel before widening scope."],
+    sourceScope: ["Keep the first pass inside the Studio render path and its adjacent server wiring."],
+    verificationObligations: ["Reuse the current Intent Studio verification path before proposing a new test lane."]
+  });
 });
 
 test("normalizeIntentWithAgent overrides a weak Gemini capture surface hint when the prompt clearly targets Intent Studio", async () => {

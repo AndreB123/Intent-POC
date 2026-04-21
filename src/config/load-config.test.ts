@@ -194,7 +194,7 @@ test("loadConfig expands the built-in surface library capture set for the unifie
 
   const loaded = await loadConfig(configPath);
   assert.equal(loaded.config.sources["intent-poc-app"].capture.catalog, "surface-library");
-  assert.equal(loaded.config.sources["intent-poc-app"].capture.items.length, 47);
+  assert.equal(loaded.config.sources["intent-poc-app"].capture.items.length, 48);
   assert.equal(
     loaded.config.sources["intent-poc-app"].capture.items.some((item) => item.id === "library-index" && item.fullPage === true),
     true

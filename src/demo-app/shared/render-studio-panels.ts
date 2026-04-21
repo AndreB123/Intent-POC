@@ -39,22 +39,25 @@ export function renderStudioLifecyclePanel(): string {
                 </div>
               </div>
               <div class="lifecycle-step" id="step-linear">
-                <div class="lifecycle-step-title">2. Linear Scoping <span class="lifecycle-step-status" id="step-linear-status" data-state="pending">Pending</span></div>
+                <div class="lifecycle-step-title">2. Repo Context <span class="lifecycle-step-status" id="step-linear-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content" id="plan-linear"></div>
               </div>
               <div class="lifecycle-step" id="step-bdd">
-                <div class="lifecycle-step-title">3. BDD Planning <span class="lifecycle-step-status" id="step-bdd-status" data-state="pending">Pending</span></div>
+                <div class="lifecycle-step-title">3. Scope & Boundaries <span class="lifecycle-step-status" id="step-bdd-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content">
                   <div id="plan-criteria"></div>
                   <div id="plan-scenarios"></div>
                 </div>
               </div>
               <div class="lifecycle-step" id="step-tdd">
-                <div class="lifecycle-step-title">4. TDD Planning <span class="lifecycle-step-status" id="step-tdd-status" data-state="pending">Pending</span></div>
-                <div class="lifecycle-step-content" id="plan-work-items"></div>
+                <div class="lifecycle-step-title">4. Success Contract <span class="lifecycle-step-status" id="step-tdd-status" data-state="pending">Pending</span></div>
+                <div class="lifecycle-step-content">
+                  <div id="plan-decomposition"></div>
+                  <div id="plan-work-items"></div>
+                </div>
               </div>
               <div class="lifecycle-step" id="step-plan">
-                <div class="lifecycle-step-title">5. Planned Execution <span class="lifecycle-step-status" id="step-plan-status" data-state="pending">Pending</span></div>
+                <div class="lifecycle-step-title">5. Execution Readiness <span class="lifecycle-step-status" id="step-plan-status" data-state="pending">Pending</span></div>
                 <div class="lifecycle-step-content">
                   <div class="plan-note" id="plan-execution-note"></div>
                   <div id="plan-sources"></div>

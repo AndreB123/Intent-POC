@@ -1,6 +1,6 @@
 {
-  "intentId": "2026-04-21T06-35-05-259Z-change-behavior-for-intent-poc-app",
-  "receivedAt": "2026-04-21T06:35:05.259Z",
+  "intentId": "2026-04-21T22-49-50-256Z-change-behavior-for-intent-poc-app",
+  "receivedAt": "2026-04-21T22:49:50.256Z",
   "rawPrompt": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
   "summary": "change behavior for intent-poc-app",
   "intentType": "change-behavior",
@@ -20,7 +20,7 @@
   },
   "businessIntent": {
     "statement": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
-    "desiredOutcome": "Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.",
+    "desiredOutcome": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
     "acceptanceCriteria": [
       {
         "id": "ac-1-intent-is-translated-into-executable-work-for-intent-poc-app",
@@ -34,7 +34,7 @@
       },
       {
         "id": "ac-3-results-are-packaged-so-they-can-be-distributed-consistently-with-the-desired-ou",
-        "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..",
+        "description": "Results are packaged so they can be distributed consistently, with the desired outcome of: Create a baseline for the deterministic screenshot library for the built-in surface library..",
         "origin": "inferred"
       }
     ],
@@ -45,7 +45,7 @@
         "goal": "Turn the raw business statement into reviewable BDD structure.",
         "given": [
           "A business intent has been captured: Create a baseline for the deterministic screenshot library for the built-in surface library.",
-          "The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders."
+          "The desired outcome is explicit: Create a baseline for the deterministic screenshot library for the built-in surface library."
         ],
         "when": [
           "The planner decomposes the intent into acceptance criteria and scenarios.",
@@ -116,7 +116,11 @@
         "verification": "QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
         "execution": {
           "order": 1,
-          "dependsOnWorkItemIds": []
+          "dependsOnWorkItemIds": [],
+          "objectiveId": "objective-1-create-a-baseline-for-the-deterministic-screenshot-library-for-the-built-in-surf",
+          "workstreamId": "workstream-1-intent-poc-app",
+          "taskId": "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+          "subtaskId": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
         },
         "playwright": {
           "generatedBy": "rules",
@@ -757,7 +761,88 @@
           ]
         }
       }
-    ]
+    ],
+    "decomposition": {
+      "objectives": [
+        {
+          "id": "objective-1-create-a-baseline-for-the-deterministic-screenshot-library-for-the-built-in-surf",
+          "title": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+          "summary": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+          "desiredOutcome": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+          "workstreamIds": [
+            "workstream-1-intent-poc-app"
+          ]
+        }
+      ],
+      "workstreams": [
+        {
+          "id": "workstream-1-intent-poc-app",
+          "title": "Source workstream: intent-poc-app",
+          "summary": "Deliver the reviewed intent in intent-poc-app.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "taskIds": [
+            "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources"
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "id": "task-1-intent-poc-app-scenario-2-behavior-is-verified-visually-for-applicable-sources",
+          "title": "Behavior is verified visually for applicable sources",
+          "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "scenarioIds": [
+            "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+          ],
+          "workItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "subtaskIds": [
+            "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ]
+        }
+      ],
+      "subtasks": [
+        {
+          "id": "subtask-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
+          "title": "Behavior is verified visually for applicable sources",
+          "summary": "Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.",
+          "scenarioIds": [
+            "scenario-2-behavior-is-verified-visually-for-applicable-sources"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ],
+          "dependsOnSubtaskIds": []
+        }
+      ],
+      "verificationTasks": [
+        {
+          "id": "verify-1-work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app",
+          "title": "Verify Behavior is verified visually for applicable sources",
+          "summary": "Verify the user-visible outcome for Behavior is verified visually for applicable sources.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app"
+          ]
+        }
+      ]
+    }
   },
   "planning": {
     "repoCandidates": [
@@ -786,6 +871,121 @@
         "captureCount": 48
       }
     ],
+    "scopingContext": {
+      "matchedPromptTerms": [
+        "surface library",
+        "library",
+        "Surface Library",
+        "surface"
+      ],
+      "sourceMatches": [
+        {
+          "sourceId": "intent-poc-app",
+          "matchedTerms": [
+            "surface library",
+            "library"
+          ],
+          "reason": "Source intent-poc-app was selected in the requested source scope."
+        }
+      ],
+      "primarySurface": {
+        "sourceId": "intent-poc-app",
+        "id": "surface-library",
+        "label": "Surface Library",
+        "confidence": "high",
+        "rationale": "The prompt points to surface-library behavior inside intent-poc-app.",
+        "matchedTerms": [
+          "Surface Library",
+          "surface",
+          "library"
+        ],
+        "primaryPaths": [
+          "src/demo-app/render/render-surface-frame.ts",
+          "src/demo-app/render/render-surface-page.ts"
+        ],
+        "adjacentPaths": [
+          "src/demo-app/model/catalog.ts",
+          "src/demo-app/model/types.ts"
+        ]
+      },
+      "alternativeSurfaces": [
+        {
+          "sourceId": "intent-poc-app",
+          "id": "intent-studio",
+          "label": "Intent Studio",
+          "confidence": "low",
+          "rationale": "The library request may also touch the Studio shell if the prompt is using Studio language loosely.",
+          "matchedTerms": [],
+          "primaryPaths": [
+            "src/demo-app/render/render-intent-studio-page.ts"
+          ],
+          "adjacentPaths": [
+            "src/demo-app/server/start-intent-studio-server.ts",
+            "src/demo-app/serve-demo-app.ts"
+          ]
+        }
+      ],
+      "pathHints": [
+        {
+          "sourceId": "intent-poc-app",
+          "path": "src/demo-app/render/render-surface-frame.ts",
+          "reason": "Primary implementation path for Surface Library."
+        },
+        {
+          "sourceId": "intent-poc-app",
+          "path": "src/demo-app/render/render-surface-page.ts",
+          "reason": "Primary implementation path for Surface Library."
+        }
+      ],
+      "uiStateHints": [],
+      "verificationHints": [
+        {
+          "sourceId": "intent-poc-app",
+          "note": "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+          "reason": "Matched prompt terms: screenshot, Surface Library, surface, library."
+        },
+        {
+          "sourceId": "intent-poc-app",
+          "note": "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+          "reason": "Matched prompt terms: Surface Library, surface, library."
+        },
+        {
+          "sourceId": "intent-poc-app",
+          "note": "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+          "reason": "Matched prompt terms: screenshot, Surface Library, surface, library."
+        }
+      ],
+      "repoNoteHints": [
+        {
+          "sourceId": "intent-poc-app",
+          "note": "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+          "reason": "Matched prompt terms: built-in, surface, library, Surface Library."
+        },
+        {
+          "sourceId": "intent-poc-app",
+          "note": "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
+          "reason": "Matched prompt terms: surface, library, screenshot, Surface Library."
+        }
+      ],
+      "repoMemoryHints": [
+        {
+          "memoryId": "demo-runtime",
+          "title": "Demo Runtime",
+          "sourcePath": "/memories/repo/domains/demo-runtime.md",
+          "note": "/library stays a stable screenshot surface and should reuse shared render layers.",
+          "reason": "Matched repo memory terms: library, screenshot."
+        },
+        {
+          "memoryId": "artifact-contract",
+          "title": "Artifact Contract",
+          "sourcePath": "/memories/repo/domains/artifact-contract.md",
+          "note": "Persistent artifacts live under artifacts/business, artifacts/sources/<sourceId>, and artifacts/library/<sourceId>.",
+          "reason": "Matched repo memory terms: library, baseline."
+        }
+      ],
+      "captureHints": [],
+      "unresolvedQuestions": []
+    },
     "plannerSections": [
       {
         "id": "idd-plan",

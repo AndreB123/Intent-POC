@@ -242,6 +242,15 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
+    await test.step("Activity Timeline", async () => {
+      await page.goto(new URL("/library/component-activity-timeline", baseUrl).toString(), { waitUntil: "load" });
+      await page.waitForSelector("[data-testid='component-activity-timeline']");
+      const target = page.locator("[data-testid='component-activity-timeline']");
+      await expect(target, "The target '[data-testid='component-activity-timeline']' is visible for Activity Timeline.").toBeVisible();
+      const screenshotPath = path.join(screenshotRoot, "bdd/behavior-is-verified-visually-for-applicable-sources-spec", "activity-timeline.png");
+      await mkdir(path.dirname(screenshotPath), { recursive: true });
+      await target.screenshot({ path: screenshotPath });
+    });
     await test.step("Dashboard Summary View", async () => {
       await page.goto(new URL("/library/view-dashboard-summary", baseUrl).toString(), { waitUntil: "load" });
       await page.waitForSelector("[data-testid='view-dashboard-summary']");

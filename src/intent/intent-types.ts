@@ -1,5 +1,5 @@
 import type { AgentStageId } from "./agent-stage-config";
-import type { CodeSurfaceSelection } from "./code-surface";
+import type { CodeSurfaceConfidence, CodeSurfaceId, CodeSurfaceSelection } from "./code-surface";
 import type { SourceConfig } from "../config/schema";
 
 export type IntentType = "change-behavior";
@@ -73,6 +73,10 @@ export interface PlaywrightCheckpoint {
 export interface WorkItemExecutionPlan {
   order: number;
   dependsOnWorkItemIds: string[];
+  objectiveId?: string;
+  workstreamId?: string;
+  taskId?: string;
+  subtaskId?: string;
   stepMapping?: Record<string, string>;
   reversionState?: Record<string, unknown>;
 }
@@ -126,12 +130,67 @@ export interface TDDWorkItem {
   };
 }
 
+export interface IntentSubtask {
+  id: string;
+  title: string;
+  summary: string;
+  scenarioIds: string[];
+  sourceIds: string[];
+  workItemIds: string[];
+  verificationTaskIds: string[];
+  dependsOnSubtaskIds: string[];
+}
+
+export interface IntentTask {
+  id: string;
+  title: string;
+  summary: string;
+  sourceIds: string[];
+  scenarioIds: string[];
+  workItemIds: string[];
+  subtaskIds: string[];
+  verificationTaskIds: string[];
+}
+
+export interface IntentWorkstream {
+  id: string;
+  title: string;
+  summary: string;
+  sourceIds: string[];
+  taskIds: string[];
+}
+
+export interface IntentObjective {
+  id: string;
+  title: string;
+  summary: string;
+  desiredOutcome: string;
+  workstreamIds: string[];
+}
+
+export interface IntentVerificationTask {
+  id: string;
+  title: string;
+  summary: string;
+  sourceIds: string[];
+  workItemIds: string[];
+}
+
+export interface IntentDecomposition {
+  objectives: IntentObjective[];
+  workstreams: IntentWorkstream[];
+  tasks: IntentTask[];
+  subtasks: IntentSubtask[];
+  verificationTasks: IntentVerificationTask[];
+}
+
 export interface BusinessIntent {
   statement: string;
   desiredOutcome: string;
   acceptanceCriteria: AcceptanceCriterion[];
   scenarios: BDDScenario[];
   workItems: TDDWorkItem[];
+  decomposition?: IntentDecomposition;
 }
 
 export interface ExecutionSourcePlan {
@@ -200,8 +259,91 @@ export interface PlanningResumeTarget {
   issueReference?: string;
 }
 
+export interface ScopingContextSourceMatch {
+  sourceId: string;
+  matchedTerms: string[];
+  reason: string;
+}
+
+export interface ScopingContextSurfaceHint {
+  sourceId: string;
+  id: CodeSurfaceId;
+  label: string;
+  confidence: CodeSurfaceConfidence;
+  rationale: string;
+  matchedTerms: string[];
+  primaryPaths: string[];
+  adjacentPaths: string[];
+}
+
+export interface ScopingContextPathHint {
+  sourceId: string;
+  path: string;
+  reason: string;
+}
+
+export interface ScopingContextUiStateHint {
+  sourceId: string;
+  stateId: SourceConfig["planning"]["uiStates"][number]["id"];
+  label?: string;
+  reason: string;
+  verificationStrategies: string[];
+  notes: string[];
+}
+
+export interface ScopingContextVerificationHint {
+  sourceId: string;
+  note: string;
+  reason: string;
+}
+
+export interface ScopingContextRepoNoteHint {
+  sourceId: string;
+  note: string;
+  reason: string;
+}
+
+export interface ScopingContextRepoMemoryHint {
+  memoryId: string;
+  title: string;
+  sourcePath: string;
+  note: string;
+  reason: string;
+}
+
+export interface ScopingContextCaptureHint {
+  sourceId: string;
+  captureIds: string[];
+  reason: string;
+}
+
+export interface ScopingContextPack {
+  matchedPromptTerms: string[];
+  sourceMatches: ScopingContextSourceMatch[];
+  primarySurface?: ScopingContextSurfaceHint;
+  alternativeSurfaces: ScopingContextSurfaceHint[];
+  pathHints: ScopingContextPathHint[];
+  uiStateHints: ScopingContextUiStateHint[];
+  verificationHints: ScopingContextVerificationHint[];
+  repoNoteHints: ScopingContextRepoNoteHint[];
+  repoMemoryHints: ScopingContextRepoMemoryHint[];
+  captureHints: ScopingContextCaptureHint[];
+  unresolvedQuestions: string[];
+}
+
+export interface PlanningScopingDetails {
+  repoContext?: string[];
+  sourceScope?: string[];
+  adaptiveBoundaries?: string[];
+  minimumSuccess?: string[];
+  baseline?: string[];
+  verificationObligations?: string[];
+}
+
 export interface PlanningContext {
   repoCandidates: RepoContextCandidate[];
+  scopingContext?: ScopingContextPack;
+  scopingDetails?: PlanningScopingDetails;
   plannerSections: PlannerManagedSection[];
   reviewNotes: string[];
   linearPlan: PlanningResumeTarget;
@@ -260,4 +402,17 @@ export interface NormalizedIntent {
     continueOnCaptureError: boolean;
   };
   normalizationMeta: NormalizationMeta;
+}
+
+export type ReviewedIntentStatus = "draft" | "sent" | "executing" | "delivered";
+
+export interface ReviewedIntentArtifact {
+  reviewedIntentId: string;
+  status: ReviewedIntentStatus;
+  createdAt: string;
+  updatedAt: string;
+  prompt: string;
+  requestedSourceIds?: string[];
+  resumeIssue?: string;
+  normalizedIntent: NormalizedIntent;
 }

@@ -1,14 +1,14 @@
 # Intent POC Business Run Summary
 
-- Run ID: 2026-04-21T06-35-05-259Z-intent-poc-app
-- Status: failed
+- Run ID: 2026-04-21T22-49-50-258Z-intent-poc-app
+- Status: completed
 - Intent: Create a baseline for the deterministic screenshot library for the built-in surface library.
 - Normalized summary: change behavior for intent-poc-app
 - Primary source: intent-poc-app
 - Verification workflow: active
 - Linear parent issue: not created
 - Has drift: no
-- Desired outcome: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.
+- Desired outcome: Create a baseline for the deterministic screenshot library for the built-in surface library.
 
 ## AI Stages
 
@@ -27,14 +27,14 @@ Create a baseline for the deterministic screenshot library for the built-in surf
 
 - Intent is translated into executable work for intent-poc-app.
 - Evidence is captured and packaged for review.
-- Results are packaged so they can be distributed consistently, with the desired outcome of: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders..
+- Results are packaged so they can be distributed consistently, with the desired outcome of: Create a baseline for the deterministic screenshot library for the built-in surface library..
 
 ## BDD Scenarios
 
 ### Intent is translated into acceptance-ready work
 - Sources: intent-poc-app
 - Given A business intent has been captured: Create a baseline for the deterministic screenshot library for the built-in surface library.
-- Given The desired outcome is explicit: Produce consistent, reviewable outputs that make the intent visible to users and stakeholders.
+- Given The desired outcome is explicit: Create a baseline for the deterministic screenshot library for the built-in surface library.
 - When The planner decomposes the intent into acceptance criteria and scenarios.
 - When Applicable sources and destinations are identified from the prompt and configuration.
 - Then Intent is translated into executable work for intent-poc-app.
@@ -57,6 +57,25 @@ Create a baseline for the deterministic screenshot library for the built-in surf
 - Then Stakeholders can inspect the outcome through a consistent package tied to the intent.
 - Then Distribution remains decoupled from any single source-specific workflow.
 
+## IDD Decomposition
+
+### Objective: Create a baseline for the deterministic screenshot library for the built-in surface library.
+- Desired outcome: Create a baseline for the deterministic screenshot library for the built-in surface library.
+- Summary: Create a baseline for the deterministic screenshot library for the built-in surface library.
+
+#### Workstream: Source workstream: intent-poc-app
+- Sources: intent-poc-app
+- Summary: Deliver the reviewed intent in intent-poc-app.
+
+##### Task: Behavior is verified visually for applicable sources
+- Summary: Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.
+- Work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+- Verification tasks: Verify Behavior is verified visually for applicable sources
+###### Subtask: Behavior is verified visually for applicable sources
+- Work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+- Verification tasks: Verify Behavior is verified visually for applicable sources
+- Depends on: none
+
 ## TDD Work Items
 
 - Behavior is verified visually for applicable sources
@@ -77,12 +96,12 @@ Create a baseline for the deterministic screenshot library for the built-in surf
 ## Source Runs
 
 ### intent-poc-app
-- Status: failed
-- Error: QA verification failed for source 'intent-poc-app' on attempt 1: Command failed (1). Progress: completed 0/1 targeted work items; pending work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.
+- Status: completed
+- Error: none
 - Linear issue: not created
 - Generated Playwright specs: 1
 - Attempts: 1
-- Latest runtime result: failed (qaVerification)
+- Latest runtime result: completed
 - Summary: artifacts/sources/intent-poc-app/summary.md
 - Manifest: artifacts/sources/intent-poc-app/manifest.json
 
@@ -97,9 +116,9 @@ Create a baseline for the deterministic screenshot library for the built-in surf
 
 ## Outcome
 
-- Completed sources: 0
-- Failed sources: 1
-- Errors: QA verification failed for source 'intent-poc-app' on attempt 1: Command failed (1). Progress: completed 0/1 targeted work items; pending work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app.
+- Completed sources: 1
+- Failed sources: 0
+- Errors: none
 
 ## Artifacts
 

@@ -9,7 +9,7 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
-DEFAULT_CONFIG="./intent-poc.yaml"
+DEFAULT_CONFIG="./intent-poc.local-no-linear.yaml"
 CONFIG_PATH="${INTENT_STUDIO_CONFIG:-}"
 
 if [[ -z "$CONFIG_PATH" ]]; then

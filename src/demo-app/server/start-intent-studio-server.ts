@@ -13,8 +13,16 @@ import {
   assertImplementationStageReady,
   resolveAgentStageConfig
 } from "../../intent/agent-stage-config";
+import { resolveGeminiApiKey } from "../../intent/gemini-client";
 import { normalizeIntentWithAgent } from "../../intent/normalize-intent";
-import { NormalizedIntent, IntentLifecycleStatus } from "../../intent/intent-types";
+import {
+  loadReviewedIntentDraft,
+  persistReviewedIntentDraft,
+  replaceReviewedIntentDraft,
+  updateReviewedIntentDraftStatus
+} from "../../intent/reviewed-intent";
+import { buildReviewedIntentDraftPreview, buildReviewedIntentMarkdown, ReviewedIntentDraftPreview } from "../../intent/reviewed-intent-markdown";
+import { NormalizedIntent, IntentLifecycleStatus, ReviewedIntentStatus } from "../../intent/intent-types";
 import { RunIntentEvent, RunIntentResult, runIntent } from "../../orchestrator/run-intent";
 import { buildRuntimeRunIntentOptions } from "../../runtime/build-runtime-run-intent-options";
 import { pathExists } from "../../shared/fs";
@@ -115,6 +123,7 @@ interface StudioSourceRunSummary {
 interface StudioRunRecord {
   sessionId: string;
   prompt: string;
+  draftId?: string;
   requestedSourceIds?: string[];
   agentOverrides?: RunAgentConfigOverride;
   sourceId?: string;
@@ -185,7 +194,26 @@ interface StudioSourceMetadataUpdate {
   summary?: string;
 }
 
-const STUDIO_IMPLEMENTATION_GUIDANCE = "Start Studio with './intent-poc.local-no-linear.yaml' or add 'agent.provider: gemini' plus a Gemini API key environment variable before enabling Implementation.";
+interface StudioDraftSummary {
+  draftId: string;
+  status: ReviewedIntentStatus;
+  prompt: string;
+  summary: string;
+  preview: ReviewedIntentDraftPreview;
+  path: string;
+  fileUrl?: string;
+  updatedAt: string;
+}
+
+interface PreviewNormalizedIntentResult {
+  plan: NormalizedIntent;
+  draft: StudioDraftSummary;
+}
+
+const STUDIO_GEMINI_GUIDANCE =
+  "Start Studio with './intent-poc.local-no-linear.yaml' or add 'agent.provider: gemini' plus a Gemini API key environment variable before using live Gemini planning or Implementation.";
+
+type StudioPlanningDepth = "scoping" | "full";
 
 function formatSourceLabel(sourceId: string): string {
   return sourceId
@@ -534,14 +562,48 @@ function normalizeAgentOverrides(value: unknown): RunAgentConfigOverride | undef
   return Object.keys(stages).length > 0 ? { stages } : undefined;
 }
 
-function assertStudioAgentConfigurationReady(agent: AgentConfig): void {
+function assertStudioGeminiStageReady(agent: AgentConfig, stageId: "promptNormalization" | "bddPlanning" | "tddPlanning"): void {
+  const stage = resolveAgentStageConfig(agent, stageId);
+
+  if (!stage.enabled || !stage.provider) {
+    return;
+  }
+
+  if (stage.provider !== "gemini") {
+    throw new Error(
+      `Stage '${stage.label}' only supports the gemini provider for live Studio planning. ${STUDIO_GEMINI_GUIDANCE}`
+    );
+  }
+
+  try {
+    resolveGeminiApiKey({ apiKeyEnv: stage.apiKeyEnv });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`${stage.label} requires Gemini access. ${error.message} ${STUDIO_GEMINI_GUIDANCE}`);
+    }
+
+    throw error;
+  }
+}
+
+function assertStudioAgentConfigurationReady(agent: AgentConfig, planningDepth?: StudioPlanningDepth): void {
+  if (planningDepth === "scoping") {
+    assertStudioGeminiStageReady(agent, "promptNormalization");
+  }
+
+  if (planningDepth === "full") {
+    assertStudioGeminiStageReady(agent, "promptNormalization");
+    assertStudioGeminiStageReady(agent, "bddPlanning");
+    assertStudioGeminiStageReady(agent, "tddPlanning");
+  }
+
   const implementationStage = resolveAgentStageConfig(agent, "implementation");
 
   try {
     assertImplementationStageReady(implementationStage);
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`${error.message} ${STUDIO_IMPLEMENTATION_GUIDANCE}`);
+      throw new Error(`${error.message} ${STUDIO_GEMINI_GUIDANCE}`);
     }
 
     throw error;
@@ -588,13 +650,13 @@ async function previewNormalizedIntent(input: {
   sourceIds?: string[];
   agentOverrides?: RunAgentConfigOverride;
   resumeIssue?: string;
-}): Promise<NormalizedIntent> {
+}): Promise<PreviewNormalizedIntentResult> {
   const loaded = await loadConfig(input.configPath);
   const agent = applyAgentOverrides(loaded.config.agent, input.agentOverrides);
 
-  assertStudioAgentConfigurationReady(agent);
+  assertStudioAgentConfigurationReady(agent, "scoping");
 
-  return await normalizeIntentWithAgent({
+  const plan = await normalizeIntentWithAgent({
     rawPrompt: input.prompt,
     defaultSourceId: loaded.config.run.sourceId,
     continueOnCaptureError: loaded.config.run.continueOnCaptureError,
@@ -602,10 +664,116 @@ async function previewNormalizedIntent(input: {
     resumeIssue: input.resumeIssue ?? loaded.config.run.resumeIssue,
     availableSources: buildPlannerSources(loaded.config.sources),
     requestedSourceIds: input.sourceIds,
+    planningDepth: "scoping",
     linearEnabled: loaded.config.linear.enabled,
     publishToSourceWorkspace:
       loaded.config.artifacts.storageMode === "both" && Boolean(loaded.config.artifacts.copyToSourcePath)
   });
+
+  const reviewedPrompt = buildReviewedIntentMarkdown({
+    rawPrompt: input.prompt,
+    normalizedIntent: plan
+  });
+
+  const { artifact, paths } = await persistReviewedIntentDraft({
+    loadedConfig: loaded,
+    normalizedIntent: plan,
+    prompt: reviewedPrompt,
+    requestedSourceIds: input.sourceIds,
+    resumeIssue: input.resumeIssue
+  });
+  const relativeDraftPath = toRelativePath(paths.controllerRoot, paths.draftPath) ?? paths.draftPath;
+
+  return {
+    plan,
+    draft: {
+      draftId: artifact.reviewedIntentId,
+      status: artifact.status,
+      prompt: artifact.prompt,
+      summary: plan.summary,
+      preview: buildReviewedIntentDraftPreview({ normalizedIntent: plan }),
+      path: relativeDraftPath,
+      fileUrl: toFileUrlPath(relativeDraftPath),
+      updatedAt: artifact.updatedAt
+    }
+  };
+}
+
+async function updateNormalizedIntentDraft(input: {
+  configPath: string;
+  reviewedIntentId: string;
+  prompt: string;
+  sourceIds?: string[];
+  agentOverrides?: RunAgentConfigOverride;
+  resumeIssue?: string;
+}): Promise<PreviewNormalizedIntentResult> {
+  const loaded = await loadConfig(input.configPath);
+  const agent = applyAgentOverrides(loaded.config.agent, input.agentOverrides);
+
+  assertStudioAgentConfigurationReady(agent, "full");
+
+  const plan = await normalizeIntentWithAgent({
+    rawPrompt: input.prompt,
+    defaultSourceId: loaded.config.run.sourceId,
+    continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    agent,
+    resumeIssue: input.resumeIssue ?? loaded.config.run.resumeIssue,
+    availableSources: buildPlannerSources(loaded.config.sources),
+    requestedSourceIds: input.sourceIds,
+    planningDepth: "full",
+    linearEnabled: loaded.config.linear.enabled,
+    publishToSourceWorkspace:
+      loaded.config.artifacts.storageMode === "both" && Boolean(loaded.config.artifacts.copyToSourcePath)
+  });
+
+  const { artifact, paths } = await replaceReviewedIntentDraft({
+    loadedConfig: loaded,
+    reviewedIntentId: input.reviewedIntentId,
+    prompt: input.prompt,
+    requestedSourceIds: input.sourceIds,
+    resumeIssue: input.resumeIssue,
+    normalizedIntent: plan,
+    status: "draft"
+  });
+
+  const relativeDraftPath = toRelativePath(paths.controllerRoot, paths.draftPath) ?? paths.draftPath;
+
+  return {
+    plan: {
+      ...plan,
+      intentId: input.reviewedIntentId
+    },
+    draft: {
+      draftId: artifact.reviewedIntentId,
+      status: artifact.status,
+      prompt: artifact.prompt,
+      summary: plan.summary,
+      preview: buildReviewedIntentDraftPreview({ normalizedIntent: plan }),
+      path: relativeDraftPath,
+      fileUrl: toFileUrlPath(relativeDraftPath),
+      updatedAt: artifact.updatedAt
+    }
+  };
+}
+
+function parseReviewedIntentIdFromRoute(route: string): string | undefined {
+  const match = route.match(/^\/api\/drafts\/([^/]+)$/);
+  if (!match) {
+    return undefined;
+  }
+
+  const decodedId = decodeURIComponent(match[1]).trim();
+  return decodedId.length > 0 ? decodedId : undefined;
+}
+
+function parseReviewedIntentIdForSend(route: string): string | undefined {
+  const match = route.match(/^\/api\/drafts\/([^/]+)\/send$/);
+  if (!match) {
+    return undefined;
+  }
+
+  const decodedId = decodeURIComponent(match[1]).trim();
+  return decodedId.length > 0 ? decodedId : undefined;
 }
 
 function toStudioCaptureSummaries(result: RunIntentResult): StudioCaptureSummary[] {
@@ -1018,6 +1186,8 @@ export async function startIntentStudioServer(
 
   async function executeRun(input: {
     prompt: string;
+    normalizedIntent?: NormalizedIntent;
+    draftId?: string;
     sourceIds?: string[];
     agentOverrides?: RunAgentConfigOverride;
     resumeIssue?: string;
@@ -1027,9 +1197,18 @@ export async function startIntentStudioServer(
     const { run } = input;
 
     try {
+      if (input.draftId) {
+        await updateReviewedIntentDraftStatus({
+          loadedConfig: await loadConfig(configPath),
+          reviewedIntentId: input.draftId,
+          status: "executing"
+        });
+      }
+
       const result = await runIntentFn(await buildRuntimeRunIntentOptions({
           configPath,
           intent: input.prompt,
+          normalizedIntent: input.normalizedIntent,
           sourceIds: input.sourceIds,
           agentOverrides: input.agentOverrides,
           resumeIssue: input.resumeIssue,
@@ -1041,13 +1220,29 @@ export async function startIntentStudioServer(
         }));
 
         applyRunResult(run, result);
-  run.status = result.status;
+        run.status = result.status;
         run.finishedAt = new Date().toISOString();
+
+        if (input.draftId) {
+          await updateReviewedIntentDraftStatus({
+            loadedConfig: await loadConfig(configPath),
+            reviewedIntentId: input.draftId,
+            status: result.status === "completed" ? "delivered" : "sent"
+          });
+        }
+
         void broadcastState();
       } catch (error) {
         run.status = "failed";
         run.finishedAt = new Date().toISOString();
         run.error = error instanceof Error ? error.message : String(error);
+        if (input.draftId) {
+          await updateReviewedIntentDraftStatus({
+            loadedConfig: await loadConfig(configPath),
+            reviewedIntentId: input.draftId,
+            status: "sent"
+          });
+        }
         appendEvent(run, {
           timestamp: new Date().toISOString(),
           level: "error",
@@ -1063,6 +1258,8 @@ export async function startIntentStudioServer(
 
   function startRun(input: {
     prompt: string;
+    normalizedIntent?: NormalizedIntent;
+    draftId?: string;
     sourceIds?: string[];
     agentOverrides?: RunAgentConfigOverride;
     resumeIssue?: string;
@@ -1073,9 +1270,11 @@ export async function startIntentStudioServer(
     const run: StudioRunRecord = {
       sessionId: createSessionId(),
       prompt: input.prompt,
+      draftId: input.draftId,
       requestedSourceIds: input.sourceIds,
       agentOverrides: input.agentOverrides,
       resumeIssue: input.resumeIssue,
+      intentPlan: input.normalizedIntent,
       dryRun: input.dryRun,
       status: "running",
       startedAt: new Date().toISOString(),
@@ -1092,6 +1291,8 @@ export async function startIntentStudioServer(
       phase: "run",
       message: "Run request accepted.",
       details: {
+        draftId: input.draftId,
+        reviewedIntentId: input.normalizedIntent?.intentId,
         requestedSourceIds: input.sourceIds,
         agentOverrides: input.agentOverrides,
         resumeIssue: input.resumeIssue,
@@ -1126,6 +1327,8 @@ export async function startIntentStudioServer(
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const requestUrl = new URL(req.url ?? "/", `http://${host}`);
     const route = requestUrl.pathname;
+    const reviewedIntentIdRouteParam = parseReviewedIntentIdFromRoute(route);
+    const reviewedIntentIdSendRouteParam = parseReviewedIntentIdForSend(route);
     const effectiveVariant = resolveVariant(requestUrl, variant);
 
     if (req.method === "GET" && route === "/") {
@@ -1193,7 +1396,7 @@ export async function startIntentStudioServer(
         const resumeIssue = typeof body.resumeIssue === "string" && body.resumeIssue.trim().length > 0
           ? body.resumeIssue.trim()
           : undefined;
-        const plan = await previewNormalizedIntent({
+        const preview = await previewNormalizedIntent({
           configPath,
           prompt,
           sourceIds,
@@ -1201,7 +1404,74 @@ export async function startIntentStudioServer(
           resumeIssue
         });
 
-        sendJson(res, 200, { plan });
+        sendJson(res, 200, preview);
+      } catch (error) {
+        sendJson(res, 400, { error: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
+
+    if (req.method === "PATCH" && reviewedIntentIdRouteParam) {
+      try {
+        const rawBody = await readRequestBody(req);
+        const body = rawBody.length > 0 ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
+        const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+
+        if (!prompt) {
+          sendJson(res, 400, { error: "prompt is required when updating a reviewed intent draft." });
+          return;
+        }
+
+        const sourceIds = normalizeRequestedSourceIds(body.sourceIds ?? body.sourceId);
+        const agentOverrides = normalizeAgentOverrides(body.agentOverrides);
+        const resumeIssue = typeof body.resumeIssue === "string" && body.resumeIssue.trim().length > 0
+          ? body.resumeIssue.trim()
+          : undefined;
+
+        const preview = await updateNormalizedIntentDraft({
+          configPath,
+          reviewedIntentId: reviewedIntentIdRouteParam,
+          prompt,
+          sourceIds,
+          agentOverrides,
+          resumeIssue
+        });
+
+        sendJson(res, 200, preview);
+      } catch (error) {
+        sendJson(res, 400, { error: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
+
+    if (req.method === "POST" && reviewedIntentIdSendRouteParam) {
+      try {
+        const loaded = await loadConfig(configPath);
+        const existingDraft = await loadReviewedIntentDraft({
+          loadedConfig: loaded,
+          reviewedIntentId: reviewedIntentIdSendRouteParam
+        });
+
+        if (existingDraft.artifact.normalizedIntent.normalizationMeta.effectivePlanningDepth !== "full") {
+          sendJson(res, 409, {
+            error: `Reviewed intent draft '${reviewedIntentIdSendRouteParam}' must be refreshed from the reviewed IDD draft before approval.`
+          });
+          return;
+        }
+
+        const { artifact } = await updateReviewedIntentDraftStatus({
+          loadedConfig: loaded,
+          reviewedIntentId: reviewedIntentIdSendRouteParam,
+          status: "sent"
+        });
+
+        sendJson(res, 200, {
+          draft: {
+            draftId: artifact.reviewedIntentId,
+            status: artifact.status,
+            updatedAt: artifact.updatedAt
+          }
+        });
       } catch (error) {
         sendJson(res, 400, { error: error instanceof Error ? error.message : String(error) });
       }
@@ -1233,12 +1503,7 @@ export async function startIntentStudioServer(
         const rawBody = await readRequestBody(req);
         const body = rawBody.length > 0 ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
         const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-
-        if (!prompt) {
-          sendJson(res, 400, { error: "Prompt is required." });
-          return;
-        }
-
+        const draftId = typeof body.draftId === "string" && body.draftId.trim().length > 0 ? body.draftId.trim() : undefined;
         const sourceIds = normalizeRequestedSourceIds(body.sourceIds ?? body.sourceId);
         const agentOverrides = normalizeAgentOverrides(body.agentOverrides);
         const resumeIssue = typeof body.resumeIssue === "string" && body.resumeIssue.trim().length > 0
@@ -1249,7 +1514,54 @@ export async function startIntentStudioServer(
 
         assertStudioAgentConfigurationReady(applyAgentOverrides(loaded.config.agent, agentOverrides));
 
-        startRun({ prompt, sourceIds, agentOverrides, resumeIssue, dryRun });
+        if (draftId) {
+          const { artifact } = await loadReviewedIntentDraft({
+            loadedConfig: loaded,
+            reviewedIntentId: draftId
+          });
+
+          if (artifact.status === "draft") {
+            sendJson(res, 409, { error: `Reviewed intent draft '${draftId}' must be sent before starting a run.` });
+            return;
+          }
+
+          if (artifact.status !== "sent") {
+            sendJson(res, 409, { error: `Reviewed intent draft '${draftId}' is already ${artifact.status}.` });
+            return;
+          }
+
+          if (artifact.normalizedIntent.normalizationMeta.effectivePlanningDepth !== "full") {
+            sendJson(res, 409, {
+              error: `Reviewed intent draft '${draftId}' must be refreshed from the reviewed IDD draft before starting a run.`
+            });
+            return;
+          }
+
+          startRun({
+            prompt: artifact.prompt,
+            normalizedIntent: artifact.normalizedIntent,
+            draftId,
+            sourceIds: artifact.requestedSourceIds,
+            agentOverrides,
+            resumeIssue: artifact.resumeIssue,
+            dryRun
+          });
+          sendJson(res, 202, { ok: true });
+          return;
+        }
+
+        if (!prompt) {
+          sendJson(res, 400, { error: "prompt is required before starting a run." });
+          return;
+        }
+
+        startRun({
+          prompt,
+          sourceIds,
+          agentOverrides,
+          resumeIssue,
+          dryRun
+        });
         sendJson(res, 202, { ok: true });
       } catch (error) {
         sendJson(res, 400, { error: error instanceof Error ? error.message : String(error) });

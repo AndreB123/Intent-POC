@@ -69,6 +69,25 @@ Create a baseline screenshot library for the surface library source. The plan mu
 - Then Stakeholders can inspect the outcome through a consistent package tied to the intent.
 - Then Distribution remains decoupled from any single source-specific workflow.
 
+## IDD Decomposition
+
+### Objective: Create a baseline screenshot library for the surface library source. The plan must turn the request into acceptance-ready work for the built-in surface library. The captured evidence should reflect dark mode during verification. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
+- Desired outcome: product and engineering leads can inspect the baseline without reading implementation details
+- Summary: Create a baseline screenshot library for the surface library source. The plan must turn the request into acceptance-ready work for the built-in surface library. The captured evidence should reflect dark mode during verification. It should publish a reviewable evidence package for GitHub and documentation stakeholders. It needs to leave a visible business process gate for baseline review. Do this so that product and engineering leads can inspect the baseline without reading implementation details.
+
+#### Workstream: Source workstream: intent-poc-app
+- Sources: intent-poc-app
+- Summary: Deliver the reviewed intent in intent-poc-app.
+
+##### Task: Behavior is verified visually for applicable sources
+- Summary: Define Playwright screenshot verification that QA can execute to validate behavior for each source involved in the intent.
+- Work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+- Verification tasks: Verify Behavior is verified visually for applicable sources
+###### Subtask: Behavior is verified visually for applicable sources
+- Work items: work-1-behavior-is-verified-visually-for-applicable-sources-intent-poc-app
+- Verification tasks: Verify Behavior is verified visually for applicable sources
+- Depends on: none
+
 ## TDD Work Items
 
 - Behavior is verified visually for applicable sources

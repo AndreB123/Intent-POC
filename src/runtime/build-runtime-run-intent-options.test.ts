@@ -146,6 +146,26 @@ test("buildRuntimeRunIntentOptions respects an explicit publish-to-library overr
   assert.deepEqual(options.sourceIds, ["app"]);
 });
 
+test("buildRuntimeRunIntentOptions passes through a reviewed normalized intent", async (t) => {
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-runtime-policy-reviewed-"));
+  const configPath = path.join(tmpRoot, "intent-poc.yaml");
+
+  await writeConfig(configPath);
+
+  t.after(async () => {
+    await fs.rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  const reviewedIntent = { intentId: "reviewed-intent-1" } as never;
+  const options = await buildRuntimeRunIntentOptions({
+    configPath,
+    intent: "Run from reviewed intent.",
+    normalizedIntent: reviewedIntent
+  });
+
+  assert.equal(options.normalizedIntent, reviewedIntent);
+});
+
 test("buildRuntimeRunIntentOptions rejects legacy artifact keys during config load", async (t) => {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-runtime-policy-legacy-"));
   const configPath = path.join(tmpRoot, "intent-poc.yaml");

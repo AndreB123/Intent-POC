@@ -8,6 +8,8 @@ For sources that opt into `capture.publishToLibrary: true`, screenshot PNGs now 
 
 Runtime entrypoints now share one run policy surface. `npm run dev -- run`, Intent Studio live runs, and `npm run library:refresh` all build `runIntent` options through the same runtime helper so tracked surface-library sources do not drift into different publish behavior depending on how the run was launched.
 
+The current Intent-Driven Development workflow plan is documented in `docs/idd-plan.md`, and the tracked implementation checklist lives in `docs/idd-task-plan.md`. Together they define the target review-first flow where the system drafts intent from sparse prompts, repo memory, and source metadata, then stops for user edits before execution begins.
+
 ## Current Status
 
 The initial implementation includes:
@@ -39,6 +41,8 @@ cp .env.example .env
 
 To enable live Gemini planning, set `GEMINI_KEY`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` in `.env` or the process environment and configure the `agent` block with `provider: gemini` plus per-stage models under `agent.stages`. The checked-in `intent-poc.yaml` intentionally stays rules-backed by default so dry runs, tests, and canonical snapshots remain deterministic. `intent-poc.local-no-linear.yaml` is the live Gemini example config in this repo, uses current `models/...` Gemini ids, and enables implementation plus QA for the built-in Intent Driven Development POC demo sources rather than `client-systems`.
 
+Local interactive Studio sessions now default to `intent-poc.local-no-linear.yaml` so first-click planning uses live Gemini by default. Use `--config ./intent-poc.yaml` when you explicitly want deterministic Studio planning.
+
 The current Gemini stage split is:
 - `promptNormalization`: bounded prompt interpretation, source scope hints, and capture hints. Default in this repo: `models/gemini-3.1-flash-lite-preview`. Alternate fast preview: `models/gemini-3-flash-preview`.
 - `linearScoping`: issue and lane shaping before implementation planning expands. Default in this repo: `models/gemini-3.1-flash-lite-preview`.
@@ -61,10 +65,10 @@ Start the built-in Intent Studio UI:
 npm run demo:serve
 ```
 
-To run Studio with the live Gemini example config:
+The default `demo` config is now the live Gemini example config. To force the deterministic Studio path instead:
 
 ```bash
-npm run demo:serve -- --config ./intent-poc.local-no-linear.yaml
+npm run demo:serve -- --config ./intent-poc.yaml
 ```
 
 Then open:
@@ -75,6 +79,8 @@ http://127.0.0.1:6010/
 
 The prompt screen now lets you:
 - submit an intent prompt
+- preview a persisted compact reviewed-intent draft before execution starts
+- edit the reviewed draft in place and explicitly send it when it is ready
 - choose work scope from config-backed checkbox cards
 - edit source labels and repo context directly in Studio
 - open the active config in the editor when you need structural source changes
@@ -82,6 +88,31 @@ The prompt screen now lets you:
 - watch live orchestration status
 - inspect Linear activity when enabled
 - open summaries, manifests, logs, screenshots, and diff images
+
+Studio now follows a review-first run contract:
+- the first `POST /api/plan` call stops at a scoping pass and persists a compact IDD draft with intent, repo context, scope, boundaries, minimum success, baseline, verification obligations, and delivery obligations
+- subsequent prompt edits refresh that same draft into the full reviewed plan instead of creating a new execution path
+- Studio sends the reviewed draft explicitly before calling `POST /api/runs`, and direct send or run is rejected while the draft is still scoping-only
+- Studio-backed `/api/runs` starts from `draftId` and reuses the reviewed normalized intent instead of re-planning from raw prompt text
+
+Studio now also surfaces planning provenance directly from the normalized intent stage metadata so you can tell whether prompt normalization came from live Gemini, deterministic rules, fallback, or a skipped stage. When Gemini does not provide prompt-specific scoping details, the reviewed scoping draft marks that repo context as scaffolded from repo heuristics instead of presenting it like model-derived certainty.
+
+If Studio is using the live Gemini config and the required Gemini environment variables are missing, planning preview now fails clearly instead of silently dropping into a deterministic-looking draft.
+
+The operational details for this flow live in `docs/studio-prompt-normalization.md`.
+
+To launch Studio from the shell wrapper with the live Gemini default:
+
+```bash
+./start-studio.sh
+```
+
+To launch the wrapper against the deterministic config instead:
+
+```bash
+INTENT_STUDIO_CONFIG=./intent-poc.yaml ./start-studio.sh
+```
+
 
 The asset library is still available at:
 

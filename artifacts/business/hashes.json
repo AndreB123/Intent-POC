@@ -1,6 +1,295 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "generatedAt": "2026-04-21T06:35:39.767Z",
-  "items": []
+  "generatedAt": "2026-04-21T22:51:10.607Z",
+  "items": [
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-color-chip",
+      "relativePath": "components/primitive-color-chip.png",
+      "sha256": "99232a2d6c2b49c3c845f3ffb9b76c25be8c9adaf1ac9c1bf1e3ec11fca0a8eb"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-typography",
+      "relativePath": "components/primitive-typography.png",
+      "sha256": "d25b5e62951e40dfe3df0ab2f16c169f4f9d57db7f3e00d1fd352a1c0c9c6a16"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-pill-tag",
+      "relativePath": "components/primitive-pill-tag.png",
+      "sha256": "72663f698ef0c5c1db8fba0375b619afa922712f5bd9553ca34d1e2ce438a7dc"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-input-field",
+      "relativePath": "components/primitive-input-field.png",
+      "sha256": "be7951b328e2ff26b6217d84ee8d27373ac3c95ff203a2a2fa78eb5df4f36434"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-button-set",
+      "relativePath": "components/primitive-button-set.png",
+      "sha256": "6039d6408f2e512ba2e96cd6adca74a694984ea994f26b9c4d78694fba253b24"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-avatar-stack",
+      "relativePath": "components/primitive-avatar-stack.png",
+      "sha256": "2c3781096819cd07482f3b78745d83f8ce19467efdde79cfae115ea6ee1ccb0d"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-status-indicator",
+      "relativePath": "components/primitive-status-indicator.png",
+      "sha256": "75399e8f22c05619857392180480a03464e1e28e07cc7f465b7f66eb3dff9854"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-spacing-scale",
+      "relativePath": "components/primitive-spacing-scale.png",
+      "sha256": "ece02510ffe2ab7b3f747cdd9573060cce71fc66e546f8b7b488fa22afc9afb2"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-icon-list",
+      "relativePath": "components/primitive-icon-list.png",
+      "sha256": "c2e2e4e4d08a7d4f339545003c55a09154c4f20283c2dbf05da982ae686091cd"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "primitive-kpi-block",
+      "relativePath": "components/primitive-kpi-block.png",
+      "sha256": "69be0a5cd947da70513b0da2d459e4997a5f7895ba21072aa2f5aaa3beb18edc"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-button-primary",
+      "relativePath": "components/component-button-primary.png",
+      "sha256": "93ea2d086a1fec0c56c2216d985ef8353b6373ed0bf3b96f7863453916ccf547"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-button-secondary",
+      "relativePath": "components/component-button-secondary.png",
+      "sha256": "d8244c5b9a65577cda392e5573bf268efdb958df94a6081795d48da62c2cf2f7"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-button-danger",
+      "relativePath": "components/component-button-danger.png",
+      "sha256": "e1c36ee544ae199151ccc19da3836d823ba8e45276c274ebc2fbd342c412b706"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-card-highlight",
+      "relativePath": "components/component-card-highlight.png",
+      "sha256": "e93bb3b4b099b2cdd88940626233b4460b7537be6fd515cd83c117eab22c717a"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-card-compact",
+      "relativePath": "components/component-card-compact.png",
+      "sha256": "5f78d2077d08d1c3c2f0c808d481084c9fe0ce187457d248fa2fce2ab27b05e9"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-banner-info",
+      "relativePath": "components/component-banner-info.png",
+      "sha256": "f4c8ae979424e832e5b448759cb1a48ab3a77cf04b429eaf077e515a561d2800"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-banner-warning",
+      "relativePath": "components/component-banner-warning.png",
+      "sha256": "2b89bdd3ae109db4056d999b2c0422d66ede7b9797f74491f7228dce00d98db9"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-modal-shell",
+      "relativePath": "components/component-modal-shell.png",
+      "sha256": "d27890dae57c421cb7ffd350ff359bff8acc00d13244a3e2db2c401133a67516"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-table-row",
+      "relativePath": "components/component-table-row.png",
+      "sha256": "219afe3fba3cbed8b153a3f2a8f17cbeeb50209b8ea6d74ea24df17305be6639"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-search-bar",
+      "relativePath": "components/component-search-bar.png",
+      "sha256": "9b3954c5d8ef53b4b84b206b027ecf49a73b5fe5496e6eb19890bc4df19b8561"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-stat-tile",
+      "relativePath": "components/component-stat-tile.png",
+      "sha256": "acc1d920cba619622f569ae9e4889977669b6c83e9b1d6c38a6a4cea8be9b4ee"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-nav-tabs",
+      "relativePath": "components/component-nav-tabs.png",
+      "sha256": "52b7a4dc3c4158416328fbe95f06834c0e9dfce73fc1fec45ee6220bff0fe3d8"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-toast-success",
+      "relativePath": "components/component-toast-success.png",
+      "sha256": "0b0abe0641f66b88e3b746079dabb3b00be951133f68b05a11344c265d7ec796"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-toast-error",
+      "relativePath": "components/component-toast-error.png",
+      "sha256": "13b54b25f2295d9781a410f45ceb6c8a572121e07b825b3eb2810ed05f951179"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-form-section",
+      "relativePath": "components/component-form-section.png",
+      "sha256": "8f59db07ac4f3e044dafdd5602eff5ca59b6e2235e98e9d754c8423caa9283fe"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-user-list-item",
+      "relativePath": "components/component-user-list-item.png",
+      "sha256": "38de89f252e50f87a5546512bf0a4091e407fbb4da3738d6917fed4d7b5e323e"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "component-activity-timeline",
+      "relativePath": "components/component-activity-timeline.png",
+      "sha256": "5a6fbfbb76e6342d315db70c8b989e142d44cd10a37db2600233c4052c574ca9"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-dashboard-summary",
+      "relativePath": "views/view-dashboard-summary.png",
+      "sha256": "5423f70af11c37b5836e0df7fd356bea0785095520d5b3c906d67afd3c6ab2ad"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-list-overview",
+      "relativePath": "views/view-list-overview.png",
+      "sha256": "14b0adc5d95ec4c55762c424e12f0a024a0c1848676fc69054c8ff65ca221abd"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-settings-panel",
+      "relativePath": "views/view-settings-panel.png",
+      "sha256": "469a3356d2aae50b3df630fa5017504f8f2aec4ec1a4917b62bd8bcf52c70b2c"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-empty-results",
+      "relativePath": "views/view-empty-results.png",
+      "sha256": "14c06fdfa43085ca3d93f3e599dee33ae3845079b3e4b7401b8d6aca77f01216"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-campaign-table",
+      "relativePath": "views/view-campaign-table.png",
+      "sha256": "42623944908cec3aefdeb2f1c63bc91ba3a5d0692a63e691253c5df23b21b442"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-notifications-center",
+      "relativePath": "views/view-notifications-center.png",
+      "sha256": "1db35105e8da92384bf358646c16c65969103618b3fab99ff5361ddad2f1229c"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-user-directory",
+      "relativePath": "views/view-user-directory.png",
+      "sha256": "5468629af8c19c63801e12be93fcfde0497808e203138b6697d21cacb164b239"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-revenue-kpis",
+      "relativePath": "views/view-revenue-kpis.png",
+      "sha256": "e9e122c0dc157eca745543ff59d670ca9f4e6d545c0c994d17171bb93bb863d8"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-onboarding-checklist",
+      "relativePath": "views/view-onboarding-checklist.png",
+      "sha256": "cf868a11318264eabe0e38dc1ec82b182a4bcbe90681560b8e4d370d99156eb4"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-approval-queue",
+      "relativePath": "views/view-approval-queue.png",
+      "sha256": "3d970a44365ca6729ad8c976cbf53acea5a3246dfaa3c247db32694dd33aff7c"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-audit-log",
+      "relativePath": "views/view-audit-log.png",
+      "sha256": "dc153638a61f36bb7af3afa054cdd9f2765b512a50e00ed08d8f06a96c51cb3f"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "view-billing-overview",
+      "relativePath": "views/view-billing-overview.png",
+      "sha256": "3b81ebc30e9c769dc7cae5cf08f78b7fb440d26e3bd1b4585aedb4418a3b8cb7"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-analytics-overview",
+      "relativePath": "pages/page-analytics-overview.png",
+      "sha256": "b4bea81d1937c819318fed3743ab68ceb91ac2795f49f9257260976e234df407"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-account-list",
+      "relativePath": "pages/page-account-list.png",
+      "sha256": "e2593f1e7f68bf64193b7fb48508099d0c602cbddd1c57a237e7d6b5b8837a00"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-campaign-editor",
+      "relativePath": "pages/page-campaign-editor.png",
+      "sha256": "71f9bdcb1698147b726f521cc81610e916272e735ee59430828ab82b4deee3d7"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-system-settings",
+      "relativePath": "pages/page-system-settings.png",
+      "sha256": "b1d2b25ff18dc416da7e79131ed26a83b6926f28d6009c12e150470ef2e25bd1"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-operations-center",
+      "relativePath": "pages/page-operations-center.png",
+      "sha256": "3a7a61ea52f574aa24ae2cf1ef2beee96e4bab52486349f3fde46284f2335001"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-user-management",
+      "relativePath": "pages/page-user-management.png",
+      "sha256": "1ab1b4885c1603545e91b1a7750c81688904a02c4810db7f1694f501cb6b5c1c"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-incident-review",
+      "relativePath": "pages/page-incident-review.png",
+      "sha256": "3ab1390955fd36bb28ad4d2828268fd988e20277499cf96240766e1b7b06a74b"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "page-revenue-forecast",
+      "relativePath": "pages/page-revenue-forecast.png",
+      "sha256": "8b7c99310436544b172bf170fc74910f9ccf1868c1068cd78a22517bced2e37d"
+    },
+    {
+      "sourceId": "intent-poc-app",
+      "captureId": "library-index",
+      "relativePath": "library-index.png",
+      "sha256": "9b84a68b1332ae17e0ccc86a0d3663371c7e1c8adce26fc6e40ed5afd4cd231a"
+    }
+  ]
 }
