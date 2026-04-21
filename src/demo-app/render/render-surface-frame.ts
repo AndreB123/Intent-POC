@@ -198,6 +198,9 @@ export function renderSurfaceFrame(input: {
         border-color: #666;
         background: #333;
       }
+      .dark-mode .input-field::placeholder {
+        color: #bbb;
+      }
       button {
         border: none;
         border-radius: var(--radius-md);

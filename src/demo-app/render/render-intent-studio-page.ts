@@ -363,7 +363,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         width: 100%;
         border: 1px solid rgba(25, 54, 70, 0.18);
         border-radius: var(--radius-md);
-        background: white;
+        background: rgba(255, 255, 255, 0.92);
         padding: 14px 16px;
         color: var(--text);
       }
@@ -372,6 +372,29 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         min-height: 140px;
         resize: vertical;
         line-height: 1.5;
+      }
+
+      textarea::placeholder,
+      input[type="text"]::placeholder {
+        color: color-mix(in srgb, var(--muted) 82%, white 18%);
+      }
+
+      .dark-mode textarea,
+      .dark-mode select,
+      .dark-mode input[type="text"] {
+        border-color: rgba(255, 255, 255, 0.18);
+        background: rgba(15, 23, 42, 0.88);
+        color: var(--text);
+      }
+
+      .dark-mode textarea::placeholder,
+      .dark-mode input[type="text"]::placeholder {
+        color: color-mix(in srgb, var(--muted) 72%, white 28%);
+      }
+
+      .dark-mode .dark-mode-toggle {
+        background: rgba(15, 23, 42, 0.72);
+        color: var(--text);
       }
 
       .form-actions {
@@ -1303,8 +1326,30 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
     <script>
       (function () {
         const darkModeToggle = document.getElementById("dark-mode-toggle");
+
+        function setDarkMode(enabled, syncUrl) {
+          document.body.classList.toggle("dark-mode", enabled);
+          if (!syncUrl) {
+            return;
+          }
+
+          const url = new URL(window.location.href);
+          if (enabled) {
+            url.searchParams.set("dark", "true");
+          } else {
+            url.searchParams.set("dark", "false");
+          }
+          window.history.replaceState({}, "", url);
+        }
+
+        function syncDarkModeFromUrl() {
+          const url = new URL(window.location.href);
+          setDarkMode(url.searchParams.get("dark") === "true", false);
+        }
+
+        syncDarkModeFromUrl();
         darkModeToggle.addEventListener("click", function() {
-          document.body.classList.toggle("dark-mode");
+          setDarkMode(!document.body.classList.contains("dark-mode"), true);
         });
 
         function wireCollapseToggle(toggleId, panelId, expandedDisplay) {

@@ -10,15 +10,10 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
 DEFAULT_CONFIG="./intent-poc.yaml"
-LIVE_CONFIG="./intent-poc.local-no-linear.yaml"
 CONFIG_PATH="${INTENT_STUDIO_CONFIG:-}"
 
 if [[ -z "$CONFIG_PATH" ]]; then
-  if [[ -f "$LIVE_CONFIG" ]] && [[ -n "${GEMINI_KEY:-}" || -n "${GEMINI_API_KEY:-}" || -n "${GOOGLE_API_KEY:-}" ]]; then
-    CONFIG_PATH="$LIVE_CONFIG"
-  else
-    CONFIG_PATH="$DEFAULT_CONFIG"
-  fi
+  CONFIG_PATH="$DEFAULT_CONFIG"
 fi
 
 if [[ ! -f "$CONFIG_PATH" ]]; then

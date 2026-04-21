@@ -108,7 +108,9 @@ const UI_AFFORDANCE_KEYWORDS = [
 
 const INTENT_STUDIO_UI_KEYWORDS = [
   "prompt input",
+  "prompt box",
   "prompt run",
+  "textarea",
   "input box",
   "collapse",
   "collapsible",

@@ -832,3 +832,121 @@ test("writeGeneratedPlaywrightTests Given query-param UI states When specs are g
     await fs.rm(rootDir, { recursive: true, force: true });
   }
 });
+
+test("writeGeneratedPlaywrightTests Given a dark-mode input verification flow When specs are generated Then the spec activates theme state and types sample text", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-input-visibility-"));
+
+  try {
+    const source = {
+      ...buildBehaviorSource({
+        rootDir,
+        aliases: ["intent-poc-app", "library"],
+        planning: {
+          repoId: "intent-poc",
+          repoLabel: "Intent POC",
+          role: "controller-and-demo-source",
+          notes: [],
+          verificationNotes: ["Verify the requested UI state before trusting screenshot evidence."],
+          uiStates: [
+            {
+              id: "theme-mode",
+              label: "Theme mode",
+              description: "The demo app supports light and dark theme states that affect visual evidence.",
+              activation: [
+                {
+                  type: "query-param",
+                  target: "dark",
+                  values: {
+                    light: "false",
+                    dark: "true"
+                  },
+                  notes: []
+                },
+                {
+                  type: "ui-control",
+                  target: "[data-testid='theme-toggle']",
+                  values: {
+                    light: "false",
+                    dark: "true"
+                  },
+                  notes: []
+                },
+                {
+                  type: "ui-control",
+                  target: "#dark-mode-toggle",
+                  values: {
+                    light: "false",
+                    dark: "true"
+                  },
+                  notes: []
+                }
+              ],
+              verificationStrategies: ["ui-interaction-playwright"],
+              notes: []
+            }
+          ]
+        },
+        startCommand: "echo start",
+        baseUrl: "http://127.0.0.1:6006",
+        captureItems: [
+          {
+            id: "primitive-input-field",
+            name: "Input Field",
+            path: "/library/primitive-input-field",
+            locator: "[data-testid='primitive-input-field']",
+            waitForSelector: "[data-testid='primitive-input-field']",
+            maskSelectors: [],
+            delayMs: 0
+          }
+        ]
+      }),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent = normalizeIntent({
+      rawPrompt: "Verify dark mode input field readability in intent-poc-app so typed text stays visible.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: {
+        "intent-poc-app": {
+          aliases: source.aliases,
+          planning: source.planning,
+          source: source.source,
+          capture: source.capture
+        }
+      }
+    });
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "intent-poc-app",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "intent-poc-app"
+    });
+
+    const specPath = result?.files.find((filePath) => filePath.includes("intent-poc-app"));
+    assert.ok(specPath);
+
+    const generatedContent = await fs.readFile(specPath!, "utf8");
+    assert.equal(generatedContent.includes('const requiredUiStates = ['), true);
+    assert.equal(generatedContent.includes('function isUiStateRouteSatisfied(page: Page, requirement: (typeof requiredUiStates)[number]): boolean {'), true);
+    assert.equal(generatedContent.includes('if (isUiStateRouteSatisfied(page, requirement)) {'), true);
+    assert.equal(generatedContent.includes('if ((await control.count()) === 0) {'), true);
+    assert.equal(generatedContent.includes('await applyUiStateRequirements(page, requiredUiStates);'), true);
+    assert.equal(generatedContent.includes('const target = page.locator("[data-testid=\'primitive-input-field\'] input");'), true);
+    assert.equal(generatedContent.includes('await target.fill("Readable dark mode sample text");'), true);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});

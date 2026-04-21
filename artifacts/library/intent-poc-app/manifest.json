@@ -1,7 +1,7 @@
 {
-  "runId": "2026-04-21T02-29-19-118Z-intent-poc-app",
+  "runId": "2026-04-21T04-01-52-274Z-intent-poc-app",
   "sourceId": "intent-poc-app",
-  "generatedAt": "2026-04-21T02:30:10.904Z",
+  "generatedAt": "2026-04-21T04:02:37.842Z",
   "intentSummary": "change behavior for intent-poc-app",
   "captureCount": 47,
   "failedCaptureCount": 0

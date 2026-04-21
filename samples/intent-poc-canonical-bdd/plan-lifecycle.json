@@ -57,7 +57,7 @@
       "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
       "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
       "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
-      "Source intent-poc-app: Until a stable route contract exists, do not assume a library URL alone implies dark mode.",
+      "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
       "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
     ],
     "requestedPlanningDepth": "full",
@@ -152,6 +152,17 @@
           "requestedValue": "dark",
           "activation": [
             {
+              "type": "query-param",
+              "target": "dark",
+              "values": {
+                "light": "false",
+                "dark": "true"
+              },
+              "notes": [
+                "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+              ]
+            },
+            {
               "type": "ui-control",
               "target": "[data-testid='theme-toggle']",
               "values": {
@@ -159,7 +170,18 @@
                 "dark": "true"
               },
               "notes": [
-                "The shared library surfaces and Intent Studio expose a theme toggle that must be activated deliberately."
+                "The library surface toggle remains available for manual verification flows."
+              ]
+            },
+            {
+              "type": "ui-control",
+              "target": "#dark-mode-toggle",
+              "values": {
+                "light": "false",
+                "dark": "true"
+              },
+              "notes": [
+                "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
               ]
             }
           ],
@@ -170,7 +192,7 @@
             "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
             "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
             "Verify the active theme state before trusting screenshot comparisons.",
-            "Until a stable route contract exists, do not assume a library URL alone implies dark mode."
+            "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme."
           ],
           "reason": "Prompt requests the Theme mode UI state with value \"dark\"."
         }

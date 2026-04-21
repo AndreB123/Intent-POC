@@ -79,14 +79,14 @@ async function applyUiStateRequirements(page: Page, requirements: typeof require
 }
 
 test.describe("Intent-driven flow for intent-poc-app", () => {
-  test("Verify dark mode input field readability", async ({ page }) => {
+  test("Verify input text visibility in dark mode", async ({ page }) => {
     await test.step("Input Field Ready For Text Entry", async () => {
       await page.goto(buildUrlWithUiStates("/library/primitive-input-field", requiredUiStates), { waitUntil: "load" });
       await page.waitForSelector("[data-testid='primitive-input-field']");
       await applyUiStateRequirements(page, requiredUiStates);
       const target = page.locator("[data-testid='primitive-input-field']");
-      await expect(target, "Verify dark mode input field readability.").toBeVisible();
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-verify-dark-mode-input-field-readability-spec", "shot-1-primitive-input-field-ready-for-text-entry.png");
+      await expect(target, "Verify input text visibility in dark mode so typed text stays visible.").toBeVisible();
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-verify-input-text-visibility-in-dark-mode-spec", "shot-1-primitive-input-field-ready-for-text-entry.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await target.screenshot({ path: screenshotPath });
     });
@@ -96,7 +96,7 @@ test.describe("Intent-driven flow for intent-poc-app", () => {
       const target = page.locator("[data-testid='primitive-input-field'] input");
       await expect(target, "Typed text remains visible and reviewable after the input field is activated.").toBeVisible();
       await target.fill("Readable dark mode sample text");
-      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-verify-dark-mode-input-field-readability-spec", "shot-2-primitive-input-field-typed-text-visible.png");
+      const screenshotPath = path.join(screenshotRoot, "bdd/intent-poc-app-verify-input-text-visibility-in-dark-mode-spec", "shot-2-primitive-input-field-typed-text-visible.png");
       await mkdir(path.dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });
     });

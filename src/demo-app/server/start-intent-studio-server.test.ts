@@ -552,6 +552,136 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
   );
 });
 
+test("startIntentStudioServer uses the shared runtime policy when launching tracked-library sources", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-runtime-policy-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+  let receivedOptions: RunIntentOptions | undefined;
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const loaded = await loadConfig(configPath);
+  const normalizedIntent = normalizeIntent({
+    rawPrompt: "Refresh tracked screenshots for the shared library source.",
+    defaultSourceId: loaded.config.run.sourceId,
+    continueOnCaptureError: loaded.config.run.continueOnCaptureError,
+    availableSources: loaded.config.sources,
+    linearEnabled: loaded.config.linear.enabled
+  });
+
+  const mockedRunIntent = async (options: RunIntentOptions): Promise<RunIntentResult> => {
+    receivedOptions = options;
+
+    return {
+      status: "completed",
+      sourceId: "screenshots",
+      dryRun: false,
+      normalizedIntent,
+      paths: {
+        runId: "run-1",
+        controllerRoot: tmpDir,
+        runDir: path.join(tmpDir, "artifacts", "business"),
+        sourcesDir: path.join(tmpDir, "artifacts", "sources"),
+        logsDir: path.join(tmpDir, "artifacts", "logs"),
+        normalizedIntentPath: path.join(tmpDir, "artifacts", "business", "normalized-intent.json"),
+        linearPath: path.join(tmpDir, "artifacts", "business", "linear.json"),
+        planLifecyclePath: path.join(tmpDir, "artifacts", "business", "plan-lifecycle.json"),
+        summaryPath: path.join(tmpDir, "artifacts", "business", "summary.md"),
+        manifestPath: path.join(tmpDir, "artifacts", "business", "manifest.json"),
+        hashesPath: path.join(tmpDir, "artifacts", "business", "hashes.json"),
+        comparisonPath: path.join(tmpDir, "artifacts", "business", "comparison.json"),
+        sourceRuns: {
+          screenshots: {
+            runId: "run-1",
+            sourceId: "screenshots",
+            controllerRoot: tmpDir,
+            sourceDir: path.join(tmpDir, "artifacts", "sources", "screenshots"),
+            attemptsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "attempts"),
+            capturesDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "captures"),
+            diffsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "diffs"),
+            logsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs"),
+            baselineSourceDir: path.join(tmpDir, "artifacts", "library", "screenshots"),
+            appLogPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs", "app.log"),
+            manifestPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "manifest.json"),
+            hashesPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "hashes.json"),
+            comparisonPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "comparison.json"),
+            summaryPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "summary.md")
+          }
+        }
+      },
+      linearIssue: null,
+      linearPublication: null,
+      sourceRuns: [
+        {
+          sourceId: "screenshots",
+          status: "completed",
+          paths: {
+            runId: "run-1",
+            sourceId: "screenshots",
+            controllerRoot: tmpDir,
+            sourceDir: path.join(tmpDir, "artifacts", "sources", "screenshots"),
+            attemptsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "attempts"),
+            capturesDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "captures"),
+            diffsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "diffs"),
+            logsDir: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs"),
+            baselineSourceDir: path.join(tmpDir, "artifacts", "library", "screenshots"),
+            appLogPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "logs", "app.log"),
+            manifestPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "manifest.json"),
+            hashesPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "hashes.json"),
+            comparisonPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "comparison.json"),
+            summaryPath: path.join(tmpDir, "artifacts", "sources", "screenshots", "summary.md")
+          },
+          captures: [],
+          error: undefined,
+          linearIssue: null,
+          generatedPlaywrightTests: [],
+          attempts: [],
+          summaryMarkdown: "# screenshots"
+        }
+      ],
+      captures: [],
+      hasDrift: false,
+      counts: {
+        "baseline-written": 0,
+        unchanged: 0,
+        changed: 0,
+        "missing-baseline": 0,
+        "capture-failed": 0,
+        "diff-error": 0
+      },
+      summaryMarkdown: "# run summary",
+      errors: []
+    };
+  };
+
+  const server = await startIntentStudioServer({ configPath, port: 0, runIntentFn: mockedRunIntent });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const runResponse = await fetch(`${server.baseUrl}/api/runs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Refresh tracked screenshots for the shared library source.",
+      sourceIds: ["screenshots"]
+    })
+  });
+
+  assert.equal(runResponse.status, 202);
+
+  await waitForState<{ currentRun: { status: string } | null }>(
+    server.baseUrl,
+    (state) => state.currentRun?.status === "completed"
+  );
+
+  assert.equal(receivedOptions?.publishToLibrary, true);
+  assert.deepEqual(receivedOptions?.sourceIds, ["screenshots"]);
+});
+
 test("startIntentStudioServer exposes controller-relative capture paths for Studio preview links", async (t) => {
   const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-capture-path-test-"));
   const configPath = path.join(tmpDir, "intent-poc.yaml");

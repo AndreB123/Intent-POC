@@ -10,7 +10,11 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
   const stepsPanelIndex = html.indexOf('id="steps-panel"');
 
   assert.match(html, /<button class="dark-mode-toggle" id="dark-mode-toggle">Toggle Dark Mode<\/button>/);
-  assert.match(html, /document.body.classList.toggle\("dark-mode"\);/);
+  assert.match(html, /function setDarkMode\(enabled, syncUrl\) \{/);
+  assert.match(html, /url\.searchParams\.set\("dark", "true"\);/);
+  assert.match(html, /syncDarkModeFromUrl\(\);/);
+  assert.match(html, /\.dark-mode textarea,/);
+  assert.match(html, /background: rgba\(15, 23, 42, 0\.88\);/);
   assert.match(html, /id="toggle-work-scope-visibility"[^>]*>Collapse<\/button>/);
   assert.match(html, /id="toggle-stages-visibility"[^>]*>Collapse<\/button>/);
   assert.match(html, /wireCollapseToggle\("toggle-work-scope-visibility", "work-scope-panel", "block"\);/);

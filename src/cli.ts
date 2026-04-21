@@ -3,6 +3,7 @@
 import { Command, InvalidArgumentError } from "commander";
 import { serveDemoApp } from "./demo-app/serve-demo-app";
 import { runIntent } from "./orchestrator/run-intent";
+import { buildRuntimeRunIntentOptions } from "./runtime/build-runtime-run-intent-options";
 import { log } from "./shared/log";
 
 const program = new Command();
@@ -57,13 +58,13 @@ program
   .option("--dry-run", "Validate config and intent normalization without launching the source app.")
   .action(async (options) => {
     try {
-      await runIntent({
+      await runIntent(await buildRuntimeRunIntentOptions({
         configPath: options.config,
         intent: options.intent,
         sourceIds: options.source.length > 0 ? options.source : undefined,
         resumeIssue: options.resumeIssue,
         dryRun: options.dryRun
-      });
+      }));
     } catch (error) {
       log.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;

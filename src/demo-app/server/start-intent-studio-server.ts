@@ -16,6 +16,7 @@ import {
 import { normalizeIntentWithAgent } from "../../intent/normalize-intent";
 import { NormalizedIntent, IntentLifecycleStatus } from "../../intent/intent-types";
 import { RunIntentEvent, RunIntentResult, runIntent } from "../../orchestrator/run-intent";
+import { buildRuntimeRunIntentOptions } from "../../runtime/build-runtime-run-intent-options";
 import { pathExists } from "../../shared/fs";
 import { renderIntentStudioPage } from "../render/render-intent-studio-page";
 import { renderLibraryArchitectureDocsPage, renderLibraryPlanningDocsPage, renderSurfaceLibraryIndex, renderSurfacePage } from "../render/render-surface-page";
@@ -1026,7 +1027,7 @@ export async function startIntentStudioServer(
     const { run } = input;
 
     try {
-      const result = await runIntentFn({
+      const result = await runIntentFn(await buildRuntimeRunIntentOptions({
           configPath,
           intent: input.prompt,
           sourceIds: input.sourceIds,
@@ -1037,7 +1038,7 @@ export async function startIntentStudioServer(
             appendEvent(run, event);
             void broadcastState();
           }
-        });
+        }));
 
         applyRunResult(run, result);
   run.status = result.status;

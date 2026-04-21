@@ -6,6 +6,8 @@ The controller accepts a free-text intent, normalizes it into a bounded run plan
 
 For sources that opt into `capture.publishToLibrary: true`, screenshot PNGs now persist in one place only: `artifacts/library/<sourceId>/`. The source evidence lane still writes manifests, hashes, summaries, and other metadata under `artifacts/sources/<sourceId>/`, but it no longer keeps a second durable copy of the same screenshots under `artifacts/sources/<sourceId>/captures`.
 
+Runtime entrypoints now share one run policy surface. `npm run dev -- run`, Intent Studio live runs, and `npm run library:refresh` all build `runIntent` options through the same runtime helper so tracked surface-library sources do not drift into different publish behavior depending on how the run was launched.
+
 ## Current Status
 
 The initial implementation includes:

@@ -212,8 +212,26 @@ const intentPocAppSources: Record<string, Pick<SourceConfig, "aliases" | "captur
           description: "The demo app supports light and dark theme states that affect visual evidence.",
           activation: [
             {
+              type: "query-param",
+              target: "dark",
+              values: {
+                light: "false",
+                dark: "true"
+              },
+              notes: []
+            },
+            {
               type: "ui-control",
               target: "[data-testid='theme-toggle']",
+              values: {
+                light: "false",
+                dark: "true"
+              },
+              notes: []
+            },
+            {
+              type: "ui-control",
+              target: "#dark-mode-toggle",
               values: {
                 light: "false",
                 dark: "true"
@@ -535,6 +553,20 @@ test("normalizeIntent infers the intent studio code surface while preserving sou
 
   assert.equal(normalized.sourceId, "intent-poc-app");
   assert.equal(normalized.executionPlan.primarySourceId, "intent-poc-app");
+  assert.equal(normalized.codeSurface?.sourceId, "intent-poc-app");
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+  assert.equal(normalized.codeSurface?.confidence, "high");
+});
+
+test("normalizeIntent routes prompt box dark-mode fixes to Intent Studio", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "Fix the dark mode prompt box in intent-poc-app so typed text stays visible while I write in the textarea.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: demoCatalogSources
+  });
+
+  assert.equal(normalized.sourceId, "intent-poc-app");
   assert.equal(normalized.codeSurface?.sourceId, "intent-poc-app");
   assert.equal(normalized.codeSurface?.id, "intent-studio");
   assert.equal(normalized.codeSurface?.confidence, "high");
@@ -1048,6 +1080,82 @@ test("normalizeIntent resolves source-level UI state requirements into the plan 
   const firstSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
   assert.equal(firstSpec?.requiredUiStates?.[0]?.stateId, "theme-mode");
   assert.equal(firstSpec?.checkpoints[0]?.requiredUiStates?.[0]?.requestedValue, "dark");
+});
+
+test("normalizeIntent builds a typed input verification flow for dark-mode input readability prompts", () => {
+  const inputFieldSources: Record<string, Pick<SourceConfig, "aliases" | "capture" | "planning" | "source">> = {
+    "intent-poc-app": {
+      aliases: ["intent-poc-app", "library", "surface-library"],
+      planning: buildPlanningFixture({
+        repoId: "intent-poc",
+        repoLabel: "Intent POC",
+        role: "controller-and-demo-source",
+        notes: [],
+        verificationNotes: ["Verify the requested UI state before trusting screenshot evidence."],
+        uiStates: [
+          {
+            id: "theme-mode",
+            label: "Theme mode",
+            description: "The demo app supports light and dark theme states that affect visual evidence.",
+            activation: [
+              {
+                type: "ui-control",
+                target: "[data-testid='theme-toggle']",
+                values: {
+                  light: "false",
+                  dark: "true"
+                },
+                notes: []
+              }
+            ],
+            verificationStrategies: ["ui-interaction-playwright"],
+            notes: []
+          }
+        ]
+      }),
+      source: {
+        type: "local",
+        localPath: "/tmp/intent-poc"
+      },
+      capture: {
+        basePathPrefix: "",
+        publishToLibrary: false,
+        waitAfterLoadMs: 500,
+        injectCss: [],
+        defaultFullPage: false,
+        items: [
+          {
+            id: "primitive-input-field",
+            name: "Input Field",
+            path: "/library/primitive-input-field",
+            locator: "[data-testid='primitive-input-field']",
+            waitForSelector: "[data-testid='primitive-input-field']",
+            maskSelectors: [],
+            delayMs: 0
+          }
+        ]
+      }
+    }
+  };
+
+  const normalized = normalizeIntent({
+    rawPrompt: "Verify dark mode input field readability in intent-poc-app so typed text stays visible.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: inputFieldSources
+  });
+
+  const firstSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
+  assert.ok(firstSpec);
+  assert.deepEqual(
+    firstSpec?.checkpoints.map((checkpoint) => checkpoint.action),
+    ["goto", "fill"]
+  );
+  assert.equal(firstSpec?.requiredUiStates?.[0]?.stateId, "theme-mode");
+  assert.equal(firstSpec?.requiredUiStates?.[0]?.requestedValue, "dark");
+  assert.equal(firstSpec?.checkpoints[0]?.path, "/library/primitive-input-field");
+  assert.equal(firstSpec?.checkpoints[1]?.target, "[data-testid='primitive-input-field'] input");
+  assert.equal(firstSpec?.checkpoints[1]?.value, "Readable dark mode sample text");
 });
 
 test("normalizeIntent resolves query-param UI states from prompt language", () => {

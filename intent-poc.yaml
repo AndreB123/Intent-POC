@@ -47,18 +47,32 @@ sources:
           label: Theme mode
           description: The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.
           activation:
+            - type: query-param
+              target: dark
+              values:
+                light: "false"
+                dark: "true"
+              notes:
+                - The demo app now honors the dark query parameter across Studio and library routes for deterministic verification.
             - type: ui-control
               target: "[data-testid='theme-toggle']"
               values:
                 light: "false"
                 dark: "true"
               notes:
-                - The shared library surfaces and Intent Studio expose a theme toggle that must be activated deliberately.
+                - The library surface toggle remains available for manual verification flows.
+            - type: ui-control
+              target: "#dark-mode-toggle"
+              values:
+                light: "false"
+                dark: "true"
+              notes:
+                - Intent Studio keeps an explicit toggle for interactive review during manual sessions.
           verificationStrategies:
             - ui-interaction-playwright
           notes:
             - Verify the active theme state before trusting screenshot comparisons.
-            - Until a stable route contract exists, do not assume a library URL alone implies dark mode.
+            - Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.
     studio:
       displayName: Current app
     testing:

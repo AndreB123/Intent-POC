@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "runId": "2026-04-21T02-29-19-118Z-intent-poc-app",
-  "timestamp": "2026-04-21T02:30:10.911Z",
+  "runId": "2026-04-21T04-01-52-274Z-intent-poc-app",
+  "timestamp": "2026-04-21T04:02:37.843Z",
   "status": "completed",
   "intent": {
-    "intentId": "2026-04-21T02-29-19-117Z-change-behavior-for-intent-poc-app",
-    "receivedAt": "2026-04-21T02:29:19.117Z",
+    "intentId": "2026-04-21T04-01-52-273Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-21T04:01:52.273Z",
     "rawPrompt": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
     "summary": "change behavior for intent-poc-app",
     "intentType": "change-behavior",
@@ -1912,7 +1912,7 @@
     "rootDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "appDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "baseUrl": "http://127.0.0.1:6006",
-    "gitCommit": "6bb4c5d0678a0cf6193df80a032a2b88e33ec9dc",
+    "gitCommit": "223ac0d8aa05160d0a929d7840e60b485efddee2",
     "generatedPlaywrightTests": [
       "tests/intent/intent-poc-app/behavior-is-verified-visually-for-applicable-sources.spec.ts"
     ]
@@ -1941,7 +1941,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-color-chip.png",
       "relativeOutputPath": "components/primitive-color-chip.png",
-      "durationMs": 1083,
+      "durationMs": 1085,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -1961,7 +1961,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-typography.png",
       "relativeOutputPath": "components/primitive-typography.png",
-      "durationMs": 1086,
+      "durationMs": 1074,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -1981,7 +1981,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-pill-tag.png",
       "relativeOutputPath": "components/primitive-pill-tag.png",
-      "durationMs": 1107,
+      "durationMs": 1064,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2001,7 +2001,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-input-field.png",
       "relativeOutputPath": "components/primitive-input-field.png",
-      "durationMs": 1062,
+      "durationMs": 1085,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2021,7 +2021,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-button-set.png",
       "relativeOutputPath": "components/primitive-button-set.png",
-      "durationMs": 1039,
+      "durationMs": 992,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2041,7 +2041,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-avatar-stack.png",
       "relativeOutputPath": "components/primitive-avatar-stack.png",
-      "durationMs": 1099,
+      "durationMs": 941,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2061,7 +2061,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-status-indicator.png",
       "relativeOutputPath": "components/primitive-status-indicator.png",
-      "durationMs": 1106,
+      "durationMs": 938,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2081,7 +2081,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-spacing-scale.png",
       "relativeOutputPath": "components/primitive-spacing-scale.png",
-      "durationMs": 1040,
+      "durationMs": 936,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2101,7 +2101,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-icon-list.png",
       "relativeOutputPath": "components/primitive-icon-list.png",
-      "durationMs": 1051,
+      "durationMs": 920,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2121,7 +2121,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-kpi-block.png",
       "relativeOutputPath": "components/primitive-kpi-block.png",
-      "durationMs": 989,
+      "durationMs": 942,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2141,7 +2141,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-primary.png",
       "relativeOutputPath": "components/component-button-primary.png",
-      "durationMs": 1039,
+      "durationMs": 911,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2161,7 +2161,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-secondary.png",
       "relativeOutputPath": "components/component-button-secondary.png",
-      "durationMs": 990,
+      "durationMs": 920,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2181,7 +2181,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-danger.png",
       "relativeOutputPath": "components/component-button-danger.png",
-      "durationMs": 1032,
+      "durationMs": 928,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2201,7 +2201,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-highlight.png",
       "relativeOutputPath": "components/component-card-highlight.png",
-      "durationMs": 977,
+      "durationMs": 927,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2221,7 +2221,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-compact.png",
       "relativeOutputPath": "components/component-card-compact.png",
-      "durationMs": 1013,
+      "durationMs": 928,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2241,7 +2241,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-info.png",
       "relativeOutputPath": "components/component-banner-info.png",
-      "durationMs": 1037,
+      "durationMs": 941,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2261,7 +2261,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-warning.png",
       "relativeOutputPath": "components/component-banner-warning.png",
-      "durationMs": 1083,
+      "durationMs": 912,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2281,7 +2281,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-modal-shell.png",
       "relativeOutputPath": "components/component-modal-shell.png",
-      "durationMs": 1041,
+      "durationMs": 929,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2301,7 +2301,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-table-row.png",
       "relativeOutputPath": "components/component-table-row.png",
-      "durationMs": 1089,
+      "durationMs": 939,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2321,7 +2321,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-search-bar.png",
       "relativeOutputPath": "components/component-search-bar.png",
-      "durationMs": 1051,
+      "durationMs": 948,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2341,7 +2341,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-stat-tile.png",
       "relativeOutputPath": "components/component-stat-tile.png",
-      "durationMs": 1042,
+      "durationMs": 942,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2361,7 +2361,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-nav-tabs.png",
       "relativeOutputPath": "components/component-nav-tabs.png",
-      "durationMs": 1008,
+      "durationMs": 926,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2381,7 +2381,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-success.png",
       "relativeOutputPath": "components/component-toast-success.png",
-      "durationMs": 1029,
+      "durationMs": 932,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2401,7 +2401,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-error.png",
       "relativeOutputPath": "components/component-toast-error.png",
-      "durationMs": 1071,
+      "durationMs": 926,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2421,7 +2421,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-form-section.png",
       "relativeOutputPath": "components/component-form-section.png",
-      "durationMs": 1122,
+      "durationMs": 955,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2441,7 +2441,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-user-list-item.png",
       "relativeOutputPath": "components/component-user-list-item.png",
-      "durationMs": 1113,
+      "durationMs": 939,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2461,7 +2461,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-dashboard-summary.png",
       "relativeOutputPath": "views/view-dashboard-summary.png",
-      "durationMs": 1092,
+      "durationMs": 936,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2481,7 +2481,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-list-overview.png",
       "relativeOutputPath": "views/view-list-overview.png",
-      "durationMs": 1149,
+      "durationMs": 943,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2501,7 +2501,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-settings-panel.png",
       "relativeOutputPath": "views/view-settings-panel.png",
-      "durationMs": 1115,
+      "durationMs": 939,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2521,7 +2521,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-empty-results.png",
       "relativeOutputPath": "views/view-empty-results.png",
-      "durationMs": 1102,
+      "durationMs": 944,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2541,7 +2541,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-campaign-table.png",
       "relativeOutputPath": "views/view-campaign-table.png",
-      "durationMs": 1088,
+      "durationMs": 949,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2561,7 +2561,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-notifications-center.png",
       "relativeOutputPath": "views/view-notifications-center.png",
-      "durationMs": 1153,
+      "durationMs": 949,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2581,7 +2581,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-user-directory.png",
       "relativeOutputPath": "views/view-user-directory.png",
-      "durationMs": 1076,
+      "durationMs": 973,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2601,7 +2601,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-revenue-kpis.png",
       "relativeOutputPath": "views/view-revenue-kpis.png",
-      "durationMs": 1086,
+      "durationMs": 948,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2621,7 +2621,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-onboarding-checklist.png",
       "relativeOutputPath": "views/view-onboarding-checklist.png",
-      "durationMs": 1110,
+      "durationMs": 958,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2641,7 +2641,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-approval-queue.png",
       "relativeOutputPath": "views/view-approval-queue.png",
-      "durationMs": 1066,
+      "durationMs": 964,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2661,7 +2661,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-audit-log.png",
       "relativeOutputPath": "views/view-audit-log.png",
-      "durationMs": 1062,
+      "durationMs": 947,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2681,7 +2681,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-billing-overview.png",
       "relativeOutputPath": "views/view-billing-overview.png",
-      "durationMs": 1028,
+      "durationMs": 945,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2701,7 +2701,7 @@
       "kind": "page",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-analytics-overview.png",
       "relativeOutputPath": "pages/page-analytics-overview.png",
-      "durationMs": 1155,
+      "durationMs": 939,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2720,7 +2720,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-account-list.png",
       "relativeOutputPath": "pages/page-account-list.png",
-      "durationMs": 1180,
+      "durationMs": 974,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2740,7 +2740,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-campaign-editor.png",
       "relativeOutputPath": "pages/page-campaign-editor.png",
-      "durationMs": 1117,
+      "durationMs": 974,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2760,7 +2760,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-system-settings.png",
       "relativeOutputPath": "pages/page-system-settings.png",
-      "durationMs": 1069,
+      "durationMs": 962,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2780,7 +2780,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-operations-center.png",
       "relativeOutputPath": "pages/page-operations-center.png",
-      "durationMs": 1054,
+      "durationMs": 960,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2800,7 +2800,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-user-management.png",
       "relativeOutputPath": "pages/page-user-management.png",
-      "durationMs": 1069,
+      "durationMs": 987,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2820,7 +2820,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-incident-review.png",
       "relativeOutputPath": "pages/page-incident-review.png",
-      "durationMs": 1003,
+      "durationMs": 934,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2840,7 +2840,7 @@
       "kind": "locator",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-revenue-forecast.png",
       "relativeOutputPath": "pages/page-revenue-forecast.png",
-      "durationMs": 1021,
+      "durationMs": 940,
       "viewport": {
         "width": 1440,
         "height": 900
@@ -2860,7 +2860,7 @@
       "kind": "page",
       "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/library-index.png",
       "relativeOutputPath": "library-index.png",
-      "durationMs": 1260,
+      "durationMs": 1031,
       "viewport": {
         "width": 1440,
         "height": 900

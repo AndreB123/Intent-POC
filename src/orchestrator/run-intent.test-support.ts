@@ -156,8 +156,26 @@ export function buildIntentPocAppBehaviorSource(rootDir: string): SourceConfig {
           description: "Activate the surface library theme toggle before verification when the prompt requests dark mode.",
           activation: [
             {
+              type: "query-param",
+              target: "dark",
+              values: {
+                light: "false",
+                dark: "true"
+              },
+              notes: []
+            },
+            {
               type: "ui-control",
               target: "[data-testid='theme-toggle']",
+              values: {
+                light: "false",
+                dark: "true"
+              },
+              notes: []
+            },
+            {
+              type: "ui-control",
+              target: "#dark-mode-toggle",
               values: {
                 light: "false",
                 dark: "true"

@@ -593,6 +593,114 @@ function buildPlaywrightSpecRelativePath(sourceId: string, workItemTitle: string
   return `${sourceSegment}/${workItemSegment}.spec.ts`;
 }
 
+function buildPlaywrightCheckpointNarrativeText(input: {
+  workItemTitle: string;
+  promptText: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+  scenario?: BDDScenario;
+}): string {
+  return [
+    input.workItemTitle,
+    input.promptText,
+    input.desiredOutcome,
+    ...input.acceptanceCriteria,
+    input.scenario?.title ?? "",
+    input.scenario?.goal ?? "",
+    ...(input.scenario?.given ?? []),
+    ...(input.scenario?.when ?? []),
+    ...(input.scenario?.then ?? [])
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function isTextEntrySelector(selector: string): boolean {
+  return /(^|[\s>+~,])(input|textarea)(?=$|[\s>+~.#[:])/i.test(selector);
+}
+
+function shouldBuildStatefulInputVerificationCheckpoints(input: {
+  scenario?: BDDScenario;
+  captureItems: CaptureItemConfig[];
+  workItemTitle: string;
+  promptText: string;
+  desiredOutcome: string;
+  acceptanceCriteria: string[];
+}): boolean {
+  if (input.captureItems.length !== 1) {
+    return false;
+  }
+
+  const captureItem = input.captureItems[0]!;
+  const captureTarget = captureItem.locator ?? captureItem.waitForSelector;
+  if (!captureTarget) {
+    return false;
+  }
+
+  const captureText = [captureItem.id, captureItem.name ?? "", captureItem.path, captureTarget].join(" ").toLowerCase();
+  if (!/\binput\b/.test(captureText)) {
+    return false;
+  }
+
+  const narrativeText = buildPlaywrightCheckpointNarrativeText({
+    scenario: input.scenario,
+    workItemTitle: input.workItemTitle,
+    promptText: input.promptText,
+    desiredOutcome: input.desiredOutcome,
+    acceptanceCriteria: input.acceptanceCriteria
+  });
+  const mentionsInputSubject = /\b(input|field|text|placeholder|value)\b/i.test(narrativeText);
+  const mentionsEntryOrLegibility = /\b(type|typed|typing|fill|filled|readability|readable|contrast|visibility|visible|legible)\b/i.test(
+    narrativeText
+  );
+
+  return mentionsInputSubject && mentionsEntryOrLegibility;
+}
+
+function buildStatefulInputVerificationCheckpoints(input: {
+  captureItem: CaptureItemConfig;
+  workItemTitle: string;
+  desiredOutcome: string;
+  uiStateRequirements: ResolvedUiStateRequirement[];
+}): PlaywrightCheckpoint[] {
+  const captureTarget = input.captureItem.locator ?? input.captureItem.waitForSelector;
+  if (!captureTarget) {
+    throw new Error(`Stateful input verification requires a locator-backed capture item: ${input.captureItem.id}`);
+  }
+
+  const textEntryTarget = isTextEntrySelector(captureTarget) ? captureTarget : `${captureTarget} input`;
+  const checkpointUiStateFields = input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {};
+
+  return [
+    {
+      id: createPlanId("checkpoint", `${input.captureItem.id}-ready-for-text-entry`, 0),
+      label: `${input.captureItem.name ?? input.captureItem.id} Ready For Text Entry`,
+      action: "goto",
+      assertion: input.desiredOutcome,
+      screenshotId: createPlanId("shot", `${input.captureItem.id}-ready-for-text-entry`, 0),
+      path: input.captureItem.path,
+      captureId: input.captureItem.id,
+      locator: captureTarget,
+      waitForSelector: input.captureItem.waitForSelector ?? captureTarget,
+      target: captureTarget,
+      waitUntil: input.captureItem.waitForSelector ? "load" : "networkidle",
+      ...checkpointUiStateFields
+    },
+    {
+      id: createPlanId("checkpoint", `${input.captureItem.id}-typed-text-visible`, 1),
+      label: "Typed Input Text Visible",
+      action: "fill",
+      assertion: "Typed text remains visible and reviewable after the input field is activated.",
+      screenshotId: createPlanId("shot", `${input.captureItem.id}-typed-text-visible`, 1),
+      captureId: input.captureItem.id,
+      target: textEntryTarget,
+      waitForSelector: textEntryTarget,
+      value: "Readable dark mode sample text",
+      ...checkpointUiStateFields
+    }
+  ];
+}
+
 function buildPlaywrightCheckpoints(input: {
   sourceId: string;
   codeSurface: CodeSurfaceSelection;
@@ -651,6 +759,24 @@ function buildPlaywrightCheckpoints(input: {
         ...checkpointUiStateFields
       }
     ];
+  }
+
+  if (
+    shouldBuildStatefulInputVerificationCheckpoints({
+      scenario: input.scenario,
+      captureItems: input.captureItems,
+      workItemTitle: input.workItemTitle,
+      promptText: input.promptText,
+      desiredOutcome: input.desiredOutcome,
+      acceptanceCriteria: input.acceptanceCriteria
+    })
+  ) {
+    return buildStatefulInputVerificationCheckpoints({
+      captureItem: input.captureItems[0]!,
+      workItemTitle: input.workItemTitle,
+      desiredOutcome: input.desiredOutcome,
+      uiStateRequirements: input.uiStateRequirements
+    });
   }
 
   return input.captureItems.map((item, index) => ({

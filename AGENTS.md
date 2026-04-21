@@ -8,6 +8,8 @@ The current wrappers are intentional:
 - `src/demo-app/server/start-intent-studio-server.ts` previews or launches runs through `runIntent`.
 - `src/demo-app/generate-surface-library.ts` is a convenience wrapper that now routes tracked surface-library screenshot regeneration through `runIntent` instead of maintaining a separate implementation.
 
+All runtime wrappers must build `runIntent` options through the shared runtime policy helper in `src/runtime/build-runtime-run-intent-options.ts`. Do not let Studio, CLI, or tracked-library refresh drift into entrypoint-specific publish behavior for the same source.
+
 ## Screenshot Workflows
 There is one persistent artifact contract in this repo, rooted under `artifacts/`.
 

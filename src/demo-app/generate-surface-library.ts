@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { runIntent } from "../orchestrator/run-intent";
+import { buildRuntimeRunIntentOptions } from "../runtime/build-runtime-run-intent-options";
 import { log } from "../shared/log";
 import { removeDirectory } from "../shared/fs";
 import { runCommand } from "../shared/process";
@@ -75,12 +76,12 @@ export async function runSurfaceLibraryRefresh(): Promise<void> {
     await runPreflightChecks(workspaceRoot);
   }
 
-  const result = await runIntent({
+  const result = await runIntent(await buildRuntimeRunIntentOptions({
     configPath,
     sourceIds: ["intent-poc-app"],
     publishToLibrary: true,
     intent: "Create a baseline for the deterministic screenshot library for the built-in surface library."
-  });
+  }));
 
   await Promise.all(getLegacyLibraryArtifactPaths(workspaceRoot).map((targetPath) => removeDirectory(targetPath)));
 
