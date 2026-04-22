@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
-import { createGeminiClient } from "./gemini-client";
+import { createGeminiClient, runGeminiModelFailover } from "./gemini-client";
 import { CodeSurfaceSelection } from "./code-surface";
 import { PromptNormalizerSourceDescriptor } from "./gemini-prompt-normalizer";
 import { buildGeminiSourceSummary } from "./gemini-source-summary";
@@ -271,16 +271,24 @@ export async function refineIntentTddWithGemini(
     apiVersion: input.stage.apiVersion
   });
 
-  const response = await ai.models.generateContent({
-    model: input.stage.model,
-    contents: buildTddPlanningPrompt(input),
-    config: {
-      temperature: input.stage.temperature,
-      maxOutputTokens: input.stage.maxTokens,
-      responseMimeType: "application/json",
-      responseJsonSchema: tddPlanningResponseJsonSchema
-    }
+  const failoverResult = await runGeminiModelFailover({
+    contextLabel: "Gemini TDD planning",
+    primaryModel: input.stage.model,
+    modelFailover: input.stage.modelFailover,
+    invoke: async (model) =>
+      ai.models.generateContent({
+        model,
+        contents: buildTddPlanningPrompt(input),
+        config: {
+          temperature: input.stage.temperature,
+          maxOutputTokens: input.stage.maxTokens,
+          responseMimeType: "application/json",
+          responseJsonSchema: tddPlanningResponseJsonSchema
+        }
+      })
   });
+
+  const response = failoverResult.value;
 
   const text = response.text?.trim();
   if (!text) {
@@ -294,5 +302,15 @@ export async function refineIntentTddWithGemini(
     throw new Error(`Gemini TDD planning returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  return refinementSchema.parse(parsed);
+  const refinement = refinementSchema.parse(parsed);
+  if (failoverResult.selectedModel === input.stage.model) {
+    return refinement;
+  }
+
+  const failoverWarning = `Gemini TDD planning used failover model '${failoverResult.selectedModel}' after transient provider saturation on ${failoverResult.failedAttempts.map((attempt) => `'${attempt.model}'`).join(", ")}.`;
+
+  return {
+    ...refinement,
+    warnings: [...(refinement.warnings ?? []), failoverWarning]
+  };
 }

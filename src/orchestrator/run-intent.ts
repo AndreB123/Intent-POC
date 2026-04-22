@@ -32,6 +32,7 @@ import {
   assertImplementationStageReady,
   resolveAgentStageConfig
 } from "../intent/agent-stage-config";
+import { createGeminiClient, runGeminiModelFailover } from "../intent/gemini-client";
 import { normalizeIntentWithAgent } from "../intent/normalize-intent";
 import { executeImplementationStage as executeGeminiImplementationStage } from "../implementation/execute-implementation";
 import { LinearClient, LinearIssueRef } from "../linear/linear-client";
@@ -152,6 +153,7 @@ export interface ExecuteImplementationStageInput {
 
 export interface ExecuteQAVerificationStageInput {
   config: AppConfig;
+  stage: ResolvedAgentStageConfig;
   normalizedIntent: NormalizedIntent;
   sourcePlan: ExecutionSourcePlan;
   sourcePaths: SourceRunPaths;
@@ -220,6 +222,11 @@ export interface QAVerificationExecutionPlan {
   commands?: QAVerificationCommandPlan[];
   error?: string;
   uiStateRequirements: ResolvedUiStateRequirement[];
+}
+
+interface GeminiQAVerificationSelection {
+  selectedLabels: string[];
+  warnings?: string[];
 }
 
 interface QAFallbackPathGroup {
@@ -725,6 +732,137 @@ export function buildQAVerificationExecutionPlan(input: {
   };
 }
 
+function buildQAVerificationGeminiPrompt(input: {
+  sourceId: string;
+  activeWorkItemIds: string[];
+  uiStateRequirements: ResolvedUiStateRequirement[];
+  candidateCommands: QAVerificationCommandPlan[];
+}): string {
+  return [
+    "You are selecting a bounded QA verification command plan for an intent workflow source lane.",
+    "Return only JSON.",
+    "You may only choose labels from the provided candidate command labels.",
+    "Prefer the smallest command set that still validates active work items.",
+    "Keep command ordering valid for execution.",
+    `Source id: ${input.sourceId}`,
+    `Active work items: ${input.activeWorkItemIds.join(", ")}`,
+    `Required UI states: ${formatCompactUiStateList(input.uiStateRequirements) || "none"}`,
+    "Candidate commands:",
+    JSON.stringify(input.candidateCommands, null, 2),
+    "Response schema:",
+    JSON.stringify(
+      {
+        selectedLabels: ["typecheck", "generated-playwright"],
+        warnings: ["optional warning"]
+      },
+      null,
+      2
+    )
+  ].join("\n\n");
+}
+
+async function selectQAVerificationCommandsWithGemini(input: {
+  stage: ResolvedAgentStageConfig;
+  sourceId: string;
+  activeWorkItemIds: string[];
+  uiStateRequirements: ResolvedUiStateRequirement[];
+  candidateCommands: QAVerificationCommandPlan[];
+}): Promise<{ commands: QAVerificationCommandPlan[]; warnings: string[] }> {
+  const ai = createGeminiClient({
+    apiKeyEnv: input.stage.apiKeyEnv,
+    apiVersion: input.stage.apiVersion
+  });
+
+  const responseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["selectedLabels"],
+    properties: {
+      selectedLabels: {
+        type: "array",
+        minItems: 1,
+        items: {
+          type: "string",
+          enum: input.candidateCommands.map((command) => command.label)
+        }
+      },
+      warnings: {
+        type: "array",
+        items: { type: "string" }
+      }
+    }
+  } as const;
+
+  const failoverResult = await runGeminiModelFailover({
+    contextLabel: "Gemini QA verification planning",
+    primaryModel: input.stage.model,
+    modelFailover: input.stage.modelFailover,
+    invoke: async (model) =>
+      ai.models.generateContent({
+        model,
+        contents: buildQAVerificationGeminiPrompt(input),
+        config: {
+          temperature: input.stage.temperature,
+          maxOutputTokens: input.stage.maxTokens,
+          responseMimeType: "application/json",
+          responseJsonSchema: responseSchema
+        }
+      })
+  });
+
+  const text = failoverResult.value.text?.trim();
+  if (!text) {
+    throw new Error("Gemini QA verification planning returned an empty response.");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Gemini QA verification planning returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const rawSelected = Array.isArray((parsed as GeminiQAVerificationSelection).selectedLabels)
+    ? (parsed as GeminiQAVerificationSelection).selectedLabels
+    : [];
+
+  const selectedLabels = Array.from(
+    new Set(
+      rawSelected
+        .filter((label): label is string => typeof label === "string")
+        .map((label) => label.trim())
+        .filter((label) => label.length > 0)
+    )
+  );
+
+  if (selectedLabels.length === 0) {
+    throw new Error("Gemini QA verification planning returned no runnable command labels.");
+  }
+
+  const selectedSet = new Set(selectedLabels);
+  const commands = input.candidateCommands.filter((command) => selectedSet.has(command.label));
+
+  if (commands.length === 0) {
+    throw new Error("Gemini QA verification planning selected no valid commands from the candidate set.");
+  }
+
+  const rawWarnings = (parsed as GeminiQAVerificationSelection).warnings;
+  const warnings = Array.isArray(rawWarnings)
+    ? rawWarnings.filter((warning): warning is string => typeof warning === "string")
+    : [];
+
+  if (failoverResult.selectedModel !== input.stage.model) {
+    warnings.push(
+      `Gemini QA verification planning used failover model '${failoverResult.selectedModel}' after transient provider saturation.`
+    );
+  }
+
+  return {
+    commands,
+    warnings
+  };
+}
+
 function buildQAVerificationSummary(input: {
   status: "completed" | "failed" | "blocked";
   commandCount?: number;
@@ -823,7 +961,27 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
       fileOperations: []
     };
   }
-  const commands = qaPlan.commands ?? [];
+  let commands = qaPlan.commands ?? [];
+
+  if (input.stage.provider === "gemini" && commands.length > 1) {
+    const selection = await selectQAVerificationCommandsWithGemini({
+      stage: input.stage,
+      sourceId: input.sourcePlan.sourceId,
+      activeWorkItemIds: input.activeWorkItemIds,
+      uiStateRequirements: qaPlan.uiStateRequirements,
+      candidateCommands: commands
+    });
+    commands = selection.commands;
+    if (selection.warnings.length > 0) {
+      emitRunEvent(input.options, "qa-verification", "Gemini QA verification planning adjusted command selection.", {
+        sourceId: input.sourcePlan.sourceId,
+        attemptNumber: input.attemptNumber,
+        warnings: selection.warnings,
+        selectedCommandLabels: selection.commands.map((command) => command.label)
+      }, "warn");
+    }
+  }
+
   const commandRecords: SourceStageCommandRecord[] = [];
 
   for (const command of commands) {
@@ -1900,6 +2058,7 @@ async function executeSourceRun(input: ExecuteSourceRunInput): Promise<SourceRun
             try {
               qaVerificationResult = await input.executeQAVerificationStage({
                 config: input.config,
+                stage: qaVerificationStage,
                 normalizedIntent: input.normalizedIntent,
                 sourcePlan: input.sourcePlan,
                 sourcePaths: input.sourcePaths,

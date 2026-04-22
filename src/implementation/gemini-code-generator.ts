@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ResolvedAgentStageConfig } from "../intent/agent-stage-config";
 import { CodeSurfaceSelection, getCodeSurfaceImplementationHints } from "../intent/code-surface";
 import { BDDScenario, ResolvedUiStateRequirement, TDDWorkItem } from "../intent/intent-types";
-import { createGeminiClient } from "../intent/gemini-client";
+import { createGeminiClient, runGeminiModelFailover } from "../intent/gemini-client";
 import {
   collectWorkItemRequiredUiStates,
   formatDetailedUiStateRequirement
@@ -821,16 +821,24 @@ async function generateStructuredGeminiContentDefault(
     apiKeyEnv: input.stage.apiKeyEnv,
     apiVersion: input.stage.apiVersion
   });
-  const response = await ai.models.generateContent({
-    model: input.stage.model,
-    contents: input.prompt,
-    config: {
-      temperature: input.stage.temperature,
-      maxOutputTokens: input.stage.maxTokens,
-      responseMimeType: "application/json",
-      responseJsonSchema: input.responseJsonSchema
-    }
+  const failoverResult = await runGeminiModelFailover({
+    contextLabel: "Gemini implementation generation",
+    primaryModel: input.stage.model,
+    modelFailover: input.stage.modelFailover,
+    invoke: async (model) =>
+      ai.models.generateContent({
+        model,
+        contents: input.prompt,
+        config: {
+          temperature: input.stage.temperature,
+          maxOutputTokens: input.stage.maxTokens,
+          responseMimeType: "application/json",
+          responseJsonSchema: input.responseJsonSchema
+        }
+      })
   });
+
+  const response = failoverResult.value;
 
   const text = response.text?.trim();
   if (!text) {

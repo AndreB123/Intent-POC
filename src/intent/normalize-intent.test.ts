@@ -1319,6 +1319,128 @@ test("normalizeIntentWithAgent fails loudly when AI-first TDD generation cannot 
   );
 });
 
+test("normalizeIntentWithAgent passes stage model failover candidates into TDD planning dependencies", async () => {
+  let observedModelFailover: string[] | undefined;
+
+  await assert.rejects(
+    () =>
+      normalizeIntentWithAgent(
+        {
+          rawPrompt: "verify lifecycle indicator evidence in studio",
+          defaultSourceId: "intent-poc-app",
+          continueOnCaptureError: false,
+          availableSources: intentPocAppSources,
+          agent: {
+            ...geminiAgent,
+            requireAIWorkflow: true,
+            fallbackToRules: false,
+            allowBDDPlanning: true,
+            stages: {
+              ...geminiAgent.stages,
+              tddPlanning: {
+                ...geminiAgent.stages.tddPlanning,
+                fallbackToRules: false,
+                modelFailover: ["models/gemini-3.1-pro-preview", "models/gemini-3-pro-preview"]
+              }
+            }
+          }
+        },
+        {
+          normalizePromptWithGemini: async () => ({
+            sourceIds: ["intent-poc-app"],
+            codeSurfaceId: "intent-studio"
+          }),
+          refineIntentPlanWithGemini: async () => ({}),
+          refineIntentTddWithGemini: async ({ stage }) => {
+            observedModelFailover = stage.modelFailover;
+            throw new Error("provider returned no runnable spec artifacts");
+          }
+        }
+      ),
+    /Gemini TDD planning failed: provider returned no runnable spec artifacts/
+  );
+
+  assert.deepEqual(observedModelFailover, ["models/gemini-3.1-pro-preview", "models/gemini-3-pro-preview"]);
+});
+
+test("normalizeIntentWithAgent passes stage model failover candidates into prompt normalization dependencies", async () => {
+  let observedModelFailover: string[] | undefined;
+
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "route the prompt through ai normalization",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: false,
+        allowTDDPlanning: false,
+        stages: {
+          ...geminiAgent.stages,
+          promptNormalization: {
+            ...geminiAgent.stages.promptNormalization,
+            modelFailover: ["models/gemini-3-flash-preview", "models/gemini-3.1-pro-preview"]
+          }
+        }
+      }
+    },
+    {
+      normalizePromptWithGemini: async ({ stage }) => {
+        observedModelFailover = stage.modelFailover;
+        throw new Error("UNAVAILABLE high demand");
+      }
+    }
+  );
+
+  assert.deepEqual(observedModelFailover, ["models/gemini-3-flash-preview", "models/gemini-3.1-pro-preview"]);
+  assert.equal(
+    normalized.normalizationMeta.stages.find((stage) => stage.stageId === "promptNormalization")?.source,
+    "fallback"
+  );
+});
+
+test("normalizeIntentWithAgent passes stage model failover candidates into BDD planning dependencies", async () => {
+  let observedModelFailover: string[] | undefined;
+
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "plan acceptance criteria via bdd for intent studio",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: true,
+        allowTDDPlanning: false,
+        stages: {
+          ...geminiAgent.stages,
+          bddPlanning: {
+            ...geminiAgent.stages.bddPlanning,
+            modelFailover: ["models/gemini-3-flash-preview", "models/gemini-3.1-pro-preview"]
+          }
+        }
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "intent-studio"
+      }),
+      refineIntentPlanWithGemini: async ({ stage }) => {
+        observedModelFailover = stage.modelFailover;
+        throw new Error("UNAVAILABLE high demand");
+      }
+    }
+  );
+
+  assert.deepEqual(observedModelFailover, ["models/gemini-3-flash-preview", "models/gemini-3.1-pro-preview"]);
+  assert.equal(
+    normalized.normalizationMeta.stages.find((stage) => stage.stageId === "bddPlanning")?.source,
+    "fallback"
+  );
+});
+
 test("normalizeIntent honors the requested source scope across multiple sources", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Prepare reviewable visual evidence for the current release.",

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
 import { CODE_SURFACE_IDS, CodeSurfaceId } from "./code-surface";
-import { createGeminiClient } from "./gemini-client";
+import { createGeminiClient, runGeminiModelFailover } from "./gemini-client";
 import { buildGeminiSourceSummary, GeminiSourceDescriptor } from "./gemini-source-summary";
 import type { PlanningScopingDetails, ScopingContextPack } from "./intent-types";
 
@@ -288,16 +288,24 @@ export async function normalizePromptWithGemini(
     apiVersion: input.stage.apiVersion
   });
 
-  const response = await ai.models.generateContent({
-    model: input.stage.model,
-    contents: buildNormalizationPrompt(input),
-    config: {
-      temperature: input.stage.temperature,
-      maxOutputTokens: input.stage.maxTokens,
-      responseMimeType: "application/json",
-      responseJsonSchema: promptNormalizationResponseJsonSchema
-    }
+  const failoverResult = await runGeminiModelFailover({
+    contextLabel: "Gemini prompt normalization",
+    primaryModel: input.stage.model,
+    modelFailover: input.stage.modelFailover,
+    invoke: async (model) =>
+      ai.models.generateContent({
+        model,
+        contents: buildNormalizationPrompt(input),
+        config: {
+          temperature: input.stage.temperature,
+          maxOutputTokens: input.stage.maxTokens,
+          responseMimeType: "application/json",
+          responseJsonSchema: promptNormalizationResponseJsonSchema
+        }
+      })
   });
+
+  const response = failoverResult.value;
 
   const text = response.text?.trim();
   if (!text) {

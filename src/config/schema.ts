@@ -148,6 +148,7 @@ const agentStageSchema = z.object({
   enabled: z.boolean().optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
+  modelFailover: z.array(z.string().min(1)).optional(),
   temperature: z.number().min(0).max(1).optional(),
   maxTokens: z.number().int().positive().optional(),
   apiKeyEnv: z.string().optional(),

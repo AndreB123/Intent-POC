@@ -117,6 +117,7 @@ export interface RunAgentStageOverride {
   enabled?: boolean;
   provider?: string;
   model?: string;
+  modelFailover?: string[];
   temperature?: number;
   maxTokens?: number;
   apiKeyEnv?: string;
@@ -135,6 +136,7 @@ export interface ResolvedAgentStageConfig {
   enabled: boolean;
   provider?: string;
   model: string;
+  modelFailover: string[];
   temperature: number;
   maxTokens?: number;
   apiKeyEnv?: string;
@@ -156,6 +158,13 @@ export function resolveAgentStageConfig(
     enabled: stageConfig.enabled ?? (agent?.[definition.enabledFlag] ?? definition.defaultEnabled),
     provider: stageConfig.provider ?? agent?.provider,
     model: stageConfig.model ?? agent?.model ?? definition.defaultModel,
+    modelFailover: Array.from(
+      new Set(
+        (stageConfig.modelFailover ?? [])
+          .map((modelId) => modelId.trim())
+          .filter((modelId) => modelId.length > 0)
+      )
+    ),
     temperature: stageConfig.temperature ?? agent?.temperature ?? 0.1,
     maxTokens: stageConfig.maxTokens ?? agent?.maxTokens,
     apiKeyEnv: stageConfig.apiKeyEnv ?? agent?.apiKeyEnv,

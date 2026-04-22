@@ -191,6 +191,7 @@ function buildImplementationStage(overrides: Partial<ResolvedAgentStageConfig> =
     enabled: true,
     provider: "gemini",
     model: "models/gemini-3.1-flash-lite-preview",
+    modelFailover: [],
     temperature: 0.1,
     maxTokens: 8192,
     apiKeyEnv: "TEST_GEMINI_API_KEY",

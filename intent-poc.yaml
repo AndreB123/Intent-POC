@@ -28,14 +28,34 @@ agent:
   stages:
     promptNormalization:
       model: models/gemini-3.1-flash-lite-preview
+      modelFailover:
+        - models/gemini-3-flash-preview
+        - models/gemini-3.1-pro-preview
+    linearScoping:
+      model: models/gemini-3.1-flash-lite-preview
+      modelFailover:
+        - models/gemini-3-flash-preview
+        - models/gemini-3.1-pro-preview
     bddPlanning:
       model: models/gemini-3.1-flash-lite-preview
+      modelFailover:
+        - models/gemini-3-flash-preview
+        - models/gemini-3.1-pro-preview
     tddPlanning:
       model: models/gemini-3.1-flash-lite-preview
+      modelFailover:
+        - models/gemini-3-flash-preview
+        - models/gemini-3.1-pro-preview
     implementation:
       model: models/gemini-3.1-flash-lite-preview
+      modelFailover:
+        - models/gemini-3-flash-preview
+        - models/gemini-3.1-pro-preview
     qaVerification:
       model: models/gemini-3.1-flash-lite-preview
+      modelFailover:
+        - models/gemini-3-flash-preview
+        - models/gemini-3.1-pro-preview
 sources:
   intent-poc-app:
     aliases:

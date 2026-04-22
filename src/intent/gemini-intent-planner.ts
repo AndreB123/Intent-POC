@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ResolvedAgentStageConfig } from "./agent-stage-config";
-import { createGeminiClient } from "./gemini-client";
+import { createGeminiClient, runGeminiModelFailover } from "./gemini-client";
 import { PromptNormalizerSourceDescriptor } from "./gemini-prompt-normalizer";
 import { buildGeminiSourceSummary } from "./gemini-source-summary";
 
@@ -150,16 +150,24 @@ export async function refineIntentPlanWithGemini(
     apiVersion: input.stage.apiVersion
   });
 
-  const response = await ai.models.generateContent({
-    model: input.stage.model,
-    contents: buildPlanningPrompt(input),
-    config: {
-      temperature: input.stage.temperature,
-      maxOutputTokens: input.stage.maxTokens,
-      responseMimeType: "application/json",
-      responseJsonSchema: planningRefinementResponseJsonSchema
-    }
+  const failoverResult = await runGeminiModelFailover({
+    contextLabel: "Gemini intent planning",
+    primaryModel: input.stage.model,
+    modelFailover: input.stage.modelFailover,
+    invoke: async (model) =>
+      ai.models.generateContent({
+        model,
+        contents: buildPlanningPrompt(input),
+        config: {
+          temperature: input.stage.temperature,
+          maxOutputTokens: input.stage.maxTokens,
+          responseMimeType: "application/json",
+          responseJsonSchema: planningRefinementResponseJsonSchema
+        }
+      })
   });
+
+  const response = failoverResult.value;
 
   const text = response.text?.trim();
   if (!text) {

@@ -612,10 +612,22 @@ function normalizeAgentOverrides(value: unknown): RunAgentConfigOverride | undef
         ? (rawStageOverride as { model: string }).model.trim()
         : undefined;
 
-    if (enabled !== undefined || model) {
+    const modelFailover = Array.isArray((rawStageOverride as { modelFailover?: unknown }).modelFailover)
+      ? Array.from(
+          new Set(
+            ((rawStageOverride as { modelFailover?: unknown[] }).modelFailover ?? [])
+              .filter((entry): entry is string => typeof entry === "string")
+              .map((entry) => entry.trim())
+              .filter((entry) => entry.length > 0)
+          )
+        )
+      : undefined;
+
+    if (enabled !== undefined || model || (modelFailover && modelFailover.length > 0)) {
       stages[stageId] = {
         ...(enabled !== undefined ? { enabled } : {}),
-        ...(model ? { model } : {})
+        ...(model ? { model } : {}),
+        ...(modelFailover && modelFailover.length > 0 ? { modelFailover } : {})
       };
     }
   }

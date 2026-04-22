@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "runId": "2026-04-22T04-33-51-900Z-intent-poc-app",
-  "updatedAt": "2026-04-22T04:36:47.009Z",
-  "intentId": "2026-04-22T04-29-56-932Z-change-behavior-for-intent-poc-app",
+  "runId": "2026-04-22T06-27-06-993Z-intent-poc-app",
+  "updatedAt": "2026-04-22T06:27:06.999Z",
+  "intentId": "2026-04-22T06-27-06-992Z-change-behavior-for-intent-poc-app",
   "summary": "change behavior for intent-poc-app",
   "planning": {
     "repoCandidates": [
       {
         "repoId": "intent-poc",
-        "label": "Intent Driven Development POC",
+        "label": "Intent POC",
         "role": "controller-and-demo-source",
         "sourceIds": [
           "intent-poc-app"
         ],
         "selectionStatus": "selected",
-        "reason": "Source intent-poc-app was selected in the requested source scope.",
+        "reason": "Source intent-poc-app was selected by Gemini prompt normalization.",
         "summary": "Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.",
         "sourceTypes": [
           "local"
@@ -33,76 +33,68 @@
     ],
     "scopingContext": {
       "matchedPromptTerms": [
-        "studio",
-        "Intent Studio",
-        "intent"
+        "surface library",
+        "library",
+        "Surface Library",
+        "surface"
       ],
       "sourceMatches": [
         {
           "sourceId": "intent-poc-app",
           "matchedTerms": [
-            "studio"
+            "surface library",
+            "library"
           ],
-          "reason": "Source intent-poc-app was selected in the requested source scope."
+          "reason": "Source intent-poc-app was selected by Gemini prompt normalization."
         }
       ],
       "primarySurface": {
         "sourceId": "intent-poc-app",
-        "id": "intent-studio",
-        "label": "Intent Studio",
+        "id": "surface-library",
+        "label": "Surface Library",
         "confidence": "high",
-        "rationale": "The prompt targets Intent Studio run results, run status, or capture links inside intent-poc-app.",
+        "rationale": "The prompt points to surface-library behavior inside intent-poc-app.",
         "matchedTerms": [
-          "Intent Studio",
-          "intent",
-          "studio"
+          "Surface Library",
+          "surface",
+          "library"
         ],
         "primaryPaths": [
-          "src/demo-app/render/render-intent-studio-page.ts"
+          "src/demo-app/render/render-surface-frame.ts",
+          "src/demo-app/render/render-surface-page.ts"
         ],
         "adjacentPaths": [
-          "src/demo-app/server/start-intent-studio-server.ts",
-          "src/demo-app/serve-demo-app.ts"
+          "src/demo-app/model/catalog.ts",
+          "src/demo-app/model/types.ts"
         ]
       },
       "alternativeSurfaces": [
         {
           "sourceId": "intent-poc-app",
-          "id": "capture-and-evidence",
-          "label": "Capture And Evidence",
+          "id": "intent-studio",
+          "label": "Intent Studio",
           "confidence": "low",
-          "rationale": "The issue may still involve capture outputs, but the broken behavior is in the Studio results UI.",
+          "rationale": "The library request may also touch the Studio shell if the prompt is using Studio language loosely.",
           "matchedTerms": [],
           "primaryPaths": [
-            "src/capture/",
-            "src/evidence/"
+            "src/demo-app/render/render-intent-studio-page.ts"
           ],
           "adjacentPaths": [
-            "src/demo-app/generate-surface-library.ts"
-          ]
-        },
-        {
-          "sourceId": "intent-poc-app",
-          "id": "surface-library",
-          "label": "Surface Library",
-          "confidence": "low",
-          "rationale": "The request still references screenshots and could be mistaken for a library evidence task.",
-          "matchedTerms": [],
-          "primaryPaths": [
-            "src/demo-app/render/render-surface-frame.ts",
-            "src/demo-app/render/render-surface-page.ts"
-          ],
-          "adjacentPaths": [
-            "src/demo-app/model/catalog.ts",
-            "src/demo-app/model/types.ts"
+            "src/demo-app/server/start-intent-studio-server.ts",
+            "src/demo-app/serve-demo-app.ts"
           ]
         }
       ],
       "pathHints": [
         {
           "sourceId": "intent-poc-app",
-          "path": "src/demo-app/render/render-intent-studio-page.ts",
-          "reason": "Primary implementation path for Intent Studio."
+          "path": "src/demo-app/render/render-surface-frame.ts",
+          "reason": "Primary implementation path for Surface Library."
+        },
+        {
+          "sourceId": "intent-poc-app",
+          "path": "src/demo-app/render/render-surface-page.ts",
+          "reason": "Primary implementation path for Surface Library."
         }
       ],
       "uiStateHints": [
@@ -110,7 +102,7 @@
           "sourceId": "intent-poc-app",
           "stateId": "theme-mode",
           "label": "Theme mode",
-          "reason": "Prompt requests the Theme mode UI state with value \"light\".",
+          "reason": "Prompt requests the Theme mode UI state with value \"dark\".",
           "verificationStrategies": [
             "ui-interaction-playwright"
           ],
@@ -145,35 +137,35 @@
         {
           "sourceId": "intent-poc-app",
           "note": "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
-          "reason": "Matched prompt terms: studio, Intent Studio, intent."
+          "reason": "Matched prompt terms: this, source, built-in, surface, library, evidence, Surface Library."
         },
         {
           "sourceId": "intent-poc-app",
           "note": "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
-          "reason": "Matched prompt terms: with, Intent Studio, intent, studio."
+          "reason": "Matched prompt terms: surface, library, screenshot, this, source, publish, Surface Library."
         }
       ],
       "repoMemoryHints": [
         {
+          "memoryId": "ui-state-metadata",
+          "title": "UI State Metadata",
+          "sourcePath": "/memories/repo/ui-state-metadata.md",
+          "note": "theme-mode uses a shared dark query-param contract across Studio and library routes, so verification should prefer route state before UI controls.",
+          "reason": "Matched repo memory terms: dark mode, evidence, dark, library."
+        },
+        {
           "memoryId": "demo-runtime",
           "title": "Demo Runtime",
           "sourcePath": "/memories/repo/domains/demo-runtime.md",
-          "note": "Intent Studio at / is the source of truth for reusable demo UI.",
-          "reason": "Matched repo memory terms: intent studio, intent, studio."
+          "note": "/library stays a stable screenshot surface and should reuse shared render layers.",
+          "reason": "Matched repo memory terms: library, screenshot."
         },
         {
-          "memoryId": "reviewed-intent-runner",
-          "title": "Reviewed Intent Runner",
-          "sourcePath": "/memories/repo/reviewed-intent-runner.md",
-          "note": "Studio starts reviewed runs with both prompt and artifact.normalizedIntent when launching from draftId.",
-          "reason": "Matched repo memory terms: studio, with."
-        },
-        {
-          "memoryId": "studio-lifecycle-preview",
-          "title": "Studio Lifecycle Preview",
-          "sourcePath": "/memories/repo/studio-lifecycle-preview.md",
-          "note": "Studio execution stays locked until the reviewed draft is explicitly sent through /api/drafts/:id/send.",
-          "reason": "Matched repo memory terms: studio, execution."
+          "memoryId": "artifact-contract",
+          "title": "Artifact Contract",
+          "sourcePath": "/memories/repo/domains/artifact-contract.md",
+          "note": "Persistent artifacts live under artifacts/business, artifacts/sources/<sourceId>, and artifacts/library/<sourceId>.",
+          "reason": "Matched repo memory terms: library, baseline."
         }
       ],
       "captureHints": [],
@@ -181,22 +173,27 @@
     },
     "scopingDetails": {
       "repoContext": [
-        "Intent Studio serves as the primary runtime for demo UI and test execution monitoring."
+        "Surface library screenshot regeneration routes through intent-poc-app with explicit library publish opt-in."
       ],
       "sourceScope": [
-        "intent-poc-app"
+        "src/demo-app/render/render-surface-frame.ts",
+        "src/demo-app/render/render-surface-page.ts"
       ],
       "adaptiveBoundaries": [
-        "Indicator must update in real-time without blocking the main Studio execution loop."
+        "Use shared dark query-param contract for theme-mode verification.",
+        "Prefer route state over UI controls for theme activation."
       ],
       "minimumSuccess": [
-        "Visual indicator displays active test status and state codes during AI-generated test runs."
+        "Paired light-mode and dark-mode screenshot evidence for all captured components.",
+        "Published evidence package accessible to GitHub and documentation stakeholders.",
+        "Visible business process gate for baseline review."
       ],
       "baseline": [
-        "Studio execution currently locks until the reviewed draft is sent via /api/drafts/:id/send."
+        "Persistent artifacts stored under artifacts/library/intent-poc-app."
       ],
       "verificationObligations": [
-        "Verify indicator state updates using Playwright interactions; ensure theme-sensitive UI consistency."
+        "Verify active theme state before trusting screenshot comparisons.",
+        "Do not accept dark-mode-only capture sets; include light-mode reference."
       ]
     },
     "plannerSections": [
@@ -228,8 +225,10 @@
       "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
       "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
       "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.",
-      "Ensure the indicator does not obstruct critical Studio functionality.",
-      "Verify that theme-mode toggling does not reset the test execution state."
+      "Ensure library publish opt-in is enabled for screenshot regeneration.",
+      "Verify theme-mode state via query parameter before initiating capture.",
+      "Ensure light-mode reference screenshots are maintained for visual regression comparison despite the dark-mode baseline requirement.",
+      "The business process gate must be manually cleared by authorized stakeholders; automated finalization is prohibited."
     ],
     "requestedPlanningDepth": "full",
     "effectivePlanningDepth": "full",
@@ -246,7 +245,10 @@
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
         "source": "llm",
-        "warnings": []
+        "warnings": [
+          "Ensure library publish opt-in is enabled for screenshot regeneration.",
+          "Verify theme-mode state via query parameter before initiating capture."
+        ]
       },
       {
         "stageId": "linearScoping",
@@ -269,8 +271,8 @@
         "status": "completed",
         "source": "llm",
         "warnings": [
-          "Ensure the indicator does not obstruct critical Studio functionality.",
-          "Verify that theme-mode toggling does not reset the test execution state."
+          "Ensure light-mode reference screenshots are maintained for visual regression comparison despite the dark-mode baseline requirement.",
+          "The business process gate must be manually cleared by authorized stakeholders; automated finalization is prohibited."
         ]
       },
       {
@@ -317,21 +319,22 @@
   "sources": [
     {
       "sourceId": "intent-poc-app",
-      "status": "failed",
-      "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
+      "status": "planned",
+      "selectionReason": "Source intent-poc-app was selected by Gemini prompt normalization.",
       "captureScope": {
         "mode": "all",
         "captureIds": []
       },
       "warnings": [
-        "Requested UI states: theme-mode=light."
+        "Gemini suggested narrowing intent-poc-app captures to library-index, component-button-primary, page-analytics-overview, but the prompt did not explicitly name those captures, so all configured captures were preserved.",
+        "Requested UI states: theme-mode=dark."
       ],
       "uiStateRequirements": [
         {
           "stateId": "theme-mode",
           "label": "Theme mode",
           "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-          "requestedValue": "light",
+          "requestedValue": "dark",
           "activation": [
             {
               "type": "query-param",
@@ -378,49 +381,12 @@
             "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
             "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
           ],
-          "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+          "reason": "Prompt requests the Theme mode UI state with value \"dark\"."
         }
       ],
       "linearIssue": null,
-      "attemptCount": 2,
-      "attempts": [
-        {
-          "attemptNumber": 1,
-          "status": "failed",
-          "failureStage": "implementation",
-          "targetedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
-          ],
-          "completedInAttemptWorkItemIds": [],
-          "pendingTargetedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
-          ],
-          "completedWorkItemIds": [],
-          "remainingWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
-          ],
-          "implementation": "failed",
-          "qaVerification": "skipped"
-        },
-        {
-          "attemptNumber": 2,
-          "status": "failed",
-          "failureStage": "qaVerification",
-          "targetedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
-          ],
-          "completedInAttemptWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
-          ],
-          "pendingTargetedWorkItemIds": [],
-          "completedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
-          ],
-          "remainingWorkItemIds": [],
-          "implementation": "completed",
-          "qaVerification": "failed"
-        }
-      ]
+      "attemptCount": 0,
+      "attempts": []
     }
   ]
 }
