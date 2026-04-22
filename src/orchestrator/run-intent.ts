@@ -830,6 +830,9 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
     emitRunEvent(input.options, "qa-verification", `Running QA command '${command.label}'.`, {
       sourceId: input.sourcePlan.sourceId,
       attemptNumber: input.attemptNumber,
+      commandLabel: command.label,
+      commandStatus: "running",
+      stateCode: command.label === "generated-playwright" ? "QA_GENERATED_PLAYWRIGHT_RUNNING" : "QA_COMMAND_RUNNING",
       command: command.command,
       cwd: input.workspace.rootDir
     });
@@ -845,6 +848,27 @@ async function executeDefaultQAVerificationStage(input: ExecuteQAVerificationSta
       timeoutMs: QA_COMMAND_TIMEOUT_MS
     });
     commandRecords.push(commandRecord);
+
+    emitRunEvent(
+      input.options,
+      "qa-verification",
+      commandRecord.status === "failed"
+        ? `QA command '${command.label}' failed.`
+        : `QA command '${command.label}' completed.`,
+      {
+        sourceId: input.sourcePlan.sourceId,
+        attemptNumber: input.attemptNumber,
+        commandLabel: command.label,
+        commandStatus: commandRecord.status,
+        stateCode: commandRecord.status === "failed"
+          ? "QA_COMMAND_FAILED"
+          : command.label === "generated-playwright"
+            ? "QA_GENERATED_PLAYWRIGHT_COMPLETED"
+            : "QA_COMMAND_COMPLETED",
+        command: command.command,
+        logPath: commandRecord.logPath
+      }
+    );
 
     if (commandRecord.status === "failed") {
       return {

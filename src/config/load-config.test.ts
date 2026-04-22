@@ -108,6 +108,7 @@ test("loadConfig tolerates blank optional yaml fields", async () => {
   assert.equal(loaded.config.agent.model, undefined);
   assert.equal(loaded.config.agent.apiKeyEnv, "GEMINI_API_KEY");
   assert.equal(loaded.config.agent.apiVersion, undefined);
+  assert.equal(loaded.config.agent.requireAIWorkflow, false);
   assert.equal(loaded.config.agent.allowBDDPlanning, true);
   assert.equal(loaded.config.agent.allowTDDPlanning, true);
   assert.equal(loaded.config.agent.stages.promptNormalization.model, "models/gemini-3.1-flash-lite-preview");

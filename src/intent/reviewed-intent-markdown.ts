@@ -16,6 +16,13 @@ export interface ReviewedIntentDraftPreview {
   reviewNotes: string[];
 }
 
+export interface ParsedReviewedIntentMarkdown {
+  isReviewedIntentMarkdown: boolean;
+  intent?: string;
+  desiredOutcome?: string;
+  rawIntent?: string;
+}
+
 function isScopingPreview(normalizedIntent: NormalizedIntent): boolean {
   return normalizedIntent.normalizationMeta.effectivePlanningDepth === "scoping";
 }
@@ -521,6 +528,81 @@ function buildMarkdownSection(title: string, items: string[] | string): string[]
     : [items];
 
   return [title, "", ...lines, ""];
+}
+
+function extractMarkdownSectionText(lines: string[]): string | undefined {
+  const trimmedLines = lines
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (trimmedLines.length === 0) {
+    return undefined;
+  }
+
+  const normalizedLines = trimmedLines
+    .map((line) => line.replace(/^-\s+/, ""))
+    .filter((line) => line !== "None");
+
+  if (normalizedLines.length === 0) {
+    return undefined;
+  }
+
+  return normalizedLines.join("\n").trim();
+}
+
+export function parseReviewedIntentMarkdown(markdown: string): ParsedReviewedIntentMarkdown {
+  const sectionMap = new Map<string, string[]>();
+  let currentSection: string | null = null;
+
+  for (const line of markdown.split(/\r?\n/)) {
+    const headingMatch = line.match(/^##\s+(.+)$/);
+    if (headingMatch) {
+      currentSection = headingMatch[1].trim();
+      sectionMap.set(currentSection, []);
+      continue;
+    }
+
+    if (!currentSection) {
+      continue;
+    }
+
+    sectionMap.get(currentSection)?.push(line);
+  }
+
+  const intent = extractMarkdownSectionText(sectionMap.get("Intent") ?? []);
+  const desiredOutcome = extractMarkdownSectionText(sectionMap.get("Desired Outcome") ?? []);
+  const rawIntent = extractMarkdownSectionText(sectionMap.get("Raw Intent") ?? []);
+
+  return {
+    isReviewedIntentMarkdown: sectionMap.size > 0 && (sectionMap.has("Intent") || sectionMap.has("Raw Intent")),
+    intent,
+    desiredOutcome,
+    rawIntent
+  };
+}
+
+export function buildReviewedIntentPlanningPrompt(input: {
+  prompt: string;
+  fallbackPrompt?: string;
+}): string {
+  const parsed = parseReviewedIntentMarkdown(input.prompt);
+
+  if (!parsed.isReviewedIntentMarkdown) {
+    return input.prompt;
+  }
+
+  const primaryIntent = parsed.intent ?? parsed.rawIntent ?? input.fallbackPrompt ?? input.prompt;
+  const sections = [primaryIntent.trim()];
+
+  if (parsed.desiredOutcome && parsed.desiredOutcome !== primaryIntent) {
+    sections.push(`Desired outcome: ${parsed.desiredOutcome}`);
+  }
+
+  if (parsed.rawIntent && parsed.rawIntent !== primaryIntent) {
+    sections.push(`Original request context: ${parsed.rawIntent}`);
+  }
+
+  return sections.filter((section) => section.trim().length > 0).join("\n\n");
 }
 
 export function buildReviewedIntentMarkdown(input: {

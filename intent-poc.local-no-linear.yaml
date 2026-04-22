@@ -17,22 +17,22 @@ agent:
   apiKeyEnv: GEMINI_KEY
   apiVersion: v1alpha
   temperature: 0.1
+  requireAIWorkflow: true
   allowPromptNormalization: true
-  allowLinearScoping: true
+  allowLinearScoping: false
   allowBDDPlanning: true
   allowTDDPlanning: true
   allowImplementation: true
   allowQAVerification: true
-  fallbackToRules: true
+  fallbackToRules: false
   stages:
     promptNormalization:
-      model: models/gemini-3.1-flash-lite-preview
-    linearScoping:
       model: models/gemini-3.1-flash-lite-preview
     bddPlanning:
       model: models/gemini-3.1-flash-lite-preview
     tddPlanning:
       model: models/gemini-3.1-flash-lite-preview
+      fallbackToRules: false
     implementation:
       model: models/gemini-3.1-flash-lite-preview
     qaVerification:

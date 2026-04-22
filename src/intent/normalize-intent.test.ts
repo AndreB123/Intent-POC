@@ -12,6 +12,7 @@ const geminiAgent = {
   apiKeyEnv: "GEMINI_API_KEY",
   apiVersion: "v1alpha",
   temperature: 0.1,
+  requireAIWorkflow: false,
   allowPromptNormalization: true,
   allowLinearScoping: true,
   allowBDDPlanning: false,
@@ -411,21 +412,27 @@ test("normalizeIntent uses the unified behavior-change workflow for free-text pr
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
       ["promptNormalization", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
-      ["linearScoping", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["linearScoping", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
       ["bddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
       ["tddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
       ["implementation", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
       ["qaVerification", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"]
     ]
   );
-  assert.equal(normalized.businessIntent.workItems[0]?.type, "playwright-spec");
-  assert.ok((normalized.businessIntent.workItems[0]?.playwright.specs.length ?? 0) > 0);
+  assert.equal(
+    normalized.businessIntent.workItems.some((workItem) => workItem.type === "playwright-spec"),
+    true
+  );
+  assert.equal(
+    normalized.businessIntent.workItems.some((workItem) => (workItem.playwright.specs.length ?? 0) > 0),
+    true
+  );
   assert.equal(normalized.normalizationMeta.requestedPlanningDepth, "full");
   assert.equal(normalized.normalizationMeta.effectivePlanningDepth, "full");
   assert.equal(normalized.normalizationMeta.ambiguity.isAmbiguous, false);
 });
 
-test("normalizeIntent defers BDD and TDD details during the Linear scoping pass", () => {
+test("normalizeIntent defers BDD and TDD details during the scoping draft pass", () => {
   const normalized = normalizeIntent({
     rawPrompt: "Compare drift only for cockroach statements on client-systems.",
     defaultSourceId: "client-systems-roach-admin",
@@ -438,16 +445,16 @@ test("normalizeIntent defers BDD and TDD details during the Linear scoping pass"
   assert.deepEqual(normalized.businessIntent.acceptanceCriteria, []);
   assert.deepEqual(normalized.businessIntent.scenarios, []);
   assert.deepEqual(normalized.businessIntent.workItems, []);
-  assert.equal(normalized.executionPlan.tools.find((tool) => tool.id === "linear-scoping")?.enabled, true);
+  assert.equal(normalized.executionPlan.tools.find((tool) => tool.id === "linear-scoping"), undefined);
   assert.equal(normalized.executionPlan.tools.find((tool) => tool.id === "bdd-planning")?.enabled, false);
   assert.equal(normalized.executionPlan.tools.find((tool) => tool.id === "playwright-tdd")?.enabled, false);
   assert.equal(
     normalized.normalizationMeta.stages.find((stage) => stage.stageId === "bddPlanning")?.warnings[0],
-    "BDD planning is deferred until Linear scoping completes."
+    "BDD planning is deferred until the full reviewed plan pass."
   );
   assert.equal(
     normalized.normalizationMeta.stages.find((stage) => stage.stageId === "tddPlanning")?.warnings[0],
-    "Playwright-first TDD planning is deferred until Linear scoping completes."
+    "Playwright-first TDD planning is deferred until the full reviewed plan pass."
   );
   assert.equal(normalized.normalizationMeta.requestedPlanningDepth, "scoping");
   assert.equal(normalized.normalizationMeta.effectivePlanningDepth, "scoping");
@@ -481,11 +488,7 @@ test("normalizeIntent can plan across multiple sources for business-wide intent"
     normalized.executionPlan.sources.map((source) => source.sourceId),
     ["client-systems-roach-admin", "docs-portal"]
   );
-  assert.ok(
-    normalized.executionPlan.destinations.some(
-      (destination) => destination.type === "linear" && destination.status === "planned"
-    )
-  );
+  assert.equal(normalized.executionPlan.destinations.some((destination) => destination.type === "linear"), false);
   assert.equal(normalized.businessIntent.workItems.length, 2);
   assert.deepEqual(
     normalized.businessIntent.workItems.map((workItem) => workItem.sourceIds[0]),
@@ -596,6 +599,65 @@ test("normalizeIntent routes run-status indicator prompts to Intent Studio", () 
   assert.equal(normalized.codeSurface?.sourceId, "intent-poc-app");
   assert.equal(normalized.codeSurface?.id, "intent-studio");
   assert.equal(normalized.codeSurface?.confidence, "high");
+});
+
+test("normalizeIntent routes Intent Studio indicator prompts to live tracked Playwright verification", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "i need a visual test run indicator added to the ui so i know what tests are run",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: demoCatalogSources
+  });
+
+  assert.equal(normalized.codeSurface?.id, "intent-studio");
+  assert.ok(normalized.businessIntent.workItems.length > 0);
+  assert.equal(
+    normalized.businessIntent.workItems.every((workItem) => workItem.verificationMode === "tracked-playwright"),
+    true
+  );
+  assert.equal(
+    normalized.businessIntent.workItems.every((workItem) =>
+      workItem.playwright.specs.every((spec) =>
+        spec.checkpoints.every((checkpoint) => checkpoint.action !== "mock-studio-state")
+      )
+    ),
+    true
+  );
+});
+
+test("normalizeIntent builds indicator checkpoints around real Studio QA state instead of static shell screenshots", () => {
+  const normalized = normalizeIntent({
+    rawPrompt: "i need a visual test run indicator added to the ui so i know what tests are run",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: demoCatalogSources
+  });
+
+  const indicatorSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
+
+  assert.ok(indicatorSpec);
+  assert.equal(
+    indicatorSpec?.checkpoints.some((checkpoint) => checkpoint.target === "[data-testid='test-status-indicator']"),
+    true
+  );
+  assert.equal(
+    indicatorSpec?.checkpoints.some((checkpoint) => checkpoint.target === "#step-implementation-status"),
+    false
+  );
+  assert.equal(
+    indicatorSpec?.checkpoints.some((checkpoint) => checkpoint.target === "#current-status-pill"),
+    true
+  );
+  assert.equal(
+    indicatorSpec?.checkpoints.some(
+      (checkpoint) => checkpoint.attributeName === "data-state-code" && checkpoint.expectedSubstring === "QA_GENERATED_PLAYWRIGHT_RUNNING"
+    ),
+    true
+  );
+  assert.equal(
+    indicatorSpec?.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state"),
+    false
+  );
 });
 
 test("normalizeIntent derives a specific desired outcome from plain-language review-first prompts", () => {
@@ -964,7 +1026,10 @@ test("normalizeIntent maps orchestrator lifecycle rerun prompts to mocked-state 
     normalized.businessIntent.workItems[0]?.verification ?? "",
     /mocked Studio app state/
   );
-  assert.ok((normalized.businessIntent.workItems[0]?.playwright.specs.length ?? 0) > 0);
+  assert.equal(
+    normalized.businessIntent.workItems.some((workItem) => (workItem.playwright.specs.length ?? 0) > 0),
+    true
+  );
   assert.ok(
     normalized.businessIntent.workItems[0]?.playwright.specs.some((spec) =>
       spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")
@@ -1015,7 +1080,243 @@ test("normalizeIntentWithAgent still generates Playwright specs for Intent Studi
 
   assert.equal(normalized.intentType, "change-behavior");
   assert.equal(normalized.codeSurface?.id, "intent-studio");
-  assert.ok((normalized.businessIntent.workItems[0]?.playwright.specs.length ?? 0) > 0);
+  assert.equal(
+    normalized.businessIntent.workItems.some((workItem) => (workItem.playwright.specs.length ?? 0) > 0),
+    true
+  );
+});
+
+test("normalizeIntent rejects rules-only planning when AI-first workflow is required", () => {
+  assert.throws(
+    () =>
+      normalizeIntent({
+        rawPrompt: "the run status indicator should update while implementation and qa are executing",
+        defaultSourceId: "intent-poc-app",
+        continueOnCaptureError: false,
+        availableSources: intentPocAppSources,
+        agent: {
+          ...geminiAgent,
+          requireAIWorkflow: true,
+          fallbackToRules: false,
+          allowBDDPlanning: true
+        }
+      }),
+    /AI-first workflow requires provider-backed planning via normalizeIntentWithAgent/
+  );
+});
+
+test("normalizeIntentWithAgent allows mocked-state behavior verification when AI-first workflow is required", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt:
+        "the intent lifecycle needs to map the execution plan better and support state reversion when the model calls a rerun on a step.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        requireAIWorkflow: true,
+        fallbackToRules: false,
+        allowBDDPlanning: true,
+        stages: {
+          ...geminiAgent.stages,
+          tddPlanning: {
+            ...geminiAgent.stages.tddPlanning,
+            fallbackToRules: false
+          }
+        }
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "orchestrator-and-planning"
+      }),
+      refineIntentPlanWithGemini: async () => ({}),
+      refineIntentTddWithGemini: async () => ({
+        workItems: [
+          {
+            title: "Verify lifecycle behavior for intent-poc-app",
+            description: "Generate tracked lifecycle verification for intent-poc-app.",
+            verificationMode: "mocked-state-playwright",
+            sourceIds: ["intent-poc-app"],
+            userVisibleOutcome: "Lifecycle state and status handling remain reviewable in intent-poc-app.",
+            verification: "A Gemini-authored Playwright spec validates lifecycle state handling through the Studio UI.",
+            specs: [
+              {
+                sourceId: "intent-poc-app",
+                relativeSpecPath: "intent-poc-app/verify-lifecycle-behavior.spec.ts",
+                suiteName: "Intent-driven flow for intent-poc-app",
+                testName: "Verify lifecycle behavior for intent-poc-app",
+                checkpoints: [
+                  {
+                    label: "Lifecycle State Running",
+                    action: "mock-studio-state",
+                    assertion: "The Studio renders an executing lifecycle state for the active run.",
+                    screenshotId: "shot-lifecycle-running",
+                    path: "/",
+                    waitForSelector: "#step-implementation-status",
+                    waitUntil: "domcontentloaded",
+                    mockStudioState: {
+                      currentRun: {
+                        status: "running"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      })
+    }
+  );
+
+  assert.equal(normalized.codeSurface?.id, "orchestrator-and-planning");
+  assert.ok(normalized.businessIntent.workItems.length > 0);
+  assert.equal(
+    normalized.businessIntent.workItems.every((workItem) => workItem.verificationMode === "mocked-state-playwright"),
+    true
+  );
+  assert.equal(
+    normalized.businessIntent.workItems.every((workItem) =>
+      workItem.playwright.specs.every((spec) =>
+        spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")
+      )
+    ),
+    true
+  );
+  assert.equal(normalized.businessIntent.workItems.every((workItem) => workItem.playwright.generatedBy === "llm"), true);
+  assert.equal(
+    normalized.normalizationMeta.stages.find((stage) => stage.stageId === "tddPlanning")?.source,
+    "llm"
+  );
+});
+
+test("normalizeIntentWithAgent falls back to live tracked Playwright when Gemini emits mocked-state indicator verification", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt:
+        "i need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        allowBDDPlanning: true
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "intent-studio"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        acceptanceCriteria: [
+          { description: "A visual test run indicator is visible while QA is active." }
+        ],
+        scenarios: [
+          {
+            title: "Verify status indicator lifecycle",
+            goal: "Verify that the status indicator is visible while QA is active.",
+            given: ["The user is in Intent Studio during an active run."],
+            when: ["QA verification is executing."],
+            then: ["The visual test run indicator is visible while QA is active."],
+            applicableSourceIds: ["intent-poc-app"]
+          }
+        ]
+      }),
+      refineIntentTddWithGemini: async () => ({
+        workItems: [
+          {
+            title: "Verify status indicator lifecycle",
+            description: "Verify that the status indicator is visible while QA is active.",
+            verificationMode: "mocked-state-playwright",
+            sourceIds: ["intent-poc-app"],
+            scenarioIds: ["scenario-1-verify-status-indicator-lifecycle"],
+            userVisibleOutcome: "The visual test run indicator is visible while QA is active.",
+            verification: "A Gemini-authored Playwright spec validates the indicator.",
+            specs: [
+              {
+                sourceId: "intent-poc-app",
+                relativeSpecPath: "intent-poc-app/test-execution-indicator.spec.ts",
+                suiteName: "Intent Studio Test Execution Indicator",
+                testName: "Verify status indicator lifecycle",
+                scenarioIds: ["scenario-1-verify-status-indicator-lifecycle"],
+                checkpoints: [
+                  {
+                    label: "Lifecycle State Running",
+                    action: "mock-studio-state",
+                    assertion: "The indicator displays 'Running' status and code when the test is active.",
+                    screenshotId: "indicator-running-state",
+                    path: "/",
+                    waitForSelector: "[data-testid='test-status-indicator']",
+                    waitUntil: "domcontentloaded",
+                    mockStudioState: {
+                      currentRun: {
+                        status: "running"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      })
+    }
+  );
+
+  assert.equal(normalized.businessIntent.workItems[0]?.verificationMode, "tracked-playwright");
+  assert.equal(
+    normalized.businessIntent.workItems[0]?.playwright.specs[0]?.checkpoints.some(
+      (checkpoint) => checkpoint.action === "mock-studio-state"
+    ),
+    false
+  );
+  assert.equal(normalized.businessIntent.workItems[0]?.playwright.generatedBy, "rules");
+  assert.equal(
+    normalized.normalizationMeta.stages.find((stage) => stage.stageId === "tddPlanning")?.source,
+    "rules"
+  );
+});
+
+test("normalizeIntentWithAgent fails loudly when AI-first TDD generation cannot produce artifacts", async () => {
+  await assert.rejects(
+    () =>
+      normalizeIntentWithAgent(
+        {
+          rawPrompt: "show live lifecycle state changes in the studio while the run is executing",
+          defaultSourceId: "intent-poc-app",
+          continueOnCaptureError: false,
+          availableSources: intentPocAppSources,
+          agent: {
+            ...geminiAgent,
+            requireAIWorkflow: true,
+            fallbackToRules: false,
+            allowBDDPlanning: true,
+            stages: {
+              ...geminiAgent.stages,
+              tddPlanning: {
+                ...geminiAgent.stages.tddPlanning,
+                fallbackToRules: false
+              }
+            }
+          }
+        },
+        {
+          normalizePromptWithGemini: async () => ({
+            sourceIds: ["intent-poc-app"],
+            codeSurfaceId: "intent-studio"
+          }),
+          refineIntentPlanWithGemini: async () => ({}),
+          refineIntentTddWithGemini: async () => {
+            throw new Error("provider returned no runnable spec artifacts");
+          }
+        }
+      ),
+    /Gemini TDD planning failed: provider returned no runnable spec artifacts/
+  );
 });
 
 test("normalizeIntent honors the requested source scope across multiple sources", () => {
@@ -1072,7 +1373,7 @@ test("normalizeIntentWithAgent uses Gemini hints when the provider returns valid
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
       ["promptNormalization", "completed", "llm", "models/gemini-3.1-flash-lite-preview"],
-      ["linearScoping", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["linearScoping", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
       ["bddPlanning", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
       ["tddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
       ["implementation", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
@@ -1705,7 +2006,7 @@ test("normalizeIntentWithAgent applies Gemini planning refinement when the plann
     normalized.normalizationMeta.stages.map((stage) => [stage.stageId, stage.status, stage.source, stage.model]),
     [
       ["promptNormalization", "completed", "llm", "models/gemini-3.1-flash-lite-preview"],
-      ["linearScoping", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
+      ["linearScoping", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
       ["bddPlanning", "completed", "llm", "models/gemini-3.1-flash-lite-preview"],
       ["tddPlanning", "completed", "rules", "models/gemini-3.1-flash-lite-preview"],
       ["implementation", "skipped", "skipped", "models/gemini-3.1-flash-lite-preview"],
@@ -1770,7 +2071,7 @@ test("normalizeIntentWithAgent falls back to rules when Gemini normalization fai
   assert.deepEqual(normalized.captureScope.captureIds, ["roach-statements"]);
   assert.deepEqual(
     normalized.normalizationMeta.stages.map((stage) => stage.status),
-    ["fallback", "completed", "skipped", "completed", "skipped", "skipped"]
+    ["fallback", "skipped", "skipped", "completed", "skipped", "skipped"]
   );
   assert.ok(
     normalized.normalizationMeta.warnings.some((warning) => warning.includes("quota exceeded"))

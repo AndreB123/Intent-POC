@@ -251,6 +251,64 @@ test("writeGeneratedPlaywrightTests Given a hidden-state checkpoint When specs a
   }
 });
 
+test("writeGeneratedPlaywrightTests Given a live Intent Studio indicator flow When specs are generated Then the spec asserts live QA state without mocked Studio state", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-indicator-live-"));
+
+  try {
+    const source = {
+      ...buildIntentPocAppBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent = normalizeIntent({
+      rawPrompt: "i need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: {
+        "intent-poc-app": {
+          aliases: source.aliases,
+          capture: source.capture,
+          planning: source.planning,
+          source: source.source
+        }
+      }
+    });
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "intent-poc-app",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "intent-poc-app"
+    });
+
+    const generatedFiles = await Promise.all((result?.files ?? []).map(async (filePath) => ({
+      filePath,
+      content: await fs.readFile(filePath, "utf8")
+    })));
+    const matchingSpec = generatedFiles.find((entry) => entry.content.includes("[data-testid='test-status-indicator']"));
+    assert.ok(matchingSpec);
+
+    const generatedContent = matchingSpec!.content;
+    assert.equal(generatedContent.includes('await page.route("**/api/state", async (route) => {'), false);
+    assert.equal(generatedContent.includes('const attributeValue = await target.getAttribute("data-state-code");'), true);
+    assert.equal(generatedContent.includes('expect(attributeValue ?? "", "The live indicator exposes the generated Playwright QA state code while verification is running.").toContain("QA_GENERATED_PLAYWRIGHT_RUNNING");'), true);
+    assert.equal(generatedContent.includes("[data-testid='test-status-indicator']"), true);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("writeGeneratedPlaywrightTests Given a below-layout checkpoint When specs are generated Then the spec emits the layout helper and assertion", async () => {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-layout-"));
 

@@ -748,6 +748,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         color: var(--warning);
       }
 
+      .target-blocked {
+        background: rgba(180, 69, 52, 0.12);
+        color: var(--danger);
+      }
+
       .selection-summary,
       .target-summary,
       .target-detail,
@@ -852,6 +857,40 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         display: grid;
         gap: 14px;
         grid-template-columns: 1fr;
+      }
+
+      .workflow-readiness {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: color-mix(in srgb, var(--panel-strong) 82%, white 18%);
+      }
+
+      .workflow-readiness-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .workflow-pipeline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .workflow-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(15, 118, 110, 0.08);
+        color: var(--accent-strong);
+        font-size: 12px;
+        font-weight: 700;
       }
 
       .run-snapshot-mini {
@@ -1123,6 +1162,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             <a class="hero-link" href="/library">Browse Asset Library</a>
             <a class="hero-link" href="/health">Health Check</a>
             <span class="hero-link" id="connection-state">Connecting stream…</span>
+            <span class="hero-link" id="test-status-indicator" data-testid="test-status-indicator" style="display: none;">Ready</span>
           </div>
           <div class="error-banner" id="config-error"></div>
         </section>
@@ -1183,6 +1223,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                       </label>
                       <div class="submit-row">
                         <span class="notice" id="form-note">No run in progress.</span>
+                        ${renderButton({ label: "Start new intent", className: "ghost-button", id: "reset-intent-button", type: "button" })}
                         ${renderButton({ label: "Run intent", className: "primary-button", id: "submit-button", type: "submit", attributes: { disabled: "disabled" } })}
                       </div>
                     </div>
@@ -1214,6 +1255,17 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                     <div class="agent-stages-grid" id="agent-stages-grid">
                       ${agentStageFields}
                     </div>
+                  </div>
+                  <div class="workflow-readiness" id="workflow-readiness-panel">
+                    <div class="workflow-readiness-head">
+                      <div>
+                        <label>Workflow Readiness</label>
+                        <div class="panel-copy" id="workflow-readiness-summary">Checking whether the reviewed flow can continue through implementation, QA, screenshots, comparison, and artifacts.</div>
+                      </div>
+                      <span class="target-badge target-attention" id="workflow-readiness-status">checking</span>
+                    </div>
+                    <div class="field-note" id="workflow-readiness-detail">Studio reports whether the current config can carry the reviewed plan through the full success path.</div>
+                    <div class="workflow-pipeline" id="workflow-readiness-pipeline"></div>
                   </div>
                 </div>
               </form>
@@ -1326,6 +1378,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
     <script>
       (function () {
         const darkModeToggle = document.getElementById("dark-mode-toggle");
+        const testStatusIndicator = document.getElementById("test-status-indicator");
 
         function setDarkMode(enabled, syncUrl) {
           document.body.classList.toggle("dark-mode", enabled);
@@ -1352,6 +1405,45 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           setDarkMode(!document.body.classList.contains("dark-mode"), true);
         });
 
+        function updateTestStatusIndicator(run) {
+          if (!run || !run.sourceRuns || run.sourceRuns.length === 0) {
+            testStatusIndicator.style.display = "none";
+            testStatusIndicator.removeAttribute("data-state-code");
+            testStatusIndicator.removeAttribute("data-command-label");
+            return;
+          }
+
+          const activeSourceRun = run.sourceRuns.find(function(sr) {
+            return sr.qaVerificationStageStatus === "running" || sr.implementationStageStatus === "running";
+          }) || run.sourceRuns[0];
+          const isRunning = run.sourceRuns.some(sr => sr.implementationStageStatus === "running" || sr.qaVerificationStageStatus === "running");
+          const isCompleted = run.status === "completed";
+          const isFailed = run.status === "failed";
+          const qaCommandLabel = activeSourceRun && activeSourceRun.qaCommandLabel ? activeSourceRun.qaCommandLabel : "";
+          const stateCode = activeSourceRun && activeSourceRun.qaVerificationStageStatus === "running"
+            ? (activeSourceRun.qaCommandStateCode || "QA_RUNNING")
+            : activeSourceRun && activeSourceRun.implementationStageStatus === "running"
+              ? "IMPLEMENTATION_RUNNING"
+              : isCompleted
+                ? "RUN_COMPLETED"
+                : isFailed
+                  ? "RUN_FAILED"
+                  : "READY";
+          const statusLabel = isRunning ? "Running" : isCompleted ? "Passed" : isFailed ? "Failed" : "Ready";
+
+          testStatusIndicator.style.display = "inline-flex";
+          testStatusIndicator.textContent = qaCommandLabel
+            ? statusLabel + " · " + stateCode + " · " + qaCommandLabel
+            : statusLabel + " · " + stateCode;
+          testStatusIndicator.className = "hero-link " + (isRunning ? "status-running" : isCompleted ? "status-completed" : isFailed ? "status-failed" : "status-ready");
+          testStatusIndicator.setAttribute("data-state-code", stateCode);
+          if (qaCommandLabel) {
+            testStatusIndicator.setAttribute("data-command-label", qaCommandLabel);
+          } else {
+            testStatusIndicator.removeAttribute("data-command-label");
+          }
+        }
+
         function wireCollapseToggle(toggleId, panelId, expandedDisplay) {
           const toggle = document.getElementById(toggleId);
           const panel = document.getElementById(panelId);
@@ -1375,6 +1467,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         const configEditorLink = document.getElementById("config-editor-link");
         const configFileLink = document.getElementById("config-file-link");
         const dryRunInput = document.getElementById("dry-run-input");
+        const resetIntentButton = document.getElementById("reset-intent-button");
         const submitButton = document.getElementById("submit-button");
         const formNote = document.getElementById("form-note");
         const configError = document.getElementById("config-error");
@@ -1406,6 +1499,10 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         const selectionSummary = document.getElementById("selection-summary");
         const selectionDefaults = document.getElementById("selection-defaults");
         const selectionDetails = document.getElementById("selection-details");
+        const workflowReadinessStatus = document.getElementById("workflow-readiness-status");
+        const workflowReadinessSummary = document.getElementById("workflow-readiness-summary");
+        const workflowReadinessDetail = document.getElementById("workflow-readiness-detail");
+        const workflowReadinessPipeline = document.getElementById("workflow-readiness-pipeline");
         const planIntentText = document.getElementById("plan-intent-text");
         const planIntentOutcome = document.getElementById("plan-intent-outcome");
         const planPlanNotes = document.getElementById("plan-plan-notes");
@@ -1442,6 +1539,50 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         let previewDirty = false;
         let localSubmissionState = null;
         let hydratingPrompt = false;
+        const previewDraftSessionKey = "intent-studio.active-reviewed-draft-id";
+
+        function rememberPreviewDraft(draftId) {
+          try {
+            if (!draftId) {
+              window.sessionStorage.removeItem(previewDraftSessionKey);
+              return;
+            }
+
+            window.sessionStorage.setItem(previewDraftSessionKey, draftId);
+          } catch {
+          }
+        }
+
+        function rememberedPreviewDraftId() {
+          try {
+            return window.sessionStorage.getItem(previewDraftSessionKey);
+          } catch {
+            return null;
+          }
+        }
+
+        function shouldResumeDraft(activeDraft) {
+          return Boolean(
+            activeDraft &&
+            activeDraft.draft &&
+            activeDraft.draft.status === "draft" &&
+            activeDraft.draft.draftId &&
+            rememberedPreviewDraftId() === activeDraft.draft.draftId
+          );
+        }
+
+        function clearPreviewState(options) {
+          const nextOptions = options || {};
+
+          previewPlan = null;
+          previewDraft = null;
+          previewDirty = false;
+          rememberPreviewDraft(null);
+
+          if (nextOptions.clearPrompt) {
+            setPromptValue("");
+          }
+        }
 
         function draftPreview() {
           return previewDraft && previewDraft.preview ? previewDraft.preview : null;
@@ -1457,6 +1598,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           previewPlan = preview && preview.plan ? preview.plan : null;
           previewDraft = preview && preview.draft ? preview.draft : null;
           previewDirty = false;
+          rememberPreviewDraft(previewDraft && previewDraft.draftId ? previewDraft.draftId : null);
 
           if (previewDraft && typeof previewDraft.prompt === "string") {
             setPromptValue(previewDraft.prompt);
@@ -1926,6 +2068,39 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           });
         }
 
+        function formatWorkflowReadinessClass(status) {
+          if (status === "ready") {
+            return "target-ready";
+          }
+
+          if (status === "blocked") {
+            return "target-blocked";
+          }
+
+          return "target-attention";
+        }
+
+        function renderWorkflowReadiness(state) {
+          const readiness = state && state.workflowReadiness
+            ? state.workflowReadiness
+            : {
+                status: "attention",
+                summary: "Workflow readiness unavailable.",
+                detail: "Studio could not determine whether the full reviewed flow can continue.",
+                pipeline: []
+              };
+
+          workflowReadinessStatus.textContent = readiness.status;
+          workflowReadinessStatus.className = "target-badge " + formatWorkflowReadinessClass(readiness.status);
+          workflowReadinessSummary.textContent = readiness.summary;
+          workflowReadinessDetail.textContent = readiness.detail;
+
+          clear(workflowReadinessPipeline);
+          (readiness.pipeline || []).forEach(function (step) {
+            workflowReadinessPipeline.appendChild(create("span", "workflow-chip", step));
+          });
+        }
+
         function renderMetrics(run) {
           clear(metrics);
 
@@ -2122,6 +2297,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           const activeDraftPreview = !run ? draftPreview() : null;
 
           updateLifecycleProgress(activePlan, run);
+          updateTestStatusIndicator(run);
 
           if (!activePlan) {
             planIntentText.textContent = promptInput.value.trim().length > 0
@@ -2138,8 +2314,8 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             renderPlanList(planSources, [], null, "Waiting for submitted intent…");
             renderPlanList(planDestinations, [], null, "Waiting for submitted intent…");
             renderPlanList(planTools, [], null, "Waiting for submitted intent…");
-            renderPlanList(planImplementation, [], null, "Waiting for submitted intent…");
-            renderPlanList(planQa, [], null, "Waiting for submitted intent…");
+            renderPlanList(planImplementation, [], null, "Implementation activity will show here after a run starts.");
+            renderPlanList(planQa, [], null, "QA results will show here after a run reaches verification.");
             return;
           }
 
@@ -2622,6 +2798,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             ? run.requestedSourceIds
             : selectedSources.map(function (source) { return source.id; });
           const hasVisibleSources = Boolean(state.sources && state.sources.length);
+          const workflowBlocked = state.workflowReadiness && state.workflowReadiness.status === "blocked";
 
           runnerStatus.textContent = run ? run.status : "ready";
           linearState.textContent = state.linearEnabled ? "enabled" : "disabled";
@@ -2648,9 +2825,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               : run
                 ? "Run queued"
                 : "No active run";
-          submitButton.disabled = Boolean(localSubmissionState || running || state.configError || !hasVisibleSources || !hasPrompt);
+          submitButton.disabled = Boolean(localSubmissionState || running || state.configError || workflowBlocked || !hasVisibleSources || !hasPrompt);
           formNote.textContent = state.configError
             ? "Fix the config before starting a run."
+            : workflowBlocked
+              ? state.workflowReadiness.detail
             : !hasVisibleSources
               ? "Open the config and expose at least one work-scope source."
             : localSubmissionState === "preview"
@@ -2675,9 +2854,14 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         function renderState(state) {
           const hadPreviousState = lastState !== null;
           lastState = state;
+          if (!state.currentRun && !previewDraft && shouldResumeDraft(state.activeDraft)) {
+            applyPreview(state.activeDraft);
+          }
+          if (!state.currentRun && !state.activeDraft && !previewDraft) {
+            rememberPreviewDraft(null);
+          }
           if (state.currentRun && previewDraft && state.currentRun.draftId === previewDraft.draftId) {
-            previewDraft = null;
-            previewDirty = false;
+            clearPreviewState({ clearPrompt: false });
             if (state.currentRun.intentPlan) {
               previewPlan = state.currentRun.intentPlan;
             }
@@ -2697,6 +2881,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           updateConfigLinks(state);
           renderSourceEditor(state, { forceReload: !hadPreviousState });
           updateAgentStageNotes(state);
+          renderWorkflowReadiness(state);
 
           updateTopLine(state);
           updateSelectionGuidance(state);
@@ -2958,6 +3143,16 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
           }
         });
 
+        resetIntentButton.addEventListener("click", function () {
+          clearPreviewState({ clearPrompt: true });
+          dryRunInput.checked = false;
+          if (lastState) {
+            updateTopLine(lastState);
+            renderPlan(lastState);
+          }
+          formNote.textContent = "Enter an intent prompt, then click Run intent.";
+        });
+
         sourceScope.addEventListener("change", function () {
           syncScopeCardSelection();
           if (lastState) {
@@ -2971,6 +3166,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             });
             updateTopLine(lastState);
             updateSelectionGuidance(lastState);
+            rememberPreviewDraft(null);
           }
         });
 

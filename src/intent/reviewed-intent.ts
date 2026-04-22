@@ -1,7 +1,10 @@
+import { promises as fs } from "node:fs";
 import { LoadedConfig } from "../config/load-config";
 import { createReviewedIntentDraftPaths, ReviewedIntentDraftPaths } from "../evidence/paths";
 import { readJsonFile, writeJsonFile } from "../shared/fs";
 import { NormalizedIntent, ReviewedIntentArtifact } from "./intent-types";
+
+const DEFAULT_RESUMABLE_REVIEWED_INTENT_STATUSES: ReviewedIntentArtifact["status"][] = ["draft"];
 
 export async function persistReviewedIntentDraft(input: {
   loadedConfig: LoadedConfig;
@@ -52,6 +55,57 @@ export async function loadReviewedIntentDraft(input: {
     artifact,
     paths
   };
+}
+
+export async function loadLatestResumableReviewedIntentDraft(input: {
+  loadedConfig: LoadedConfig;
+  statuses?: ReviewedIntentArtifact["status"][];
+}): Promise<
+  | {
+      artifact: ReviewedIntentArtifact;
+      paths: ReviewedIntentDraftPaths;
+    }
+  | null
+> {
+  const draftPaths = createReviewedIntentDraftPaths(input.loadedConfig, "studio-active-draft");
+  const allowedStatuses = new Set(input.statuses ?? DEFAULT_RESUMABLE_REVIEWED_INTENT_STATUSES);
+
+  let fileNames: string[];
+  try {
+    fileNames = await fs.readdir(draftPaths.draftsDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+
+  const drafts = await Promise.all(
+    fileNames
+      .filter((fileName) => fileName.endsWith(".json"))
+      .map(async (fileName) => {
+        const reviewedIntentId = fileName.replace(/\.json$/u, "");
+        return await loadReviewedIntentDraft({
+          loadedConfig: input.loadedConfig,
+          reviewedIntentId
+        });
+      })
+  );
+
+  const resumableDrafts = drafts.filter((draft) => allowedStatuses.has(draft.artifact.status));
+  resumableDrafts.sort((left, right) => {
+    const rightTimestamp = Date.parse(right.artifact.updatedAt || right.artifact.createdAt || "");
+    const leftTimestamp = Date.parse(left.artifact.updatedAt || left.artifact.createdAt || "");
+
+    if (rightTimestamp !== leftTimestamp) {
+      return rightTimestamp - leftTimestamp;
+    }
+
+    return right.artifact.reviewedIntentId.localeCompare(left.artifact.reviewedIntentId);
+  });
+
+  return resumableDrafts[0] ?? null;
 }
 
 export async function updateReviewedIntentDraftStatus(input: {

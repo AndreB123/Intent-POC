@@ -37,6 +37,7 @@ async function writeStudioConfig(
   configPath: string,
   tmpDir: string,
   options: {
+    requireAIWorkflow?: boolean;
     agentProvider?: string;
     agentApiKeyEnv?: string;
   } = {}
@@ -54,8 +55,19 @@ async function writeStudioConfig(
       "  commentOnCompletion: false",
       "agent:",
       "  mode: bounded-runner",
+      "  allowLinearScoping: false",
+      ...(options.requireAIWorkflow ? ["  requireAIWorkflow: true", "  fallbackToRules: false"] : []),
       ...(options.agentProvider ? [`  provider: ${options.agentProvider}`] : []),
       ...(options.agentApiKeyEnv ? [`  apiKeyEnv: ${options.agentApiKeyEnv}`] : []),
+      ...(options.requireAIWorkflow
+        ? [
+            "  allowImplementation: true",
+            "  allowQAVerification: true",
+            "  stages:",
+            "    tddPlanning:",
+            "      fallbackToRules: false"
+          ]
+        : []),
       "sources:",
       "  app:",
       "    planning:",
@@ -144,6 +156,12 @@ test("startIntentStudioServer exposes all configured sources and saves source me
     configPath: string;
     configFileUrl?: string;
     configEditorUrl?: string;
+    workflowReadiness: {
+      status: string;
+      summary: string;
+      detail: string;
+      pipeline: string[];
+    };
     sources: Array<{
       id: string;
       label: string;
@@ -157,6 +175,9 @@ test("startIntentStudioServer exposes all configured sources and saves source me
   assert.equal(state.configPath, expectedRelativeConfigPath);
   assert.equal(state.configFileUrl, toFileUrlPath(expectedRelativeConfigPath));
   assert.match(state.configEditorUrl ?? "", /^vscode:\/\/file\//);
+  assert.equal(state.workflowReadiness.status, "attention");
+  assert.match(state.workflowReadiness.summary, /Deterministic baseline mode/);
+  assert.ok(state.workflowReadiness.pipeline.some((entry) => /Screenshot capture and comparison/.test(entry)));
   assert.equal(state.sources.length, 2);
   assert.equal(state.sources[0].id, "app");
   assert.equal(state.sources[0].label, "Current app");
@@ -336,6 +357,151 @@ test("startIntentStudioServer rejects planning preview when live Gemini prompt n
   assert.match(body.error ?? "", /Prompt Interpretation requires Gemini access/);
   assert.match(body.error ?? "", /MISSING_GEMINI_KEY/);
   assert.match(body.error ?? "", /intent-poc\.local-no-linear\.yaml/);
+});
+
+test("startIntentStudioServer exposes blocked AI-first workflow readiness when Gemini access is missing", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir, {
+    requireAIWorkflow: true,
+    agentProvider: "gemini",
+    agentApiKeyEnv: "MISSING_GEMINI_KEY"
+  });
+
+  const geminiEnvNames = ["MISSING_GEMINI_KEY", "GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"] as const;
+  const previousGeminiEnv = Object.fromEntries(
+    geminiEnvNames.map((envName) => [envName, process.env[envName]])
+  ) as Record<(typeof geminiEnvNames)[number], string | undefined>;
+
+  for (const envName of geminiEnvNames) {
+    delete process.env[envName];
+  }
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    for (const envName of geminiEnvNames) {
+      if (previousGeminiEnv[envName] === undefined) {
+        delete process.env[envName];
+      } else {
+        process.env[envName] = previousGeminiEnv[envName];
+      }
+    }
+
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const response = await fetch(`${server.baseUrl}/api/state`);
+  assert.equal(response.status, 200);
+  const state = (await response.json()) as {
+    workflowReadiness: {
+      status: string;
+      summary: string;
+      detail: string;
+      pipeline: string[];
+    };
+  };
+
+  assert.equal(state.workflowReadiness.status, "blocked");
+  assert.match(state.workflowReadiness.summary, /AI-first workflow is blocked/);
+  assert.match(state.workflowReadiness.detail, /Prompt Interpretation requires Gemini access/);
+  assert.ok(state.workflowReadiness.pipeline.some((entry) => /Artifacts: normalized intent/.test(entry)));
+});
+
+test("startIntentStudioServer exposes blocked AI-first workflow readiness when TDD planning can fall back to rules", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir, {
+    requireAIWorkflow: true,
+    agentProvider: "gemini",
+    agentApiKeyEnv: "TEST_GEMINI_KEY"
+  });
+
+  await fs.writeFile(
+    configPath,
+    (await fs.readFile(configPath, "utf8")).replace(
+      "    tddPlanning:\n      fallbackToRules: false",
+      "    tddPlanning:\n      fallbackToRules: true"
+    ),
+    "utf8"
+  );
+
+  const previousGeminiKey = process.env.TEST_GEMINI_KEY;
+  process.env.TEST_GEMINI_KEY = "test-key";
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    if (previousGeminiKey === undefined) {
+      delete process.env.TEST_GEMINI_KEY;
+    } else {
+      process.env.TEST_GEMINI_KEY = previousGeminiKey;
+    }
+
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const response = await fetch(`${server.baseUrl}/api/state`);
+  assert.equal(response.status, 200);
+  const state = (await response.json()) as {
+    workflowReadiness: {
+      status: string;
+      summary: string;
+      detail: string;
+      pipeline: string[];
+    };
+  };
+
+  assert.equal(state.workflowReadiness.status, "blocked");
+  assert.match(state.workflowReadiness.summary, /AI-first workflow is blocked/);
+  assert.match(state.workflowReadiness.detail, /TDD Planning cannot fall back to rules/);
+});
+
+test("startIntentStudioServer exposes ready AI-first workflow readiness when Gemini configuration is present", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir, {
+    requireAIWorkflow: true,
+    agentProvider: "gemini",
+    agentApiKeyEnv: "TEST_GEMINI_KEY"
+  });
+
+  const previousGeminiKey = process.env.TEST_GEMINI_KEY;
+  process.env.TEST_GEMINI_KEY = "test-key";
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    if (previousGeminiKey === undefined) {
+      delete process.env.TEST_GEMINI_KEY;
+    } else {
+      process.env.TEST_GEMINI_KEY = previousGeminiKey;
+    }
+
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const response = await fetch(`${server.baseUrl}/api/state`);
+  assert.equal(response.status, 200);
+  const state = (await response.json()) as {
+    workflowReadiness: {
+      status: string;
+      summary: string;
+      detail: string;
+      pipeline: string[];
+    };
+  };
+
+  assert.equal(state.workflowReadiness.status, "ready");
+  assert.match(state.workflowReadiness.summary, /AI-first workflow is ready/);
+  assert.match(state.workflowReadiness.detail, /implementation, QA verification, screenshot capture\/comparison, and artifact publishing/);
+  assert.ok(state.workflowReadiness.pipeline.some((entry) => /Screenshot capture and comparison/.test(entry)));
 });
 
 test("startIntentStudioServer accepts prompt-based execution without a reviewed intent draft", async (t) => {
@@ -535,6 +701,141 @@ test("startIntentStudioServer persists draft intent previews for review-first St
   assert.deepEqual(persistedDraft.requestedSourceIds, ["app"]);
   assert.equal(persistedDraft.reviewedIntentId, body.plan?.intentId);
   assert.equal(persistedDraft.normalizedIntent.intentId, body.plan?.intentId);
+});
+
+test("startIntentStudioServer restores the latest reviewed draft in Studio state after reload", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-draft-restore-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  const previewResponse = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Create a review-first baseline plan for app.",
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(previewResponse.status, 200);
+
+  const previewBody = (await previewResponse.json()) as {
+    plan?: {
+      intentId: string;
+      summary: string;
+    };
+    draft?: {
+      draftId: string;
+      status: string;
+      prompt: string;
+    };
+  };
+
+  assert.ok(previewBody.plan);
+  assert.ok(previewBody.draft);
+
+  await server.close();
+
+  const reloadedServer = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    await reloadedServer.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const stateResponse = await fetch(`${reloadedServer.baseUrl}/api/state`);
+  assert.equal(stateResponse.status, 200);
+
+  const state = (await stateResponse.json()) as {
+    activeDraft: {
+      plan: {
+        intentId: string;
+        summary: string;
+      };
+      draft: {
+        draftId: string;
+        status: string;
+        prompt: string;
+      };
+    } | null;
+    currentRun: unknown;
+  };
+
+  assert.equal(state.currentRun, null);
+  assert.ok(state.activeDraft);
+  assert.equal(state.activeDraft?.draft.draftId, previewBody.draft?.draftId);
+  assert.equal(state.activeDraft?.draft.status, "draft");
+  assert.equal(state.activeDraft?.plan.intentId, previewBody.plan?.intentId);
+  assert.equal(state.activeDraft?.plan.summary, previewBody.plan?.summary);
+  assert.match(state.activeDraft?.draft.prompt ?? "", /^## Intent/m);
+});
+
+test("startIntentStudioServer does not restore sent reviewed drafts as editable active drafts", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-sent-draft-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  const previewResponse = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Create a review-first baseline plan for app.",
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(previewResponse.status, 200);
+
+  const previewBody = (await previewResponse.json()) as {
+    draft?: {
+      draftId: string;
+    };
+  };
+
+  assert.ok(previewBody.draft?.draftId);
+
+  const updateResponse = await fetch(`${server.baseUrl}/api/drafts/${encodeURIComponent(previewBody.draft?.draftId ?? "")}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Create a review-first baseline plan for app.",
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(updateResponse.status, 200);
+
+  const sendResponse = await fetch(`${server.baseUrl}/api/drafts/${encodeURIComponent(previewBody.draft?.draftId ?? "")}/send`, {
+    method: "POST"
+  });
+  assert.equal(sendResponse.status, 200);
+
+  await server.close();
+
+  const reloadedServer = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    await reloadedServer.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const stateResponse = await fetch(`${reloadedServer.baseUrl}/api/state`);
+  assert.equal(stateResponse.status, 200);
+
+  const state = (await stateResponse.json()) as {
+    activeDraft: unknown;
+  };
+
+  assert.equal(state.activeDraft, null);
 });
 
 test("startIntentStudioServer updates and sends reviewed intent drafts before execution", async (t) => {
@@ -750,6 +1051,82 @@ test("startIntentStudioServer updates and sends reviewed intent drafts before ex
   assert.equal(receivedOptions?.normalizedIntent?.intentId, draftId);
 });
 
+test("startIntentStudioServer refreshes full plans from reviewed markdown without treating headings as the raw prompt", async (t) => {
+  const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-draft-markdown-test-"));
+  const configPath = path.join(tmpDir, "intent-poc.yaml");
+
+  await writeStudioConfig(configPath, tmpDir);
+
+  const server = await startIntentStudioServer({ configPath, port: 0 });
+
+  t.after(async () => {
+    await server.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  const previewResponse = await fetch(`${server.baseUrl}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: "Create a review-first baseline plan for app.",
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(previewResponse.status, 200);
+
+  const previewBody = (await previewResponse.json()) as {
+    draft?: {
+      draftId: string;
+      path: string;
+    };
+  };
+  const draftId = previewBody.draft?.draftId ?? "";
+  assert.ok(draftId);
+
+  const persistedDraft = JSON.parse(
+    await fs.readFile(path.join(tmpDir, previewBody.draft?.path ?? ""), "utf8")
+  ) as ReviewedIntentArtifact;
+
+  const editedReviewedPrompt = persistedDraft.prompt
+    .replace(
+      "Create a review-first baseline plan for app.",
+      "Track live Studio test execution status in the current app."
+    )
+    .replace(
+      "The requested behavior works as described in the selected repo scope.",
+      "Show live test status and state codes while the run is executing."
+    );
+
+  const updateResponse = await fetch(`${server.baseUrl}/api/drafts/${encodeURIComponent(draftId)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: editedReviewedPrompt,
+      sourceIds: ["app"]
+    })
+  });
+  assert.equal(updateResponse.status, 200);
+
+  const updateBody = (await updateResponse.json()) as {
+    draft?: {
+      path: string;
+    };
+  };
+
+  const updatedDraft = JSON.parse(
+    await fs.readFile(path.join(tmpDir, updateBody.draft?.path ?? ""), "utf8")
+  ) as ReviewedIntentArtifact;
+
+  assert.equal(updatedDraft.prompt.trimEnd(), editedReviewedPrompt.trimEnd());
+  assert.match(updatedDraft.normalizedIntent.rawPrompt, /Track live Studio test execution status in the current app\./);
+  assert.doesNotMatch(updatedDraft.normalizedIntent.rawPrompt, /## Intent/);
+  assert.doesNotMatch(updatedDraft.normalizedIntent.rawPrompt, /## Desired Outcome/);
+});
+
 test("startIntentStudioServer rejects sending a draft before the reviewed IDD prompt is refreshed into a full plan", async (t) => {
   const tmpDir = await fs.mkdtemp(path.join(process.cwd(), "tmp-studio-server-draft-send-guard-test-"));
   const configPath = path.join(tmpDir, "intent-poc.yaml");
@@ -865,6 +1242,22 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
       message: "QA verification started.",
       details: {
         sourceId: "app"
+      }
+    });
+
+    await delay(100);
+
+    options.onEvent?.({
+      timestamp: new Date().toISOString(),
+      level: "info",
+      phase: "qa-verification",
+      message: "Running QA command 'generated-playwright'.",
+      details: {
+        sourceId: "app",
+        commandLabel: "generated-playwright",
+        commandStatus: "running",
+        stateCode: "QA_GENERATED_PLAYWRIGHT_RUNNING",
+        command: 'npx playwright test "tests/intent/app/indicator.spec.ts"'
       }
     });
 
@@ -1032,14 +1425,18 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
         status: string;
         implementationStageStatus?: string;
         qaVerificationStageStatus?: string;
+        qaCommandLabel?: string;
+        qaCommandStateCode?: string;
       }>;
     } | null;
-  }>(server.baseUrl, (state) => state.currentRun?.sourceRuns?.[0]?.implementationStageStatus === "running");
+  }>(server.baseUrl, (state) => state.currentRun?.sourceRuns?.[0]?.qaCommandStateCode === "QA_GENERATED_PLAYWRIGHT_RUNNING");
 
   assert.equal(runningState.currentRun?.status, "running");
   assert.equal(runningState.currentRun?.sourceRuns[0]?.sourceId, "app");
   assert.equal(runningState.currentRun?.sourceRuns[0]?.status, "running");
-  assert.equal(runningState.currentRun?.sourceRuns[0]?.implementationStageStatus, "running");
+  assert.equal(runningState.currentRun?.sourceRuns[0]?.qaVerificationStageStatus, "running");
+  assert.equal(runningState.currentRun?.sourceRuns[0]?.qaCommandLabel, "generated-playwright");
+  assert.equal(runningState.currentRun?.sourceRuns[0]?.qaCommandStateCode, "QA_GENERATED_PLAYWRIGHT_RUNNING");
 
   const completedState = await waitForState<{
     currentRun: {
@@ -1048,6 +1445,8 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
         implementationStageStatus?: string;
         qaVerificationStageStatus?: string;
         latestImplementationSummary?: string;
+        qaCommandLabel?: string;
+        qaCommandStateCode?: string;
         latestCompletedInAttemptWorkItemIds?: string[];
         latestPendingTargetedWorkItemIds?: string[];
         attemptSummaries?: Array<{
@@ -1060,6 +1459,8 @@ test("startIntentStudioServer exposes live implementation and QA lifecycle state
 
   assert.equal(completedState.currentRun?.sourceRuns[0]?.implementationStageStatus, "completed");
   assert.equal(completedState.currentRun?.sourceRuns[0]?.qaVerificationStageStatus, "completed");
+  assert.equal(completedState.currentRun?.sourceRuns[0]?.qaCommandLabel, undefined);
+  assert.equal(completedState.currentRun?.sourceRuns[0]?.qaCommandStateCode, undefined);
   assert.match(completedState.currentRun?.sourceRuns[0]?.latestImplementationSummary ?? "", /dark mode toggle/);
   assert.deepEqual(completedState.currentRun?.sourceRuns[0]?.latestCompletedInAttemptWorkItemIds, ["work-1-enable-dark-mode-toggle"]);
   assert.deepEqual(completedState.currentRun?.sourceRuns[0]?.latestPendingTargetedWorkItemIds, []);

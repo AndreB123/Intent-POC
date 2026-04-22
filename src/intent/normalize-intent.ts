@@ -13,6 +13,7 @@ import {
   PromptNormalizerSourceDescriptor
 } from "./gemini-prompt-normalizer";
 import { refineIntentPlanWithGemini, GeminiIntentPlanningRefinement } from "./gemini-intent-planner";
+import { refineIntentTddWithGemini, GeminiTddPlanningRefinement } from "./gemini-tdd-planner";
 import { REPO_MEMORY_CATALOG } from "./repo-memory-catalog";
 import {
   AcceptanceCriterion,
@@ -124,19 +125,26 @@ interface WorkItemBuildResult {
   warnings: string[];
 }
 
+const POC_LINEAR_DISABLED_WARNING = "Linear support is disabled in this POC.";
+const SCOPING_BDD_DEFERRED_WARNING = "BDD planning is deferred until the full reviewed plan pass.";
+const SCOPING_TDD_DEFERRED_WARNING = "Playwright-first TDD planning is deferred until the full reviewed plan pass.";
+
 interface BuildNormalizedIntentInput {
   planningRefinement?: IntentPlanningRefinement;
+  tddWorkItemPlan?: WorkItemBuildResult;
   stageMetas?: AgentStageMeta[];
 }
 
 export interface NormalizeIntentDependencies {
   normalizePromptWithGemini: typeof normalizePromptWithGemini;
   refineIntentPlanWithGemini: typeof refineIntentPlanWithGemini;
+  refineIntentTddWithGemini: typeof refineIntentTddWithGemini;
 }
 
 const defaultNormalizeIntentDependencies: NormalizeIntentDependencies = {
   normalizePromptWithGemini,
-  refineIntentPlanWithGemini
+  refineIntentPlanWithGemini,
+  refineIntentTddWithGemini
 };
 
 interface SanitizedIdSelection {
@@ -953,6 +961,28 @@ function hasIntentStudioLifecycleSignals(text: string): boolean {
   );
 }
 
+function hasIntentStudioRunIndicatorSignals(text: string): boolean {
+  const indicatorPattern = /\b(indicator|status pill|status badge|run status|test status|qa status|verification status)\b/i;
+  const executionPattern = /\b(test run|tests run|tests are run|visual test|qa|verification|execution|runner)\b/i;
+  const transitionPattern = /\b(running|active|in progress|updates|update|state|status|success|successful|failure|failed|complete|completed)\b/i;
+
+  return (indicatorPattern.test(text) && executionPattern.test(text))
+    || /\b(visual test run indicator|test run indicator)\b/i.test(text)
+    || (executionPattern.test(text) && transitionPattern.test(text) && /\b(show|reflect|display|surface|track)\b/i.test(text));
+}
+
+function requiresLiveIntentStudioIndicatorVerification(input: {
+  codeSurface: CodeSurfaceSelection;
+  rawPrompt: string;
+  desiredOutcome: string;
+}): boolean {
+  if (input.codeSurface.id !== "intent-studio") {
+    return false;
+  }
+
+  return hasIntentStudioRunIndicatorSignals([input.rawPrompt, input.desiredOutcome].join(" "));
+}
+
 function resolveOrchestratorBehaviorVerificationMode(input: {
   codeSurface: CodeSurfaceSelection;
   sourceIds: string[];
@@ -980,13 +1010,24 @@ function shouldBuildIntentStudioLifecycleCheckpoints(input: {
   acceptanceCriteria: string[];
   scenario?: BDDScenario;
 }): boolean {
-  const combinedText = input.scenario
-    ? [input.scenario.title, input.scenario.goal, ...input.scenario.given, ...input.scenario.when, ...input.scenario.then].join(" ")
-    : [input.promptText, input.desiredOutcome, ...input.acceptanceCriteria].join(" ");
+  const combinedText = [
+    input.promptText,
+    input.desiredOutcome,
+    ...input.acceptanceCriteria,
+    ...(input.scenario
+      ? [input.scenario.title, input.scenario.goal, ...input.scenario.given, ...input.scenario.when, ...input.scenario.then]
+      : [])
+  ].join(" ");
 
-  return input.codeSurface.id === "orchestrator-and-planning"
-    && supportsIntentStudioLifecycleVerification(input.sourceId)
-    && hasIntentStudioLifecycleSignals(combinedText);
+  if (!supportsIntentStudioLifecycleVerification(input.sourceId)) {
+    return false;
+  }
+
+  if (input.codeSurface.id === "orchestrator-and-planning") {
+    return hasIntentStudioLifecycleSignals(combinedText);
+  }
+
+  return false;
 }
 
 function buildIntentStudioLifecycleMockState(input: {
@@ -1322,6 +1363,7 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
   const includesStepsSection = /\b(steps|stages|optional config|optional configuration|configuration section|orchestration stages)\b/i.test(
     routingText
   );
+  const isRunIndicatorFlow = hasIntentStudioRunIndicatorSignals(routingText);
   const checkpointUiStateFields = input.uiStateRequirements.length > 0 ? { requiredUiStates: input.uiStateRequirements } : {};
 
   if (isResultsLinkFlow) {
@@ -1435,6 +1477,59 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       ...checkpointUiStateFields
     }
   ];
+
+  if (isRunIndicatorFlow) {
+    checkpoints.push(
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-indicator-visible`, checkpoints.length),
+        label: "Test Status Indicator Visible",
+        action: "assert-visible",
+        assertion: "The live test status indicator is visible while the Studio run is active.",
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-indicator-visible`, checkpoints.length),
+        target: "[data-testid='test-status-indicator']",
+        waitForSelector: "[data-testid='test-status-indicator']",
+        ...checkpointUiStateFields
+      },
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-indicator-running`, checkpoints.length + 1),
+        label: "Test Status Indicator Shows Running",
+        action: "assert-attribute-contains",
+        assertion: input.desiredOutcome,
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-indicator-running`, checkpoints.length + 1),
+        target: "[data-testid='test-status-indicator']",
+        attributeName: "class",
+        expectedSubstring: "status-running",
+        waitForSelector: "[data-testid='test-status-indicator']",
+        ...checkpointUiStateFields
+      },
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-indicator-state-code`, checkpoints.length + 2),
+        label: "Test Status Indicator Shows QA State Code",
+        action: "assert-attribute-contains",
+        assertion: "The live indicator exposes the generated Playwright QA state code while verification is running.",
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-indicator-state-code`, checkpoints.length + 2),
+        target: "[data-testid='test-status-indicator']",
+        attributeName: "data-state-code",
+        expectedSubstring: "QA_GENERATED_PLAYWRIGHT_RUNNING",
+        waitForSelector: "[data-testid='test-status-indicator']",
+        ...checkpointUiStateFields
+      },
+      {
+        id: createPlanId("checkpoint", `${input.workItemTitle}-runner-status-running`, checkpoints.length + 3),
+        label: "Runner Status Shows Running",
+        action: "assert-attribute-contains",
+        assertion: "The active Studio run is marked running while generated QA is executing.",
+        screenshotId: createPlanId("shot", `${input.workItemTitle}-runner-status-running`, checkpoints.length + 3),
+        target: "#current-status-pill",
+        attributeName: "class",
+        expectedSubstring: "status-running",
+        waitForSelector: "#current-status-pill",
+        ...checkpointUiStateFields
+      }
+    );
+
+    return checkpoints;
+  }
 
   if (shouldAssertPromptButtonPlacement) {
     checkpoints.push({
@@ -2289,21 +2384,22 @@ function buildDestinationPlans(input: {
       status: "active",
       reason: "Local evidence bundles are always written by the controller.",
       details: ["Stores plan, manifests, logs, captures, and summaries on disk."]
-    },
-    {
+    }
+  ];
+
+  if (input.linearEnabled) {
+    destinations.push({
       id: "linear-parent-issue",
       type: "linear",
       label: "Linear parent issue",
-      status: input.linearEnabled ? "active" : "planned",
-      reason: input.linearEnabled
-        ? "Linear is enabled and can receive the structured BDD/TDD output for this intent."
-        : "Linear is the preferred destination for the BDD/TDD plan, but it is currently disabled in config.",
+      status: "active",
+      reason: "Linear is enabled and can receive the structured BDD/TDD output for this intent.",
       details: [
         "Carries the business intent, acceptance criteria, scenarios, work items, and execution updates.",
-        input.linearEnabled ? "Publishing can happen during execution." : "Enable config.linear.enabled to publish automatically."
+        "Publishing can happen during execution."
       ]
-    }
-  ];
+    });
+  }
 
   destinations.push({
     id: "source-workspace",
@@ -2361,8 +2457,10 @@ function buildToolPlans(input: {
   const implementationEnabled = resolveAgentStageConfig(input.agent, "implementation").enabled;
   const qaVerificationEnabled = resolveAgentStageConfig(input.agent, "qaVerification").enabled;
 
-  return [
-    {
+  const tools: NormalizedIntent["executionPlan"]["tools"] = [];
+
+  if (input.linearEnabled) {
+    tools.push({
       id: "linear-scoping",
       type: "linear-scoping",
       label: "Linear-first scoping",
@@ -2376,7 +2474,10 @@ function buildToolPlans(input: {
           ? "BDD and Playwright-first TDD planning are deferred until the detailed planner pass."
           : "Detailed planner output is written back onto the same parent and source-lane issues after scoping completes."
       ]
-    },
+    });
+  }
+
+  tools.push(
     {
       id: "bdd-planning",
       type: "intent-planning",
@@ -2384,12 +2485,12 @@ function buildToolPlans(input: {
       enabled: input.planningDepth === "full",
       reason:
         input.planningDepth === "full"
-          ? "The system converts the raw prompt into reviewable acceptance criteria and scenarios after Linear scoping completes."
-          : "BDD planning is deferred until Linear scoping completes.",
+          ? "The system converts the raw prompt into reviewable acceptance criteria and scenarios during the full reviewed plan pass."
+          : SCOPING_BDD_DEFERRED_WARNING,
       details: [
         input.planningDepth === "full"
           ? "Deterministic by default, with optional Gemini refinement when configured."
-          : "The detailed planner pass will write acceptance criteria and scenarios back onto the scoped Linear lanes."
+          : "The full reviewed plan pass will add acceptance criteria and scenarios after the scoping draft is reviewed."
       ]
     },
     {
@@ -2399,14 +2500,14 @@ function buildToolPlans(input: {
       enabled: input.planningDepth === "full" && input.sourceIds.length > 0,
       reason:
         input.planningDepth !== "full"
-          ? "Playwright-first TDD generation waits for the scoped Linear lanes."
+          ? SCOPING_TDD_DEFERRED_WARNING
           : input.sourceIds.length > 0
             ? "Applicable sources now produce Playwright-first executable test plans and checkpoint screenshots."
             : "No sources were selected for Playwright-first test generation.",
       details: [
         input.planningDepth === "full"
           ? "Generated specs are intended for checked-in repo storage with overwrite semantics."
-          : "The detailed planner pass will attach Playwright-first work items after scoping completes."
+          : "The full reviewed plan pass will attach Playwright-first work items after the scoping draft is reviewed."
       ]
     },
     {
@@ -2459,19 +2560,22 @@ function buildToolPlans(input: {
       label: "Evidence reporting",
       enabled: true,
       reason: "Every run produces summaries and machine-readable manifests.",
-      details: ["Reports become distribution inputs for destinations like Linear and GitHub."]
-    },
-    {
+      details: ["Reports become distribution inputs for downstream review and publishing surfaces."]
+    }
+  );
+
+  if (input.linearEnabled) {
+    tools.push({
       id: "linear-publishing",
       type: "linear-publishing",
       label: "Linear publishing",
-      enabled: input.linearEnabled,
-      reason: input.linearEnabled
-        ? "Linear is enabled and can receive the plan plus execution updates."
-        : "Linear publishing is planned, but config currently disables it.",
+      enabled: true,
+      reason: "Linear is enabled and can receive the plan plus execution updates.",
       details: ["Intended to carry the parent issue for BDD, AC, and TDD structure."]
-    }
-  ];
+    });
+  }
+
+  return tools;
 }
 
 function describeSelectionReason(
@@ -3258,7 +3362,8 @@ function buildIntentDraft(
   options: NormalizeIntentOptions,
   resolution: NormalizationResolution,
   codeSurface: CodeSurfaceSelection,
-  planningRefinement?: IntentPlanningRefinement
+  planningRefinement?: IntentPlanningRefinement,
+  tddWorkItemPlan?: WorkItemBuildResult
 ): IntentDraft {
   const planningDepth = options.planningDepth ?? "full";
   const primarySourceId = resolution.sourceIds[0] ?? options.defaultSourceId;
@@ -3292,16 +3397,18 @@ function buildIntentDraft(
   const workItemPlan =
     planningDepth === "scoping"
       ? { workItems: [], decomposition: buildEmptyIntentDecomposition(), warnings: [] }
-      : buildWorkItems({
-          codeSurface,
-          rawPrompt: trimmedPrompt,
-          scenarios,
-          acceptanceCriteria,
-          sourcePlans,
-          sourceIds: resolution.sourceIds,
-          desiredOutcome,
-          availableSources: options.availableSources
-        });
+      : tddWorkItemPlan
+        ? tddWorkItemPlan
+        : buildWorkItems({
+            codeSurface,
+            rawPrompt: trimmedPrompt,
+            scenarios,
+            acceptanceCriteria,
+            sourcePlans,
+            sourceIds: resolution.sourceIds,
+            desiredOutcome,
+            availableSources: options.availableSources
+          });
   const workItems = workItemPlan.workItems;
 
   if (planningDepth === "full") {
@@ -3349,12 +3456,8 @@ function buildIntentDraft(
     reviewNotes.push("This intent will execute as one business run with a separate evidence lane for each applicable source.");
   }
 
-  if (!options.linearEnabled) {
-    reviewNotes.push("Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on.");
-  }
-
   if (planningDepth === "scoping") {
-    reviewNotes.push("BDD and Playwright-first TDD planning are deferred until Linear scoping creates the reusable business and source lanes.");
+    reviewNotes.push("BDD and Playwright-first TDD planning are deferred until the full reviewed plan pass.");
   }
 
   return {
@@ -3393,7 +3496,14 @@ function buildNormalizedIntent(
     hintedCodeSurfaceId: resolution.codeSurfaceId,
     hintedAlternativeIds: resolution.codeSurfaceAlternatives
   });
-  const draft = buildIntentDraft(trimmedPrompt, options, resolution, codeSurface, input.planningRefinement);
+  const draft = buildIntentDraft(
+    trimmedPrompt,
+    options,
+    resolution,
+    codeSurface,
+    input.planningRefinement,
+    input.tddWorkItemPlan
+  );
   const scopingContext = buildScopingContextPack({
     trimmedPrompt,
     options,
@@ -3481,10 +3591,157 @@ function buildFallbackResolution(rulesResolution: NormalizationResolution, messa
   };
 }
 
+function buildTddWorkItemPlanFromGemini(input: {
+  refinement: GeminiTddPlanningRefinement;
+  rawPrompt: string;
+  desiredOutcome: string;
+  codeSurface: CodeSurfaceSelection;
+  scenarios: BDDScenario[];
+  sourcePlans: NormalizedIntent["executionPlan"]["sources"];
+  sourceIds: string[];
+}): WorkItemBuildResult {
+  const validScenarioIds = new Set(input.scenarios.map((scenario) => scenario.id));
+  const sourcePlanMap = new Map(input.sourcePlans.map((sourcePlan) => [sourcePlan.sourceId, sourcePlan]));
+  const disallowMockedState = requiresLiveIntentStudioIndicatorVerification({
+    codeSurface: input.codeSurface,
+    rawPrompt: input.rawPrompt,
+    desiredOutcome: input.desiredOutcome
+  });
+
+  const workItems: TDDWorkItem[] = input.refinement.workItems.map((workItem, index) => {
+    const sourceIds = dedupeValues(workItem.sourceIds).filter((sourceId) => input.sourceIds.includes(sourceId));
+
+    if (sourceIds.length === 0) {
+      throw new Error(`Gemini TDD planning returned a work item outside the selected source scope: ${workItem.title}`);
+    }
+
+    const scenarioIds = dedupeValues((workItem.scenarioIds ?? []).filter((scenarioId) => validScenarioIds.has(scenarioId)));
+    const type: TDDWorkItem["type"] =
+      workItem.verificationMode === "targeted-code-validation" ? "code-validation" : "playwright-spec";
+    const id = createPlanId("work", `${workItem.title}-${sourceIds.join("-")}`, index);
+
+    const specs = workItem.specs.map((spec) => {
+      if (!sourceIds.includes(spec.sourceId)) {
+        throw new Error(`Gemini TDD planning returned spec '${spec.relativeSpecPath}' for unsupported source '${spec.sourceId}'.`);
+      }
+
+      const uiStateRequirements = sourcePlanMap.get(spec.sourceId)?.uiStateRequirements ?? [];
+      const specScenarioIds = dedupeValues((spec.scenarioIds ?? scenarioIds).filter((scenarioId) => validScenarioIds.has(scenarioId)));
+
+      if (disallowMockedState && spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")) {
+        throw new Error(
+          "Gemini TDD planning must use live tracked Playwright verification for Intent Studio run-indicator workflows; mocked Studio state is not allowed."
+        );
+      }
+
+      return {
+        framework: "playwright" as const,
+        sourceId: spec.sourceId,
+        relativeSpecPath: spec.relativeSpecPath,
+        suiteName: spec.suiteName,
+        testName: spec.testName,
+        scenarioIds: specScenarioIds,
+        checkpoints: spec.checkpoints.map((checkpoint, checkpointIndex) => ({
+          id: createPlanId("checkpoint", `${spec.testName}-${checkpoint.label}`, checkpointIndex),
+          label: checkpoint.label,
+          action: checkpoint.action,
+          assertion: checkpoint.assertion,
+          screenshotId: checkpoint.screenshotId,
+          ...(checkpoint.path ? { path: checkpoint.path } : {}),
+          ...(checkpoint.target ? { target: checkpoint.target } : {}),
+          ...(checkpoint.value ? { value: checkpoint.value } : {}),
+          ...(checkpoint.captureId ? { captureId: checkpoint.captureId } : {}),
+          ...(checkpoint.locator ? { locator: checkpoint.locator } : {}),
+          ...(checkpoint.referenceTarget ? { referenceTarget: checkpoint.referenceTarget } : {}),
+          ...(checkpoint.attributeName ? { attributeName: checkpoint.attributeName } : {}),
+          ...(checkpoint.expectedSubstring ? { expectedSubstring: checkpoint.expectedSubstring } : {}),
+          ...(checkpoint.waitForSelector ? { waitForSelector: checkpoint.waitForSelector } : {}),
+          ...(checkpoint.waitUntil ? { waitUntil: checkpoint.waitUntil } : {}),
+          ...(checkpoint.mockStudioState ? { mockStudioState: checkpoint.mockStudioState } : {}),
+          ...(uiStateRequirements.length > 0 ? { requiredUiStates: uiStateRequirements } : {})
+        })),
+        ...(uiStateRequirements.length > 0 ? { requiredUiStates: uiStateRequirements } : {})
+      };
+    });
+
+    const verificationMode = type === "code-validation"
+      ? "targeted-code-validation"
+      : derivePlaywrightVerificationMode(specs);
+
+    if (disallowMockedState && verificationMode === "mocked-state-playwright") {
+      throw new Error(
+        "Gemini TDD planning must use live tracked Playwright verification for Intent Studio run-indicator workflows; mocked Studio state is not allowed."
+      );
+    }
+
+    return {
+      id,
+      type,
+      verificationMode,
+      title: workItem.title,
+      description: workItem.description,
+      scenarioIds,
+      sourceIds,
+      userVisibleOutcome: workItem.userVisibleOutcome,
+      verification: workItem.verification,
+      execution: {
+        order: index + 1,
+        dependsOnWorkItemIds: []
+      },
+      playwright: {
+        generatedBy: "llm" as const,
+        specs
+      }
+    };
+  });
+
+  return {
+    workItems,
+    decomposition: buildIntentDecomposition({
+      statement: input.rawPrompt,
+      desiredOutcome: input.desiredOutcome,
+      sourceIds: input.sourceIds,
+      workItems,
+      scenarios: input.scenarios
+    }),
+    warnings: dedupeValues(input.refinement.warnings ?? [])
+  };
+}
+
+function requiresAIWorkflow(agent?: AgentConfig): boolean {
+  return agent?.requireAIWorkflow ?? false;
+}
+
+function assertAIWorkflowStage(stage: ResolvedAgentStageConfig, modeLabel: string): void {
+  if (!stage.enabled) {
+    throw new Error(`AI-first workflow requires ${stage.label} to stay enabled for ${modeLabel}.`);
+  }
+
+  if (!stage.provider) {
+    throw new Error(
+      `AI-first workflow requires ${stage.label} to use a provider-backed stage for ${modeLabel}. Configure agent.provider or agent.stages.${stage.id}.provider.`
+    );
+  }
+
+  if (stage.provider !== "gemini") {
+    throw new Error(
+      `AI-first workflow requires ${stage.label} to use a supported provider for ${modeLabel}. Supported providers: gemini.`
+    );
+  }
+
+  if (stage.fallbackToRules) {
+    throw new Error(`AI-first workflow requires rules fallback to stay disabled for ${stage.label}.`);
+  }
+}
+
 export function normalizeIntent(options: NormalizeIntentOptions): NormalizedIntent {
   const trimmedPrompt = options.rawPrompt.trim();
   ensurePrompt(trimmedPrompt);
   const planningDepth = options.planningDepth ?? "full";
+
+  if (requiresAIWorkflow(options.agent)) {
+    throw new Error("AI-first workflow requires provider-backed planning via normalizeIntentWithAgent; rules-only normalizeIntent is disabled.");
+  }
 
   const rulesResolution = buildRulesResolution(trimmedPrompt, options);
   const promptStage = resolveAgentStageConfig(options.agent, "promptNormalization");
@@ -3497,7 +3754,11 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
   return buildNormalizedIntent(trimmedPrompt, options, rulesResolution, {
     stageMetas: [
       promptStage.enabled ? buildRulesStageMeta(promptStage) : buildSkippedStageMeta(promptStage),
-      linearStage.enabled ? buildRulesStageMeta(linearStage) : buildSkippedStageMeta(linearStage),
+      options.linearEnabled
+        ? linearStage.enabled
+          ? buildRulesStageMeta(linearStage)
+          : buildSkippedStageMeta(linearStage)
+        : buildStageMeta(linearStage, "skipped", "skipped", [POC_LINEAR_DISABLED_WARNING]),
       planningDepth === "full"
         ? bddStage.enabled
           ? buildRulesStageMeta(bddStage)
@@ -3506,7 +3767,7 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
             bddStage,
             "skipped",
             "skipped",
-            ["BDD planning is deferred until Linear scoping completes."]
+            [SCOPING_BDD_DEFERRED_WARNING]
           ),
       planningDepth === "full"
         ? tddStage.enabled
@@ -3516,7 +3777,7 @@ export function normalizeIntent(options: NormalizeIntentOptions): NormalizedInte
             tddStage,
             "skipped",
             "skipped",
-            ["Playwright-first TDD planning is deferred until Linear scoping completes."]
+            [SCOPING_TDD_DEFERRED_WARNING]
           ),
       implementationStage.enabled
         ? buildDeferredStageMeta(
@@ -3576,6 +3837,10 @@ export async function normalizeIntentWithAgent(
   const stageMetas: AgentStageMeta[] = [];
 
   const promptStage = resolveAgentStageConfig(options.agent, "promptNormalization");
+  if (requiresAIWorkflow(options.agent)) {
+    assertAIWorkflowStage(promptStage, planningDepth === "scoping" ? "the scoping draft" : "the reviewed plan");
+  }
+
   if (!promptStage.enabled || !promptStage.provider) {
     stageMetas.push(buildSkippedStageMeta(promptStage));
   } else if (promptStage.provider !== "gemini") {
@@ -3611,28 +3876,32 @@ export async function normalizeIntentWithAgent(
   }
 
   const linearStage = resolveAgentStageConfig(options.agent, "linearScoping");
-  if (!linearStage.enabled) {
-    stageMetas.push(buildSkippedStageMeta(linearStage));
-  } else if (!linearStage.provider) {
-    stageMetas.push(buildRulesStageMeta(linearStage));
-  } else {
-    const message = `${linearStage.label} does not yet support provider-backed execution, so deterministic Linear lane scoping was used.`;
-    if (linearStage.fallbackToRules) {
-      stageMetas.push(buildRulesStageMeta(linearStage, [message]));
-    } else {
-      throw new Error(message);
-    }
-  }
+  stageMetas.push(
+    options.linearEnabled
+      ? !linearStage.enabled
+        ? buildSkippedStageMeta(linearStage)
+        : !linearStage.provider
+          ? buildRulesStageMeta(linearStage)
+          : (() => {
+              const message = `${linearStage.label} does not yet support provider-backed execution, so deterministic Linear lane scoping was used.`;
+              if (linearStage.fallbackToRules) {
+                return buildRulesStageMeta(linearStage, [message]);
+              }
+
+              throw new Error(message);
+            })()
+      : buildStageMeta(linearStage, "skipped", "skipped", [POC_LINEAR_DISABLED_WARNING])
+  );
 
   if (planningDepth === "scoping") {
     const bddStage = resolveAgentStageConfig(options.agent, "bddPlanning");
     stageMetas.push(
-      buildStageMeta(bddStage, "skipped", "skipped", ["BDD planning is deferred until Linear scoping completes."])
+      buildStageMeta(bddStage, "skipped", "skipped", [SCOPING_BDD_DEFERRED_WARNING])
     );
 
     const tddStage = resolveAgentStageConfig(options.agent, "tddPlanning");
     stageMetas.push(
-      buildStageMeta(tddStage, "skipped", "skipped", ["Playwright-first TDD planning is deferred until Linear scoping completes."])
+      buildStageMeta(tddStage, "skipped", "skipped", [SCOPING_TDD_DEFERRED_WARNING])
     );
 
     const implementationStage = resolveAgentStageConfig(options.agent, "implementation");
@@ -3669,7 +3938,12 @@ export async function normalizeIntentWithAgent(
   });
   const draft = buildIntentDraft(trimmedPrompt, options, resolution, draftCodeSurface);
   const planningStage = resolveAgentStageConfig(options.agent, "bddPlanning");
+  if (requiresAIWorkflow(options.agent)) {
+    assertAIWorkflowStage(planningStage, "the reviewed plan");
+  }
+
   let planningRefinement: IntentPlanningRefinement | undefined;
+  let tddWorkItemPlan: WorkItemBuildResult | undefined;
   const planningStageSources = Object.fromEntries(
     resolution.sourceIds.map((sourceId) => [sourceId, options.availableSources[sourceId]])
   );
@@ -3724,16 +3998,93 @@ export async function normalizeIntentWithAgent(
   }
 
   const tddStage = resolveAgentStageConfig(options.agent, "tddPlanning");
+  if (requiresAIWorkflow(options.agent)) {
+    assertAIWorkflowStage(tddStage, "the reviewed plan");
+  }
+
   if (!tddStage.enabled) {
     stageMetas.push(buildSkippedStageMeta(tddStage));
   } else if (!tddStage.provider) {
     stageMetas.push(buildRulesStageMeta(tddStage));
-  } else {
-    const message = `${tddStage.label} does not yet support provider-backed execution, so deterministic Playwright spec generation was used.`;
+  } else if (!requiresAIWorkflow(options.agent)) {
+    const message = `${tddStage.label} uses deterministic Playwright spec generation unless AI-first workflow is required.`;
+    stageMetas.push(buildRulesStageMeta(tddStage, [message]));
+  } else if (tddStage.provider !== "gemini") {
+    const message = `Agent provider '${tddStage.provider}' is not supported for ${tddStage.label}. Supported providers: gemini.`;
     if (tddStage.fallbackToRules) {
       stageMetas.push(buildRulesStageMeta(tddStage, [message]));
     } else {
       throw new Error(message);
+    }
+  } else {
+    const tddDraft = buildIntentDraft(
+      trimmedPrompt,
+      options,
+      resolution,
+      draftCodeSurface,
+      planningRefinement
+    );
+
+    try {
+      const refinement = await activeDependencies.refineIntentTddWithGemini({
+        rawPrompt: trimmedPrompt,
+        sourceIds: resolution.sourceIds,
+        availableSources: planningStageSources,
+        codeSurface: draftCodeSurface,
+        desiredOutcome: tddDraft.desiredOutcome,
+        acceptanceCriteria: tddDraft.acceptanceCriteria.map((criterion) => ({
+          description: criterion.description,
+          origin: criterion.origin
+        })),
+        scenarios: tddDraft.scenarios.map((scenario) => ({
+          id: scenario.id,
+          title: scenario.title,
+          goal: scenario.goal,
+          given: scenario.given,
+          when: scenario.when,
+          then: scenario.then,
+          applicableSourceIds: scenario.applicableSourceIds
+        })),
+        sourcePlans: tddDraft.sourcePlans.map((sourcePlan) => ({
+          sourceId: sourcePlan.sourceId,
+          captureScope: sourcePlan.captureScope,
+          uiStateRequirements: (sourcePlan.uiStateRequirements ?? []).map((requirement) => ({
+            stateId: requirement.stateId,
+            requestedValue: requirement.requestedValue,
+            label: requirement.label,
+            reason: requirement.reason
+          }))
+        })),
+        draftWorkItems: tddDraft.workItems.map((workItem) => ({
+          title: workItem.title,
+          description: workItem.description,
+          verificationMode: workItem.verificationMode,
+          sourceIds: workItem.sourceIds,
+          scenarioIds: workItem.scenarioIds,
+          userVisibleOutcome: workItem.userVisibleOutcome,
+          verification: workItem.verification,
+          specs: workItem.playwright.specs
+        })),
+        stage: tddStage
+      });
+
+      tddWorkItemPlan = buildTddWorkItemPlanFromGemini({
+        refinement,
+        rawPrompt: trimmedPrompt,
+        desiredOutcome: tddDraft.desiredOutcome,
+        codeSurface: draftCodeSurface,
+        scenarios: tddDraft.scenarios,
+        sourcePlans: tddDraft.sourcePlans,
+        sourceIds: resolution.sourceIds
+      });
+      stageMetas.push(buildStageMeta(tddStage, "completed", "llm", tddWorkItemPlan.warnings));
+    } catch (error) {
+      const message = `Gemini TDD planning failed: ${error instanceof Error ? error.message : String(error)}`;
+      if (tddStage.fallbackToRules) {
+        stageMetas.push(buildRulesStageMeta(tddStage, [message]));
+      } else {
+        throw new Error(message);
+      }
     }
   }
 
@@ -3759,6 +4110,7 @@ export async function normalizeIntentWithAgent(
 
   return buildNormalizedIntent(trimmedPrompt, options, resolution, {
     planningRefinement,
+    tddWorkItemPlan,
     stageMetas
   });
 }

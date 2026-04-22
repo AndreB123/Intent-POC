@@ -1,7 +1,9 @@
 {
-  "runId": "2026-04-21T22-49-50-258Z-intent-poc-app",
-  "status": "completed",
-  "errors": [],
+  "runId": "2026-04-22T04-33-51-900Z-intent-poc-app",
+  "status": "failed",
+  "errors": [
+    "QA verification failed for source 'intent-poc-app' on attempt 2: Command failed (1). Progress: completed 1/1 targeted work items."
+  ],
   "hasDrift": false,
   "counts": {
     "baseline-written": 0,
@@ -14,7 +16,8 @@
   "sources": [
     {
       "sourceId": "intent-poc-app",
-      "status": "completed",
+      "status": "failed",
+      "error": "QA verification failed for source 'intent-poc-app' on attempt 2: Command failed (1). Progress: completed 1/1 targeted work items.",
       "hasDrift": false,
       "counts": {
         "baseline-written": 0,

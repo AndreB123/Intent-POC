@@ -1,6 +1,11 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { buildReviewedIntentDraftPreview, buildReviewedIntentMarkdown } from "./reviewed-intent-markdown";
+import {
+  buildReviewedIntentDraftPreview,
+  buildReviewedIntentMarkdown,
+  buildReviewedIntentPlanningPrompt,
+  parseReviewedIntentMarkdown
+} from "./reviewed-intent-markdown";
 import { NormalizedIntent } from "./intent-types";
 
 function buildNormalizedIntent(overrides: Partial<NormalizedIntent> = {}): NormalizedIntent {
@@ -315,5 +320,50 @@ test("buildReviewedIntentDraftPreview merges AI scoping details ahead of determi
     preview.verificationObligations.includes(
       "Identify the existing Playwright or screenshot check closest to Intent Studio and Surface Library before planning implementation."
     )
+  );
+});
+
+test("parseReviewedIntentMarkdown extracts the editable intent fields from a reviewed draft", () => {
+  const normalizedIntent = buildNormalizedIntent({
+    normalizationMeta: {
+      ...buildNormalizedIntent().normalizationMeta,
+      effectivePlanningDepth: "full"
+    }
+  });
+  const markdown = buildReviewedIntentMarkdown({ rawPrompt: normalizedIntent.rawPrompt, normalizedIntent });
+
+  const parsed = parseReviewedIntentMarkdown(markdown);
+
+  assert.equal(parsed.isReviewedIntentMarkdown, true);
+  assert.equal(parsed.intent, normalizedIntent.businessIntent.statement);
+  assert.equal(parsed.desiredOutcome, normalizedIntent.businessIntent.desiredOutcome);
+  assert.equal(parsed.rawIntent, normalizedIntent.rawPrompt);
+});
+
+test("buildReviewedIntentPlanningPrompt converts reviewed draft markdown back into a plain planning prompt", () => {
+  const markdown = [
+    "## Intent",
+    "",
+    "Improve the Studio run indicator so it reflects active test execution.",
+    "",
+    "## Desired Outcome",
+    "",
+    "Show live test status and state codes in the Studio UI.",
+    "",
+    "## Raw Intent",
+    "",
+    "i need a visual test run indicator added to the ui",
+    ""
+  ].join("\n");
+
+  const prompt = buildReviewedIntentPlanningPrompt({ prompt: markdown });
+
+  assert.equal(
+    prompt,
+    [
+      "Improve the Studio run indicator so it reflects active test execution.",
+      "Desired outcome: Show live test status and state codes in the Studio UI.",
+      "Original request context: i need a visual test run indicator added to the ui"
+    ].join("\n\n")
   );
 });

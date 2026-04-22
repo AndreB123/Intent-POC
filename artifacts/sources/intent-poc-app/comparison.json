@@ -1,16 +1,16 @@
 {
-  "runId": "2026-04-21T22-49-50-258Z-intent-poc-app",
+  "runId": "2026-04-22T04-33-51-900Z-intent-poc-app",
   "sourceId": "intent-poc-app",
-  "status": "completed",
+  "status": "failed",
+  "error": "QA verification failed for source 'intent-poc-app' on attempt 2: Command failed (1). Progress: completed 1/1 targeted work items.",
   "businessIntent": {
-    "statement": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
-    "desiredOutcome": "Create a baseline for the deterministic screenshot library for the built-in surface library.",
+    "statement": "Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests to enable live monitoring of code state.",
+    "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
     "sourceIds": [
       "intent-poc-app"
     ],
     "destinationIds": [
       "controller-artifacts",
-      "linear-parent-issue",
       "source-workspace"
     ]
   },
@@ -25,11 +25,13 @@
   },
   "captureCoverage": {
     "configuredCaptureCount": 48,
-    "executedCaptureCount": 48,
+    "executedCaptureCount": 0,
     "scopeMode": "all",
     "scopeCaptureIds": []
   },
-  "warnings": [],
+  "warnings": [
+    "Requested UI states: theme-mode=light."
+  ],
   "comparisonIssues": [],
   "items": []
 }

@@ -16,13 +16,19 @@ import {
 import { resolveGeminiApiKey } from "../../intent/gemini-client";
 import { normalizeIntentWithAgent } from "../../intent/normalize-intent";
 import {
+  loadLatestResumableReviewedIntentDraft,
   loadReviewedIntentDraft,
   persistReviewedIntentDraft,
   replaceReviewedIntentDraft,
   updateReviewedIntentDraftStatus
 } from "../../intent/reviewed-intent";
-import { buildReviewedIntentDraftPreview, buildReviewedIntentMarkdown, ReviewedIntentDraftPreview } from "../../intent/reviewed-intent-markdown";
-import { NormalizedIntent, IntentLifecycleStatus, ReviewedIntentStatus } from "../../intent/intent-types";
+import {
+  buildReviewedIntentDraftPreview,
+  buildReviewedIntentMarkdown,
+  buildReviewedIntentPlanningPrompt,
+  ReviewedIntentDraftPreview
+} from "../../intent/reviewed-intent-markdown";
+import { NormalizedIntent, IntentLifecycleStatus, ReviewedIntentArtifact, ReviewedIntentStatus } from "../../intent/intent-types";
 import { RunIntentEvent, RunIntentResult, runIntent } from "../../orchestrator/run-intent";
 import { buildRuntimeRunIntentOptions } from "../../runtime/build-runtime-run-intent-options";
 import { pathExists } from "../../shared/fs";
@@ -116,6 +122,10 @@ interface StudioSourceRunSummary {
     operation: "create" | "replace" | "delete";
     filePath: string;
   }>;
+  qaCommandLabel?: string;
+  qaCommandStatus?: "running" | "completed" | "failed";
+  qaCommandStateCode?: string;
+  qaCommand?: string;
   summaryPath?: string;
   appLogPath?: string;
 }
@@ -171,6 +181,14 @@ interface StudioAgentStageSummary {
   fallbackToRules: boolean;
 }
 
+interface StudioWorkflowReadiness {
+  mode: "ai-first" | "baseline";
+  status: "ready" | "attention" | "blocked";
+  summary: string;
+  detail: string;
+  pipeline: string[];
+}
+
 interface StudioState {
   configPath: string;
   configFileUrl?: string;
@@ -180,7 +198,9 @@ interface StudioState {
   defaultPrompt?: string;
   defaultSourceId?: string;
   agentStages: StudioAgentStageSummary[];
+  workflowReadiness: StudioWorkflowReadiness;
   sources: StudioSourceSummary[];
+  activeDraft: StudioActiveDraft | null;
   currentRun: StudioRunRecord | null;
   recentRuns: StudioRunRecord[];
   serverTime: string;
@@ -210,8 +230,21 @@ interface PreviewNormalizedIntentResult {
   draft: StudioDraftSummary;
 }
 
+interface StudioActiveDraft {
+  plan: NormalizedIntent;
+  draft: StudioDraftSummary;
+}
+
 const STUDIO_GEMINI_GUIDANCE =
   "Start Studio with './intent-poc.local-no-linear.yaml' or add 'agent.provider: gemini' plus a Gemini API key environment variable before using live Gemini planning or Implementation.";
+
+const STUDIO_WORKFLOW_PIPELINE = [
+  "Reviewed planning and source scoping",
+  "Implementation in the selected workspace",
+  "QA verification against the running app",
+  "Screenshot capture and comparison for the configured capture scope",
+  "Artifacts: normalized intent, summary, manifest, and comparison"
+] as const;
 
 type StudioPlanningDepth = "scoping" | "full";
 
@@ -259,6 +292,34 @@ function summarizeSource(sourceId: string, sourceType: string, startCommand: str
 
 function buildConfigFileUrl(relativePath: string): string {
   return toFileUrlPath(relativePath) ?? "#";
+}
+
+function buildStudioDraftSummary(input: {
+  artifact: ReviewedIntentArtifact;
+  paths: { controllerRoot: string; draftPath: string };
+}): StudioDraftSummary {
+  const relativeDraftPath = toRelativePath(input.paths.controllerRoot, input.paths.draftPath) ?? input.paths.draftPath;
+
+  return {
+    draftId: input.artifact.reviewedIntentId,
+    status: input.artifact.status,
+    prompt: input.artifact.prompt,
+    summary: input.artifact.normalizedIntent.summary,
+    preview: buildReviewedIntentDraftPreview({ normalizedIntent: input.artifact.normalizedIntent }),
+    path: relativeDraftPath,
+    fileUrl: toFileUrlPath(relativeDraftPath),
+    updatedAt: input.artifact.updatedAt
+  };
+}
+
+function buildStudioActiveDraft(input: {
+  artifact: ReviewedIntentArtifact;
+  paths: { controllerRoot: string; draftPath: string };
+}): StudioActiveDraft {
+  return {
+    plan: input.artifact.normalizedIntent,
+    draft: buildStudioDraftSummary(input)
+  };
 }
 
 function buildEditorUrl(filePath: string): string {
@@ -587,6 +648,12 @@ function assertStudioGeminiStageReady(agent: AgentConfig, stageId: "promptNormal
 }
 
 function assertStudioAgentConfigurationReady(agent: AgentConfig, planningDepth?: StudioPlanningDepth): void {
+  const workflowReadiness = buildStudioWorkflowReadiness(agent);
+
+  if (workflowReadiness.status === "blocked") {
+    throw new Error(workflowReadiness.detail);
+  }
+
   if (planningDepth === "scoping") {
     assertStudioGeminiStageReady(agent, "promptNormalization");
   }
@@ -608,6 +675,104 @@ function assertStudioAgentConfigurationReady(agent: AgentConfig, planningDepth?:
 
     throw error;
   }
+}
+
+function buildStudioWorkflowReadiness(agent: AgentConfig): StudioWorkflowReadiness {
+  const mode = agent.requireAIWorkflow ? "ai-first" : "baseline";
+  const blockers: string[] = [];
+  const cautions: string[] = [];
+
+  if (agent.requireAIWorkflow) {
+    for (const stageId of ["promptNormalization", "bddPlanning", "tddPlanning"] as const) {
+      const stage = resolveAgentStageConfig(agent, stageId);
+
+      if (!stage.enabled) {
+        blockers.push(`${stage.label} must stay enabled for the AI-first Studio workflow.`);
+        continue;
+      }
+
+      if (!stage.provider) {
+        blockers.push(`${stage.label} must use the gemini provider for the AI-first Studio workflow. ${STUDIO_GEMINI_GUIDANCE}`);
+        continue;
+      }
+
+      if (stage.provider !== "gemini") {
+        blockers.push(`${stage.label} only supports the gemini provider for live Studio planning. ${STUDIO_GEMINI_GUIDANCE}`);
+        continue;
+      }
+
+      if (stage.fallbackToRules) {
+        blockers.push(`${stage.label} cannot fall back to rules while the AI-first Studio workflow is enabled.`);
+      }
+
+      try {
+        resolveGeminiApiKey({ apiKeyEnv: stage.apiKeyEnv });
+      } catch (error) {
+        blockers.push(
+          `${stage.label} requires Gemini access. ${error instanceof Error ? error.message : String(error)} ${STUDIO_GEMINI_GUIDANCE}`
+        );
+      }
+    }
+  }
+
+  const implementationStage = resolveAgentStageConfig(agent, "implementation");
+  if (agent.requireAIWorkflow && !implementationStage.enabled) {
+    blockers.push(
+      "Implementation stage is disabled, so the Studio cannot carry the reviewed plan through code changes before screenshots and artifacts are captured."
+    );
+  }
+
+  try {
+    assertImplementationStageReady(implementationStage);
+  } catch (error) {
+    if (error instanceof Error) {
+      blockers.push(`${error.message} ${STUDIO_GEMINI_GUIDANCE}`);
+    } else {
+      blockers.push(String(error));
+    }
+  }
+
+  const qaStage = resolveAgentStageConfig(agent, "qaVerification");
+  if (!qaStage.enabled) {
+    const message =
+      "QA verification stage is disabled, so the runner can still capture screenshots but it will not keep the full verification gate ahead of artifact publication.";
+    if (agent.requireAIWorkflow) {
+      blockers.push(message);
+    } else {
+      cautions.push(message);
+    }
+  }
+
+  if (blockers.length > 0) {
+    return {
+      mode,
+      status: "blocked",
+      summary: mode === "ai-first" ? "AI-first workflow is blocked." : "Studio execution path is blocked.",
+      detail: blockers.join(" "),
+      pipeline: [...STUDIO_WORKFLOW_PIPELINE]
+    };
+  }
+
+  if (mode === "baseline") {
+    return {
+      mode,
+      status: "attention",
+      summary: "Deterministic baseline mode is active.",
+      detail:
+        cautions[0]
+        ?? "Studio can still execute the review-first flow and emit captures/artifacts, but this config does not enforce the AI-first workflow contract by default.",
+      pipeline: [...STUDIO_WORKFLOW_PIPELINE]
+    };
+  }
+
+  return {
+    mode,
+    status: "ready",
+    summary: "AI-first workflow is ready.",
+    detail:
+      "The reviewed plan can continue through implementation, QA verification, screenshot capture/comparison, and artifact publishing with the current config.",
+    pipeline: [...STUDIO_WORKFLOW_PIPELINE]
+  };
 }
 
 function buildStudioAgentStages(agent: Awaited<ReturnType<typeof loadConfig>>["config"]["agent"]): StudioAgentStageSummary[] {
@@ -682,20 +847,10 @@ async function previewNormalizedIntent(input: {
     requestedSourceIds: input.sourceIds,
     resumeIssue: input.resumeIssue
   });
-  const relativeDraftPath = toRelativePath(paths.controllerRoot, paths.draftPath) ?? paths.draftPath;
 
   return {
     plan,
-    draft: {
-      draftId: artifact.reviewedIntentId,
-      status: artifact.status,
-      prompt: artifact.prompt,
-      summary: plan.summary,
-      preview: buildReviewedIntentDraftPreview({ normalizedIntent: plan }),
-      path: relativeDraftPath,
-      fileUrl: toFileUrlPath(relativeDraftPath),
-      updatedAt: artifact.updatedAt
-    }
+    draft: buildStudioDraftSummary({ artifact, paths })
   };
 }
 
@@ -709,11 +864,19 @@ async function updateNormalizedIntentDraft(input: {
 }): Promise<PreviewNormalizedIntentResult> {
   const loaded = await loadConfig(input.configPath);
   const agent = applyAgentOverrides(loaded.config.agent, input.agentOverrides);
+  const existingDraft = await loadReviewedIntentDraft({
+    loadedConfig: loaded,
+    reviewedIntentId: input.reviewedIntentId
+  });
+  const planningPrompt = buildReviewedIntentPlanningPrompt({
+    prompt: input.prompt,
+    fallbackPrompt: existingDraft.artifact.normalizedIntent.rawPrompt
+  });
 
   assertStudioAgentConfigurationReady(agent, "full");
 
   const plan = await normalizeIntentWithAgent({
-    rawPrompt: input.prompt,
+    rawPrompt: planningPrompt,
     defaultSourceId: loaded.config.run.sourceId,
     continueOnCaptureError: loaded.config.run.continueOnCaptureError,
     agent,
@@ -736,23 +899,12 @@ async function updateNormalizedIntentDraft(input: {
     status: "draft"
   });
 
-  const relativeDraftPath = toRelativePath(paths.controllerRoot, paths.draftPath) ?? paths.draftPath;
-
   return {
     plan: {
       ...plan,
       intentId: input.reviewedIntentId
     },
-    draft: {
-      draftId: artifact.reviewedIntentId,
-      status: artifact.status,
-      prompt: artifact.prompt,
-      summary: plan.summary,
-      preview: buildReviewedIntentDraftPreview({ normalizedIntent: plan }),
-      path: relativeDraftPath,
-      fileUrl: toFileUrlPath(relativeDraftPath),
-      updatedAt: artifact.updatedAt
-    }
+    draft: buildStudioDraftSummary({ artifact, paths })
   };
 }
 
@@ -941,6 +1093,10 @@ function applyRunResult(run: StudioRunRecord, result: RunIntentResult): void {
         operation: fileOperation.operation,
         filePath: fileOperation.filePath
       })),
+      qaCommandLabel: undefined,
+      qaCommandStatus: undefined,
+      qaCommandStateCode: undefined,
+      qaCommand: undefined,
       summaryPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.summaryPath),
       appLogPath: toRelativePath(result.paths.controllerRoot, sourceRun.paths.appLogPath)
     };
@@ -983,6 +1139,11 @@ export async function startIntentStudioServer(
   async function buildState(): Promise<StudioState> {
     try {
       const loaded = await loadConfig(configPath);
+      const activeDraft = currentRun
+        ? null
+        : await loadLatestResumableReviewedIntentDraft({
+            loadedConfig: loaded
+          });
       const sources = await Promise.all(
         Object.entries(loaded.config.sources).map(async ([sourceId, source]) =>
           await buildSourceSummary(workspaceRoot, sourceId, loaded.config.run.sourceId, source)
@@ -999,7 +1160,9 @@ export async function startIntentStudioServer(
         defaultPrompt: loaded.config.run.intent,
         defaultSourceId: loaded.config.run.sourceId,
         agentStages: buildStudioAgentStages(loaded.config.agent),
+        workflowReadiness: buildStudioWorkflowReadiness(loaded.config.agent),
         sources,
+        activeDraft: activeDraft ? buildStudioActiveDraft(activeDraft) : null,
         currentRun: currentRun ? cloneRun(currentRun) : null,
         recentRuns: recentRuns.map((run) => cloneRun(run)),
         serverTime: new Date().toISOString()
@@ -1013,7 +1176,15 @@ export async function startIntentStudioServer(
         configError: error instanceof Error ? error.message : String(error),
         linearEnabled: false,
         agentStages: [],
+        workflowReadiness: {
+          mode: "baseline",
+          status: "blocked",
+          summary: "Studio config failed to load.",
+          detail: error instanceof Error ? error.message : String(error),
+          pipeline: [...STUDIO_WORKFLOW_PIPELINE]
+        },
         sources: [],
+        activeDraft: null,
         currentRun: currentRun ? cloneRun(currentRun) : null,
         recentRuns: recentRuns.map((run) => cloneRun(run)),
         serverTime: new Date().toISOString()
@@ -1093,6 +1264,10 @@ export async function startIntentStudioServer(
         remainingWorkItemIds?: string[];
         verificationMode?: "full" | "incremental";
         fileOperations?: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
+        commandLabel?: string;
+        commandStatus?: "running" | "completed" | "failed";
+        stateCode?: string;
+        command?: string;
       };
 
       if (details.sourceId) {
@@ -1112,6 +1287,23 @@ export async function startIntentStudioServer(
           sourceRun.latestImplementationFileOperations = details.fileOperations ?? sourceRun.latestImplementationFileOperations;
         } else {
           sourceRun.qaVerificationStageStatus = details.status ?? "running";
+          if (details.commandLabel) {
+            sourceRun.qaCommandLabel = details.commandLabel;
+          }
+          if (details.commandStatus) {
+            sourceRun.qaCommandStatus = details.commandStatus;
+          }
+          if (details.stateCode) {
+            sourceRun.qaCommandStateCode = details.stateCode;
+          }
+          if (details.command) {
+            sourceRun.qaCommand = details.command;
+          }
+          if (details.status === "completed" || details.status === "failed" || details.status === "skipped") {
+            sourceRun.qaCommandLabel = undefined;
+            sourceRun.qaCommandStatus = undefined;
+            sourceRun.qaCommand = undefined;
+          }
         }
 
         sourceRun.targetedWorkItemIds = details.targetedWorkItemIds ?? sourceRun.targetedWorkItemIds;
@@ -1180,6 +1372,11 @@ export async function startIntentStudioServer(
         sourceRun.remainingWorkItemCount = sourceRun.remainingWorkItemIds?.length;
         sourceRun.sourceWarnings = details.sourceWarnings ?? sourceRun.sourceWarnings;
         sourceRun.error = details.error ?? sourceRun.error;
+        if (sourceRun.status === "completed" || sourceRun.status === "failed") {
+          sourceRun.qaCommandLabel = undefined;
+          sourceRun.qaCommandStatus = undefined;
+          sourceRun.qaCommand = undefined;
+        }
       }
     }
   }

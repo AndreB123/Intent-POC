@@ -19,6 +19,10 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
   assert.match(html, /id="toggle-stages-visibility"[^>]*>Collapse<\/button>/);
   assert.match(html, /wireCollapseToggle\("toggle-work-scope-visibility", "work-scope-panel", "block"\);/);
   assert.match(html, /wireCollapseToggle\("toggle-stages-visibility", "steps-panel", "block"\);/);
+  assert.match(html, /id="workflow-readiness-status"/);
+  assert.match(html, /id="workflow-readiness-summary"/);
+  assert.match(html, /id="workflow-readiness-pipeline"/);
+  assert.match(html, /implementation, QA, screenshots, comparison, and artifacts/);
   assert.ok(promptInputIndex >= 0);
   assert.ok(submitButtonIndex > promptInputIndex);
   assert.ok(workScopeIndex > submitButtonIndex);
@@ -31,6 +35,7 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
   assert.match(html, /id="selection-title"/);
   assert.match(html, /id="selection-defaults"/);
   assert.equal(html.includes('id="send-draft-button"'), false);
+  assert.match(html, /id="reset-intent-button"/);
   assert.match(html, /The first click builds a reviewed IDD draft with repo context, boundaries, baseline, and minimum success\./);
   assert.match(html, /Click Run intent to generate the scoping IDD draft\./);
   assert.match(html, /Scoping IDD draft ready\. Review it, edit it if needed, then click Run intent again to refresh the full reviewed plan and start the session\./);
@@ -41,6 +46,9 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
   assert.match(html, /3\. Scope & Boundaries/);
   assert.match(html, /4\. Success Contract/);
   assert.match(html, /5\. Execution Readiness/);
+  assert.match(html, /const previewDraftSessionKey = "intent-studio\.active-reviewed-draft-id";/);
+  assert.match(html, /function shouldResumeDraft\(activeDraft\) \{/);
+  assert.match(html, /resetIntentButton\.addEventListener\("click", function \(\) \{/);
   assert.match(html, /fetch\("\/api\/plan"/);
   assert.match(html, /fetch\("\/api\/drafts\/" \+ encodeURIComponent\(previewDraft\.draftId\)/);
   assert.match(html, /fetch\("\/api\/runs"/);

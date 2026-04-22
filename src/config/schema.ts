@@ -206,6 +206,7 @@ export const configSchema = z
       maxTokens: z.number().int().positive().optional(),
       apiKeyEnv: z.string().optional(),
       apiVersion: z.string().optional(),
+      requireAIWorkflow: z.boolean().default(false),
       allowPromptNormalization: z.boolean().default(true),
       allowLinearScoping: z.boolean().default(true),
       allowBDDPlanning: z.boolean().default(true),
