@@ -72,7 +72,6 @@ const workItemTitles = ["Behavior is verified visually for applicable sources"];
 
 const destinationStatuses: IntentPocBddSampleExpectation["destinationStatuses"] = [
   { label: "Controller artifacts", status: "active" },
-  { label: "Linear parent issue", status: "planned" },
   { label: "Source workspace publication", status: "inactive" },
   { label: "GitHub workflow", status: "planned" },
   { label: "Documentation space", status: "planned" },
@@ -80,15 +79,13 @@ const destinationStatuses: IntentPocBddSampleExpectation["destinationStatuses"] 
 ];
 
 const toolStates: IntentPocBddSampleExpectation["toolStates"] = [
-  { label: "Linear-first scoping", enabled: true },
   { label: "BDD planning", enabled: true },
   { label: "Playwright TDD generation", enabled: true },
   { label: "Visual verification", enabled: true },
   { label: "Environment deployment", enabled: false },
   { label: "Implementation loop", enabled: false },
   { label: "QA verification", enabled: false },
-  { label: "Evidence reporting", enabled: true },
-  { label: "Linear publishing", enabled: false }
+  { label: "Evidence reporting", enabled: true }
 ];
 
 export const INTENT_POC_BDD_SAMPLE = {
@@ -109,8 +106,7 @@ export const INTENT_POC_BDD_SAMPLE = {
     uiStateRequirements: [{ stateId: "theme-mode", requestedValue: "dark" }],
     executionReviewNotes: [
       "Source intent-poc-app: The surface library supports a dark mode toggle that should be activated explicitly when requested.",
-      "Source intent-poc-app: The toggle updates the surface library query state before screenshots are captured.",
-      "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
+      "Source intent-poc-app: The toggle updates the surface library query state before screenshots are captured."
     ],
     planningReviewNotes: [],
     repoCandidates: [{ repoId: "intent-poc", selectionStatus: "selected", sourceIds: ["intent-poc-app"] }],
@@ -140,8 +136,8 @@ export const INTENT_POC_BDD_SAMPLE = {
       "  - Verification: QA can run a Playwright screenshot flow to verify behavior for intent-poc-app.",
       "  - Playwright specs: 1",
       "  - Checkpoints: 3",
-      "- Destinations: Controller artifacts [active], Linear parent issue [planned], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]",
-      "- Tools: Linear-first scoping [enabled], BDD planning [enabled], Playwright TDD generation [enabled], Visual verification [enabled], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled], Linear publishing [planned]"
+      "- Destinations: Controller artifacts [active], Source workspace publication [inactive], GitHub workflow [planned], Documentation space [planned], Business process controls [planned]",
+      "- Tools: BDD planning [enabled], Playwright TDD generation [enabled], Visual verification [enabled], Environment deployment [planned], Implementation loop [planned], QA verification [planned], Evidence reporting [enabled]"
     ]
   }
 } satisfies IntentPocBddSampleContract;

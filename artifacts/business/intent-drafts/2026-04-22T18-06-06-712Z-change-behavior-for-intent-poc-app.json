@@ -1,0 +1,343 @@
+{
+  "reviewedIntentId": "2026-04-22T18-06-06-712Z-change-behavior-for-intent-poc-app",
+  "status": "draft",
+  "createdAt": "2026-04-22T18:06:06.713Z",
+  "updatedAt": "2026-04-22T18:06:06.713Z",
+  "prompt": "## Intent\n\nGenerate a test for the login flow\n\n## Desired Outcome\n\nGenerate a Playwright test for the login flow within the intent-poc-app.\n\n## Repo Context\n\n- Intent Driven Development POC (intent-poc-app)\n- Intent Driven Development POC: Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.\n\n## Source Scope\n\n- intent-poc-app\n- Selected source: intent-poc-app.\n- Likely owning surface: Shared Source (high confidence).\n\n## Adaptive Boundaries\n\n- Keep this draft inside intent-poc-app until the owning surface is confirmed.\n\n## Minimum Success\n\n- Functional test script covering login flow\n- Verification of successful authentication state\n- Generate a Playwright test for the login flow within the intent-poc-app.\n- The draft keeps the change centered on Shared Source instead of the whole repo.\n- The final plan names one existing UI verification path instead of inventing a new workflow.\n\n## Baseline\n\n- Capture the current baseline in Shared Source before changing behavior.\n\n## Verification Obligations\n\n- Ensure test handles theme-mode states if login UI is theme-sensitive\n- Use Playwright for interaction and state validation\n- Name the existing Playwright or screenshot check that will prove the behavior change.\n\n## Raw Intent\n\nGenerate a test for the login flow\n",
+  "requestedSourceIds": [
+    "intent-poc-app"
+  ],
+  "normalizedIntent": {
+    "intentId": "2026-04-22T18-06-06-712Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-22T18:06:06.713Z",
+    "rawPrompt": "Generate a test for the login flow",
+    "summary": "change behavior for intent-poc-app",
+    "intentType": "change-behavior",
+    "codeSurface": {
+      "sourceId": "intent-poc-app",
+      "id": "shared-source",
+      "label": "Shared Source",
+      "confidence": "high",
+      "rationale": "Prompt normalization identified Shared Source as the most likely code surface within intent-poc-app.",
+      "alternatives": []
+    },
+    "businessIntent": {
+      "statement": "Generate a test for the login flow",
+      "desiredOutcome": "Generate a Playwright test for the login flow within the intent-poc-app.",
+      "acceptanceCriteria": [],
+      "scenarios": [],
+      "workItems": [],
+      "decomposition": {
+        "objectives": [],
+        "workstreams": [],
+        "tasks": [],
+        "subtasks": [],
+        "verificationTasks": []
+      }
+    },
+    "planning": {
+      "repoCandidates": [
+        {
+          "repoId": "intent-poc",
+          "label": "Intent Driven Development POC",
+          "role": "controller-and-demo-source",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "selectionStatus": "selected",
+          "reason": "Source intent-poc-app was selected in the requested source scope.",
+          "summary": "Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.",
+          "sourceTypes": [
+            "local"
+          ],
+          "locations": [
+            "/home/andre/Desktop/GeniusMonkey/Intent POC"
+          ],
+          "refs": [],
+          "notes": [
+            "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+            "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
+            "Configured visual captures across linked sources: 48."
+          ],
+          "captureCount": 48
+        }
+      ],
+      "scopingContext": {
+        "matchedPromptTerms": [],
+        "sourceMatches": [
+          {
+            "sourceId": "intent-poc-app",
+            "matchedTerms": [],
+            "reason": "Source intent-poc-app was selected in the requested source scope."
+          }
+        ],
+        "primarySurface": {
+          "sourceId": "intent-poc-app",
+          "id": "shared-source",
+          "label": "Shared Source",
+          "confidence": "high",
+          "rationale": "Prompt normalization identified Shared Source as the most likely code surface within intent-poc-app.",
+          "matchedTerms": [],
+          "primaryPaths": [],
+          "adjacentPaths": []
+        },
+        "alternativeSurfaces": [],
+        "pathHints": [],
+        "uiStateHints": [],
+        "verificationHints": [],
+        "repoNoteHints": [],
+        "repoMemoryHints": [],
+        "captureHints": [],
+        "unresolvedQuestions": []
+      },
+      "scopingDetails": {
+        "repoContext": [
+          "Intent Driven Development POC (intent-poc-app)"
+        ],
+        "sourceScope": [
+          "intent-poc-app"
+        ],
+        "minimumSuccess": [
+          "Functional test script covering login flow",
+          "Verification of successful authentication state"
+        ],
+        "verificationObligations": [
+          "Ensure test handles theme-mode states if login UI is theme-sensitive",
+          "Use Playwright for interaction and state validation"
+        ]
+      },
+      "plannerSections": [
+        {
+          "id": "idd-plan",
+          "title": "IDD Plan",
+          "scope": "business",
+          "summary": "Planner-owned business plan with acceptance criteria, repo context, execution lanes, and delivery notes."
+        },
+        {
+          "id": "idd-source-lane-intent-poc-app",
+          "title": "IDD Source Lane: intent-poc-app",
+          "scope": "source",
+          "sourceId": "intent-poc-app",
+          "summary": "Planner-owned lane for intent-poc-app, intended for downstream implementation and verification handoff."
+        }
+      ],
+      "reviewNotes": [],
+      "linearPlan": {
+        "mode": "new"
+      }
+    },
+    "executionPlan": {
+      "primarySourceId": "intent-poc-app",
+      "sources": [
+        {
+          "sourceId": "intent-poc-app",
+          "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
+          "captureScope": {
+            "mode": "all",
+            "captureIds": []
+          },
+          "warnings": []
+        }
+      ],
+      "destinations": [
+        {
+          "id": "controller-artifacts",
+          "type": "controller",
+          "label": "Controller artifacts",
+          "status": "active",
+          "reason": "Local evidence bundles are always written by the controller.",
+          "details": [
+            "Stores plan, manifests, logs, captures, and summaries on disk."
+          ]
+        },
+        {
+          "id": "source-workspace",
+          "type": "source-workspace",
+          "label": "Source workspace publication",
+          "status": "inactive",
+          "reason": "Workspace publishing is disabled until artifacts.storageMode is set to 'both'.",
+          "details": [
+            "Useful when evidence should live beside the source repository."
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "id": "bdd-planning",
+          "type": "intent-planning",
+          "label": "BDD planning",
+          "enabled": false,
+          "reason": "BDD planning is deferred until the full reviewed plan pass.",
+          "details": [
+            "The full reviewed plan pass will add acceptance criteria and scenarios after the scoping draft is reviewed."
+          ]
+        },
+        {
+          "id": "playwright-tdd",
+          "type": "playwright-tdd",
+          "label": "Playwright TDD generation",
+          "enabled": false,
+          "reason": "Playwright-first TDD planning is deferred until the full reviewed plan pass.",
+          "details": [
+            "The full reviewed plan pass will attach Playwright-first work items after the scoping draft is reviewed."
+          ]
+        },
+        {
+          "id": "screenshot-evidence",
+          "type": "screenshot",
+          "label": "Visual verification",
+          "enabled": true,
+          "reason": "Applicable sources currently expose visual checkpoints and capture definitions.",
+          "details": [
+            "Playwright screenshots remain one execution tool rather than the top-level product model."
+          ]
+        },
+        {
+          "id": "environment-deployment",
+          "type": "environment-deployment",
+          "label": "Environment deployment",
+          "enabled": false,
+          "reason": "A generic local or Kubernetes deployment stage is planned but not yet wired into the runner.",
+          "details": [
+            "This will become the shared path for local, minikube, and k3s-backed execution."
+          ]
+        },
+        {
+          "id": "implementation",
+          "type": "implementation",
+          "label": "Implementation loop",
+          "enabled": true,
+          "reason": "The runner can execute bounded implementation attempts against the prepared source workspace.",
+          "details": [
+            "QA failures can feed directly back into the next bounded implementation attempt."
+          ]
+        },
+        {
+          "id": "qa-verification",
+          "type": "qa-verification",
+          "label": "QA verification",
+          "enabled": true,
+          "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
+          "details": [
+            "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
+          ]
+        },
+        {
+          "id": "reporting",
+          "type": "reporting",
+          "label": "Evidence reporting",
+          "enabled": true,
+          "reason": "Every run produces summaries and machine-readable manifests.",
+          "details": [
+            "Reports become distribution inputs for downstream review and publishing surfaces."
+          ]
+        }
+      ],
+      "orchestrationStrategy": "single-source",
+      "reviewNotes": [
+        "BDD and Playwright-first TDD planning are deferred until the full reviewed plan pass."
+      ]
+    },
+    "sourceId": "intent-poc-app",
+    "captureScope": {
+      "mode": "all",
+      "captureIds": []
+    },
+    "artifacts": {
+      "requireScreenshots": true,
+      "requireManifest": true,
+      "requireHashes": true
+    },
+    "linear": {
+      "createIssue": true,
+      "issueTitle": "IDD: Generate a test for the login flow"
+    },
+    "execution": {
+      "continueOnCaptureError": false
+    },
+    "normalizationMeta": {
+      "source": "llm",
+      "warnings": [
+        "BDD and Playwright-first TDD planning are deferred until the full reviewed plan pass."
+      ],
+      "requestedPlanningDepth": "scoping",
+      "effectivePlanningDepth": "scoping",
+      "ambiguity": {
+        "isAmbiguous": false,
+        "reasons": []
+      },
+      "stages": [
+        {
+          "stageId": "promptNormalization",
+          "label": "Prompt Interpretation",
+          "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": []
+        },
+        {
+          "stageId": "linearScoping",
+          "label": "Linear Scoping",
+          "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Linear support is disabled in this POC."
+          ]
+        },
+        {
+          "stageId": "bddPlanning",
+          "label": "BDD Planning",
+          "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "BDD planning is deferred until the full reviewed plan pass."
+          ]
+        },
+        {
+          "stageId": "tddPlanning",
+          "label": "TDD Planning",
+          "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Playwright-first TDD planning is deferred until the full reviewed plan pass."
+          ]
+        },
+        {
+          "stageId": "implementation",
+          "label": "Implementation",
+          "description": "Apply the planned changes against the scoped source workspace.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Implementation stage configuration is recorded and executes during source runs before QA verification."
+          ]
+        },
+        {
+          "stageId": "qaVerification",
+          "label": "QA Verification",
+          "description": "Verify implementation output, tests, and evidence before completion or retry.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "QA verification configuration is recorded and executes during source runs after implementation completes."
+          ]
+        }
+      ]
+    }
+  }
+}

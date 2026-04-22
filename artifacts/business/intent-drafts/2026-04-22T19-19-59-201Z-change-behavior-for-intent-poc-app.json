@@ -1,0 +1,1174 @@
+{
+  "reviewedIntentId": "2026-04-22T19-19-59-201Z-change-behavior-for-intent-poc-app",
+  "status": "sent",
+  "createdAt": "2026-04-22T19:19:59.202Z",
+  "updatedAt": "2026-04-22T19:23:49.345Z",
+  "prompt": "## Intent\n\nGenerate a test for the login page\n\n## Desired Outcome\n\nGenerate a test for the login page within the intent-poc-app.\n\n## Repo Context\n\n- The prompt suggests a user-facing change in intent-poc-app, but it does not unambiguously identify which code surface owns it.\n- Intent Driven Development POC: Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.\n- Open routing question: Prompt normalization identified Shared Source as the most likely code surface within intent-poc-app.\n\n## Source Scope\n\n- intent-poc-app\n- Selected source: intent-poc-app.\n- Likely owning surface: Shared Source (medium confidence).\n- Fallback surfaces to inspect next: Intent Studio and Surface Library.\n\n## Adaptive Boundaries\n\n- No concrete owning file was identified from the prompt yet.\n- Keep this draft inside intent-poc-app until the owning surface is confirmed.\n- Resolve whether the change belongs to Intent Studio and Surface Library before touching multiple UI surfaces.\n\n## Minimum Success\n\n- A test for the login page is successfully generated and executes without errors.\n- Generate a test for the login page within the intent-poc-app.\n- The draft keeps the change centered on Shared Source instead of the whole repo.\n- The final plan names one existing UI verification path instead of inventing a new workflow.\n\n## Baseline\n\n- The current context does not identify an existing test for the login page.\n- Capture the current baseline in Shared Source before changing behavior.\n\n## Verification Obligations\n\n- Ensure the generated test correctly targets the login page elements and assertions pass.\n- Name the existing Playwright or screenshot check that will prove the behavior change.\n\n## Raw Intent\n\nGenerate a test for the login page",
+  "requestedSourceIds": [
+    "intent-poc-app"
+  ],
+  "normalizedIntent": {
+    "intentId": "2026-04-22T19-19-59-201Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-22T19:20:27.300Z",
+    "rawPrompt": "Generate a test for the login page\n\nDesired outcome: Generate a test for the login page within the intent-poc-app.",
+    "summary": "change behavior for intent-poc-app",
+    "intentType": "change-behavior",
+    "codeSurface": {
+      "sourceId": "intent-poc-app",
+      "id": "surface-library",
+      "label": "Surface Library",
+      "confidence": "medium",
+      "rationale": "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app.",
+      "alternatives": [
+        {
+          "id": "intent-studio",
+          "label": "Intent Studio",
+          "reason": "Prompt normalization kept this as a fallback interpretation."
+        },
+        {
+          "id": "shared-source",
+          "label": "Shared Source",
+          "reason": "Prompt normalization kept this as a fallback interpretation."
+        }
+      ]
+    },
+    "businessIntent": {
+      "statement": "Implement a Playwright test suite for the login page in the intent-poc-app to verify authentication flows and UI state.",
+      "desiredOutcome": "A functional Playwright test suite that validates successful login, error handling for invalid credentials, and visual consistency of the login form across light and dark themes.",
+      "acceptanceCriteria": [
+        {
+          "id": "ac-1-playwright-test-file-created-in-intent-poc-app-covering-successful-login",
+          "description": "Playwright test file created in intent-poc-app covering successful login.",
+          "origin": "inferred"
+        },
+        {
+          "id": "ac-2-playwright-test-file-covers-error-state-for-invalid-credentials",
+          "description": "Playwright test file covers error state for invalid credentials.",
+          "origin": "inferred"
+        },
+        {
+          "id": "ac-3-visual-regression-screenshots-captured-for-the-login-page-in-both-light-and-dark",
+          "description": "Visual regression screenshots captured for the login page in both light and dark modes.",
+          "origin": "inferred"
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "scenario-1-verify-successful-login-flow",
+          "title": "Verify successful login flow",
+          "goal": "Ensure users can authenticate successfully.",
+          "given": [
+            "The login page is loaded in intent-poc-app"
+          ],
+          "when": [
+            "The user enters valid credentials",
+            "The user clicks the submit button"
+          ],
+          "then": [
+            "The application redirects to the dashboard",
+            "A success toast is displayed"
+          ],
+          "applicableSourceIds": [
+            "intent-poc-app"
+          ]
+        },
+        {
+          "id": "scenario-2-verify-login-error-handling",
+          "title": "Verify login error handling",
+          "goal": "Ensure invalid credentials trigger appropriate feedback.",
+          "given": [
+            "The login page is loaded in intent-poc-app"
+          ],
+          "when": [
+            "The user enters invalid credentials",
+            "The user clicks the submit button"
+          ],
+          "then": [
+            "An error message is displayed on the login form",
+            "The user remains on the login page"
+          ],
+          "applicableSourceIds": [
+            "intent-poc-app"
+          ]
+        },
+        {
+          "id": "scenario-3-verify-visual-consistency-across-themes",
+          "title": "Verify visual consistency across themes",
+          "goal": "Ensure the login page renders correctly in light and dark modes.",
+          "given": [
+            "The login page is accessible"
+          ],
+          "when": [
+            "The theme is set to light",
+            "A screenshot is captured",
+            "The theme is set to dark"
+          ],
+          "then": [
+            "Both screenshots match the expected visual baseline"
+          ],
+          "applicableSourceIds": [
+            "intent-poc-app"
+          ]
+        }
+      ],
+      "workItems": [
+        {
+          "id": "work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app",
+          "type": "playwright-spec",
+          "verificationMode": "mocked-state-playwright",
+          "title": "Verify login page functionality and visual consistency",
+          "description": "Validate successful login, error handling for invalid credentials, and visual consistency across light and dark themes for the login page.",
+          "scenarioIds": [
+            "scenario-1-verify-successful-login-flow",
+            "scenario-2-verify-login-error-handling",
+            "scenario-3-verify-visual-consistency-across-themes"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "userVisibleOutcome": "Login page is functional and visually consistent in both themes.",
+          "verification": "Playwright suite covering authentication flows and visual regression testing.",
+          "execution": {
+            "order": 1,
+            "dependsOnWorkItemIds": [],
+            "objectiveId": "objective-1-generate-a-test-for-the-login-page-desired-outcome-generate-a-test-for-the-login",
+            "workstreamId": "workstream-1-intent-poc-app",
+            "taskId": "task-1-intent-poc-app-scenario-1-verify-successful-login-flow",
+            "subtaskId": "subtask-1-work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app"
+          },
+          "playwright": {
+            "generatedBy": "llm",
+            "specs": [
+              {
+                "framework": "playwright",
+                "sourceId": "intent-poc-app",
+                "relativeSpecPath": "intent-poc-app/login-page.spec.ts",
+                "suiteName": "Login Page Suite",
+                "testName": "Login Page Functionality and Visuals",
+                "scenarioIds": [
+                  "scenario-1-verify-successful-login-flow",
+                  "scenario-2-verify-login-error-handling",
+                  "scenario-3-verify-visual-consistency-across-themes"
+                ],
+                "checkpoints": [
+                  {
+                    "id": "checkpoint-1-login-page-functionality-and-visuals-load-login-page",
+                    "label": "Load login page",
+                    "action": "goto",
+                    "assertion": "Login page is loaded",
+                    "screenshotId": "login-page-initial",
+                    "requiredUiStates": [
+                      {
+                        "stateId": "theme-mode",
+                        "label": "Theme mode",
+                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+                        "requestedValue": "light",
+                        "activation": [
+                          {
+                            "type": "query-param",
+                            "target": "dark",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "[data-testid='theme-toggle']",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The library surface toggle remains available for manual verification flows."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "#dark-mode-toggle",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                            ]
+                          }
+                        ],
+                        "verificationStrategies": [
+                          "ui-interaction-playwright"
+                        ],
+                        "notes": [
+                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                          "Verify the active theme state before trusting screenshot comparisons.",
+                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+                        ],
+                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                      }
+                    ]
+                  },
+                  {
+                    "id": "checkpoint-2-login-page-functionality-and-visuals-enter-valid-credentials",
+                    "label": "Enter valid credentials",
+                    "action": "fill",
+                    "assertion": "Credentials entered",
+                    "screenshotId": "login-page-filled",
+                    "locator": "input[name='username']",
+                    "referenceTarget": "user",
+                    "attributeName": "value",
+                    "expectedSubstring": "user",
+                    "requiredUiStates": [
+                      {
+                        "stateId": "theme-mode",
+                        "label": "Theme mode",
+                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+                        "requestedValue": "light",
+                        "activation": [
+                          {
+                            "type": "query-param",
+                            "target": "dark",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "[data-testid='theme-toggle']",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The library surface toggle remains available for manual verification flows."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "#dark-mode-toggle",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                            ]
+                          }
+                        ],
+                        "verificationStrategies": [
+                          "ui-interaction-playwright"
+                        ],
+                        "notes": [
+                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                          "Verify the active theme state before trusting screenshot comparisons.",
+                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+                        ],
+                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                      }
+                    ]
+                  },
+                  {
+                    "id": "checkpoint-3-login-page-functionality-and-visuals-submit-login",
+                    "label": "Submit login",
+                    "action": "click",
+                    "assertion": "Redirected to dashboard",
+                    "screenshotId": "login-success",
+                    "locator": "button[type='submit']",
+                    "requiredUiStates": [
+                      {
+                        "stateId": "theme-mode",
+                        "label": "Theme mode",
+                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+                        "requestedValue": "light",
+                        "activation": [
+                          {
+                            "type": "query-param",
+                            "target": "dark",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "[data-testid='theme-toggle']",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The library surface toggle remains available for manual verification flows."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "#dark-mode-toggle",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                            ]
+                          }
+                        ],
+                        "verificationStrategies": [
+                          "ui-interaction-playwright"
+                        ],
+                        "notes": [
+                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                          "Verify the active theme state before trusting screenshot comparisons.",
+                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+                        ],
+                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                      }
+                    ]
+                  },
+                  {
+                    "id": "checkpoint-4-login-page-functionality-and-visuals-verify-error-on-invalid-login",
+                    "label": "Verify error on invalid login",
+                    "action": "fill",
+                    "assertion": "Error message visible",
+                    "screenshotId": "login-error",
+                    "locator": "input[name='password']",
+                    "referenceTarget": "wrong-password",
+                    "attributeName": "value",
+                    "expectedSubstring": "wrong-password",
+                    "requiredUiStates": [
+                      {
+                        "stateId": "theme-mode",
+                        "label": "Theme mode",
+                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+                        "requestedValue": "light",
+                        "activation": [
+                          {
+                            "type": "query-param",
+                            "target": "dark",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "[data-testid='theme-toggle']",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The library surface toggle remains available for manual verification flows."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "#dark-mode-toggle",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                            ]
+                          }
+                        ],
+                        "verificationStrategies": [
+                          "ui-interaction-playwright"
+                        ],
+                        "notes": [
+                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                          "Verify the active theme state before trusting screenshot comparisons.",
+                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+                        ],
+                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                      }
+                    ]
+                  },
+                  {
+                    "id": "checkpoint-5-login-page-functionality-and-visuals-verify-light-theme",
+                    "label": "Verify light theme",
+                    "action": "mock-studio-state",
+                    "assertion": "Light theme applied",
+                    "screenshotId": "login-light-theme",
+                    "mockStudioState": {},
+                    "requiredUiStates": [
+                      {
+                        "stateId": "theme-mode",
+                        "label": "Theme mode",
+                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+                        "requestedValue": "light",
+                        "activation": [
+                          {
+                            "type": "query-param",
+                            "target": "dark",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "[data-testid='theme-toggle']",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The library surface toggle remains available for manual verification flows."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "#dark-mode-toggle",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                            ]
+                          }
+                        ],
+                        "verificationStrategies": [
+                          "ui-interaction-playwright"
+                        ],
+                        "notes": [
+                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                          "Verify the active theme state before trusting screenshot comparisons.",
+                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+                        ],
+                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                      }
+                    ]
+                  },
+                  {
+                    "id": "checkpoint-6-login-page-functionality-and-visuals-verify-dark-theme",
+                    "label": "Verify dark theme",
+                    "action": "mock-studio-state",
+                    "assertion": "Dark theme applied",
+                    "screenshotId": "login-dark-theme",
+                    "mockStudioState": {},
+                    "requiredUiStates": [
+                      {
+                        "stateId": "theme-mode",
+                        "label": "Theme mode",
+                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+                        "requestedValue": "light",
+                        "activation": [
+                          {
+                            "type": "query-param",
+                            "target": "dark",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "[data-testid='theme-toggle']",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "The library surface toggle remains available for manual verification flows."
+                            ]
+                          },
+                          {
+                            "type": "ui-control",
+                            "target": "#dark-mode-toggle",
+                            "values": {
+                              "light": "false",
+                              "dark": "true"
+                            },
+                            "notes": [
+                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                            ]
+                          }
+                        ],
+                        "verificationStrategies": [
+                          "ui-interaction-playwright"
+                        ],
+                        "notes": [
+                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                          "Verify the active theme state before trusting screenshot comparisons.",
+                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+                        ],
+                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                      }
+                    ]
+                  }
+                ],
+                "requiredUiStates": [
+                  {
+                    "stateId": "theme-mode",
+                    "label": "Theme mode",
+                    "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+                    "requestedValue": "light",
+                    "activation": [
+                      {
+                        "type": "query-param",
+                        "target": "dark",
+                        "values": {
+                          "light": "false",
+                          "dark": "true"
+                        },
+                        "notes": [
+                          "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                        ]
+                      },
+                      {
+                        "type": "ui-control",
+                        "target": "[data-testid='theme-toggle']",
+                        "values": {
+                          "light": "false",
+                          "dark": "true"
+                        },
+                        "notes": [
+                          "The library surface toggle remains available for manual verification flows."
+                        ]
+                      },
+                      {
+                        "type": "ui-control",
+                        "target": "#dark-mode-toggle",
+                        "values": {
+                          "light": "false",
+                          "dark": "true"
+                        },
+                        "notes": [
+                          "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                        ]
+                      }
+                    ],
+                    "verificationStrategies": [
+                      "ui-interaction-playwright"
+                    ],
+                    "notes": [
+                      "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                      "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                      "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                      "Verify the active theme state before trusting screenshot comparisons.",
+                      "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                      "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+                    ],
+                    "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "decomposition": {
+        "objectives": [
+          {
+            "id": "objective-1-generate-a-test-for-the-login-page-desired-outcome-generate-a-test-for-the-login",
+            "title": "Generate a test for the login page\n\nDesired outcome: Generate a test for the login page within the intent-poc-app.",
+            "summary": "Generate a test for the login page\n\nDesired outcome: Generate a test for the login page within the intent-poc-app.",
+            "desiredOutcome": "A functional Playwright test suite that validates successful login, error handling for invalid credentials, and visual consistency of the login form across light and dark themes.",
+            "workstreamIds": [
+              "workstream-1-intent-poc-app"
+            ]
+          }
+        ],
+        "workstreams": [
+          {
+            "id": "workstream-1-intent-poc-app",
+            "title": "Source workstream: intent-poc-app",
+            "summary": "Deliver the reviewed intent in intent-poc-app.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "taskIds": [
+              "task-1-intent-poc-app-scenario-1-verify-successful-login-flow"
+            ]
+          }
+        ],
+        "tasks": [
+          {
+            "id": "task-1-intent-poc-app-scenario-1-verify-successful-login-flow",
+            "title": "Verify successful login flow",
+            "summary": "Ensure users can authenticate successfully.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "scenarioIds": [
+              "scenario-1-verify-successful-login-flow",
+              "scenario-2-verify-login-error-handling",
+              "scenario-3-verify-visual-consistency-across-themes"
+            ],
+            "workItemIds": [
+              "work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app"
+            ],
+            "subtaskIds": [
+              "subtask-1-work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app"
+            ]
+          }
+        ],
+        "subtasks": [
+          {
+            "id": "subtask-1-work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app",
+            "title": "Verify login page functionality and visual consistency",
+            "summary": "Validate successful login, error handling for invalid credentials, and visual consistency across light and dark themes for the login page.",
+            "scenarioIds": [
+              "scenario-1-verify-successful-login-flow",
+              "scenario-2-verify-login-error-handling",
+              "scenario-3-verify-visual-consistency-across-themes"
+            ],
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app"
+            ],
+            "dependsOnSubtaskIds": []
+          }
+        ],
+        "verificationTasks": [
+          {
+            "id": "verify-1-work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app",
+            "title": "Verify Verify login page functionality and visual consistency",
+            "summary": "Verify the user-visible outcome for Verify login page functionality and visual consistency.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-1-verify-login-page-functionality-and-visual-consistency-intent-poc-app"
+            ]
+          }
+        ]
+      }
+    },
+    "planning": {
+      "repoCandidates": [
+        {
+          "repoId": "intent-poc",
+          "label": "Intent Driven Development POC",
+          "role": "controller-and-demo-source",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "selectionStatus": "selected",
+          "reason": "Source intent-poc-app was selected in the requested source scope.",
+          "summary": "Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.",
+          "sourceTypes": [
+            "local"
+          ],
+          "locations": [
+            "/home/andre/Desktop/GeniusMonkey/Intent POC"
+          ],
+          "refs": [],
+          "notes": [
+            "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+            "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
+            "Configured visual captures across linked sources: 48."
+          ],
+          "captureCount": 48
+        }
+      ],
+      "scopingContext": {
+        "matchedPromptTerms": [
+          "intent-poc-app",
+          "page"
+        ],
+        "sourceMatches": [
+          {
+            "sourceId": "intent-poc-app",
+            "matchedTerms": [
+              "intent-poc-app"
+            ],
+            "reason": "Source intent-poc-app was selected in the requested source scope."
+          }
+        ],
+        "primarySurface": {
+          "sourceId": "intent-poc-app",
+          "id": "surface-library",
+          "label": "Surface Library",
+          "confidence": "medium",
+          "rationale": "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app.",
+          "matchedTerms": [
+            "page"
+          ],
+          "primaryPaths": [
+            "src/demo-app/render/render-surface-frame.ts",
+            "src/demo-app/render/render-surface-page.ts"
+          ],
+          "adjacentPaths": [
+            "src/demo-app/model/catalog.ts",
+            "src/demo-app/model/types.ts"
+          ]
+        },
+        "alternativeSurfaces": [
+          {
+            "sourceId": "intent-poc-app",
+            "id": "intent-studio",
+            "label": "Intent Studio",
+            "confidence": "low",
+            "rationale": "Prompt normalization kept this as a fallback interpretation.",
+            "matchedTerms": [],
+            "primaryPaths": [
+              "src/demo-app/render/render-intent-studio-page.ts"
+            ],
+            "adjacentPaths": [
+              "src/demo-app/server/start-intent-studio-server.ts",
+              "src/demo-app/serve-demo-app.ts"
+            ]
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "id": "shared-source",
+            "label": "Shared Source",
+            "confidence": "low",
+            "rationale": "Prompt normalization kept this as a fallback interpretation.",
+            "matchedTerms": [],
+            "primaryPaths": [],
+            "adjacentPaths": []
+          }
+        ],
+        "pathHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/render/render-surface-frame.ts",
+            "reason": "Primary implementation path for Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/render/render-surface-page.ts",
+            "reason": "Primary implementation path for Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/model/catalog.ts",
+            "reason": "Adjacent path to confirm ownership for Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/model/types.ts",
+            "reason": "Adjacent path to confirm ownership for Surface Library."
+          }
+        ],
+        "uiStateHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "stateId": "theme-mode",
+            "label": "Theme mode",
+            "reason": "Prompt requests the Theme mode UI state with value \"light\".",
+            "verificationStrategies": [
+              "ui-interaction-playwright"
+            ],
+            "notes": [
+              "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+              "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+              "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+              "Verify the active theme state before trusting screenshot comparisons.",
+              "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+              "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+            ]
+          }
+        ],
+        "verificationHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+            "reason": "Supports verification for requested UI state context in intent-poc-app."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+            "reason": "Supports verification for requested UI state context in intent-poc-app."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+            "reason": "Supports verification for requested UI state context in intent-poc-app."
+          }
+        ],
+        "repoNoteHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+            "reason": "Matched prompt terms: page."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
+            "reason": "Matched prompt terms: page."
+          }
+        ],
+        "repoMemoryHints": [],
+        "captureHints": [],
+        "unresolvedQuestions": [
+          "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app."
+        ]
+      },
+      "scopingDetails": {
+        "repoContext": [
+          "intent-poc-app repository",
+          "Surface library rendering architecture"
+        ],
+        "sourceScope": [
+          "intent-poc-app"
+        ],
+        "adaptiveBoundaries": [
+          "Focus on login page component rendering",
+          "Verify navigation and state transitions"
+        ],
+        "minimumSuccess": [
+          "Functional test script for login page",
+          "Screenshot evidence of login page state"
+        ],
+        "baseline": [
+          "Existing surface library rendering patterns"
+        ],
+        "verificationObligations": [
+          "Validate login page accessibility",
+          "Verify theme-mode consistency"
+        ]
+      },
+      "plannerSections": [
+        {
+          "id": "idd-plan",
+          "title": "IDD Plan",
+          "scope": "business",
+          "summary": "Planner-owned business plan with acceptance criteria, repo context, execution lanes, and delivery notes."
+        },
+        {
+          "id": "idd-source-lane-intent-poc-app",
+          "title": "IDD Source Lane: intent-poc-app",
+          "scope": "source",
+          "sourceId": "intent-poc-app",
+          "summary": "Planner-owned lane for intent-poc-app, intended for downstream implementation and verification handoff."
+        }
+      ],
+      "reviewNotes": [],
+      "linearPlan": {
+        "mode": "new"
+      }
+    },
+    "executionPlan": {
+      "primarySourceId": "intent-poc-app",
+      "sources": [
+        {
+          "sourceId": "intent-poc-app",
+          "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
+          "captureScope": {
+            "mode": "all",
+            "captureIds": []
+          },
+          "warnings": [
+            "Requested UI states: theme-mode=light."
+          ],
+          "uiStateRequirements": [
+            {
+              "stateId": "theme-mode",
+              "label": "Theme mode",
+              "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
+              "requestedValue": "light",
+              "activation": [
+                {
+                  "type": "query-param",
+                  "target": "dark",
+                  "values": {
+                    "light": "false",
+                    "dark": "true"
+                  },
+                  "notes": [
+                    "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
+                  ]
+                },
+                {
+                  "type": "ui-control",
+                  "target": "[data-testid='theme-toggle']",
+                  "values": {
+                    "light": "false",
+                    "dark": "true"
+                  },
+                  "notes": [
+                    "The library surface toggle remains available for manual verification flows."
+                  ]
+                },
+                {
+                  "type": "ui-control",
+                  "target": "#dark-mode-toggle",
+                  "values": {
+                    "light": "false",
+                    "dark": "true"
+                  },
+                  "notes": [
+                    "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
+                  ]
+                }
+              ],
+              "verificationStrategies": [
+                "ui-interaction-playwright"
+              ],
+              "notes": [
+                "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+                "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+                "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+                "Verify the active theme state before trusting screenshot comparisons.",
+                "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+                "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+              ],
+              "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+            }
+          ]
+        }
+      ],
+      "destinations": [
+        {
+          "id": "controller-artifacts",
+          "type": "controller",
+          "label": "Controller artifacts",
+          "status": "active",
+          "reason": "Local evidence bundles are always written by the controller.",
+          "details": [
+            "Stores plan, manifests, logs, captures, and summaries on disk."
+          ]
+        },
+        {
+          "id": "source-workspace",
+          "type": "source-workspace",
+          "label": "Source workspace publication",
+          "status": "inactive",
+          "reason": "Workspace publishing is disabled until artifacts.storageMode is set to 'both'.",
+          "details": [
+            "Useful when evidence should live beside the source repository."
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "id": "bdd-planning",
+          "type": "intent-planning",
+          "label": "BDD planning",
+          "enabled": true,
+          "reason": "The system converts the raw prompt into reviewable acceptance criteria and scenarios during the full reviewed plan pass.",
+          "details": [
+            "Deterministic by default, with optional Gemini refinement when configured."
+          ]
+        },
+        {
+          "id": "playwright-tdd",
+          "type": "playwright-tdd",
+          "label": "Playwright TDD generation",
+          "enabled": true,
+          "reason": "Applicable sources now produce Playwright-first executable test plans and checkpoint screenshots.",
+          "details": [
+            "Generated specs are intended for checked-in repo storage with overwrite semantics."
+          ]
+        },
+        {
+          "id": "screenshot-evidence",
+          "type": "screenshot",
+          "label": "Visual verification",
+          "enabled": true,
+          "reason": "Applicable sources currently expose visual checkpoints and capture definitions.",
+          "details": [
+            "Playwright screenshots remain one execution tool rather than the top-level product model."
+          ]
+        },
+        {
+          "id": "environment-deployment",
+          "type": "environment-deployment",
+          "label": "Environment deployment",
+          "enabled": false,
+          "reason": "A generic local or Kubernetes deployment stage is planned but not yet wired into the runner.",
+          "details": [
+            "This will become the shared path for local, minikube, and k3s-backed execution."
+          ]
+        },
+        {
+          "id": "implementation",
+          "type": "implementation",
+          "label": "Implementation loop",
+          "enabled": true,
+          "reason": "The runner can execute bounded implementation attempts against the prepared source workspace.",
+          "details": [
+            "QA failures can feed directly back into the next bounded implementation attempt."
+          ]
+        },
+        {
+          "id": "qa-verification",
+          "type": "qa-verification",
+          "label": "QA verification",
+          "enabled": true,
+          "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
+          "details": [
+            "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
+          ]
+        },
+        {
+          "id": "reporting",
+          "type": "reporting",
+          "label": "Evidence reporting",
+          "enabled": true,
+          "reason": "Every run produces summaries and machine-readable manifests.",
+          "details": [
+            "Reports become distribution inputs for downstream review and publishing surfaces."
+          ]
+        }
+      ],
+      "orchestrationStrategy": "single-source",
+      "reviewNotes": [
+        "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+        "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+        "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+        "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
+        "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+        "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
+      ]
+    },
+    "sourceId": "intent-poc-app",
+    "captureScope": {
+      "mode": "all",
+      "captureIds": []
+    },
+    "artifacts": {
+      "requireScreenshots": true,
+      "requireManifest": true,
+      "requireHashes": true
+    },
+    "linear": {
+      "createIssue": true,
+      "issueTitle": "IDD: Generate a test for the login page\n\nDesired outcome: Generate a test for the login page within t"
+    },
+    "execution": {
+      "continueOnCaptureError": false
+    },
+    "normalizationMeta": {
+      "source": "llm",
+      "warnings": [
+        "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+        "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
+        "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
+        "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
+        "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
+        "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.",
+        "Ensure the login page path is correctly identified within the intent-poc-app structure.",
+        "Verify that the theme toggle mechanism is accessible to the Playwright runner."
+      ],
+      "requestedPlanningDepth": "full",
+      "effectivePlanningDepth": "full",
+      "ambiguity": {
+        "isAmbiguous": true,
+        "reasons": [
+          "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app."
+        ]
+      },
+      "stages": [
+        {
+          "stageId": "promptNormalization",
+          "label": "Prompt Interpretation",
+          "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": []
+        },
+        {
+          "stageId": "linearScoping",
+          "label": "Linear Scoping",
+          "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Linear support is disabled in this POC."
+          ]
+        },
+        {
+          "stageId": "bddPlanning",
+          "label": "BDD Planning",
+          "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": [
+            "Ensure the login page path is correctly identified within the intent-poc-app structure.",
+            "Verify that the theme toggle mechanism is accessible to the Playwright runner."
+          ]
+        },
+        {
+          "stageId": "tddPlanning",
+          "label": "TDD Planning",
+          "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": []
+        },
+        {
+          "stageId": "implementation",
+          "label": "Implementation",
+          "description": "Apply the planned changes against the scoped source workspace.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Implementation stage configuration is recorded and executes during source runs before QA verification."
+          ]
+        },
+        {
+          "stageId": "qaVerification",
+          "label": "QA Verification",
+          "description": "Verify implementation output, tests, and evidence before completion or retry.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "QA verification configuration is recorded and executes during source runs after implementation completes."
+          ]
+        }
+      ]
+    }
+  }
+}

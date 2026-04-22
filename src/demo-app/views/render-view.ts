@@ -3,13 +3,24 @@ import { LibraryVariant } from "../model/types";
 import { renderSelectionCard } from "../shared/render-content-cards";
 import { renderChecklistRow, renderStatTile } from "../shared/render-display-primitives";
 import { renderGridRow, renderGridThree, renderList, renderRow, renderSectionHeader, renderStack } from "../shared/render-layout";
+import { renderButton, renderTextInput } from "../shared/render-controls";
 
 export function renderView(id: string, variant: LibraryVariant): string {
   const changed = variant === "v2";
 
   switch (id) {
+    case "view-login-form":
+      return renderStack([
+        renderSectionHeader({ title: "Sign In", subtitle: "Enter your credentials to continue." }),
+        `<div class="tile">`,
+        `<div><strong>Username</strong>${renderTextInput({ className: "input-field", value: "" })}</div>`,
+        `<div><strong>Password</strong>${renderTextInput({ className: "input-field", value: "" })}</div>`,
+        renderButton({ label: "Sign In", className: "accent" }),
+        `</div>`
+      ]);
     case "view-dashboard-summary":
       return renderStack([
+        renderComponent("component-toast-success", variant),
         renderSelectionCard({ title: changed ? "Revenue Operations" : "Growth Operations", badge: { label: "overview", toneClass: "target-ready" }, lines: [{ text: "Dashboard summary" }] }),
         renderGridRow([renderComponent("component-stat-tile", variant), renderComponent("component-card-highlight", variant)]),
         renderComponent("component-banner-info", variant)

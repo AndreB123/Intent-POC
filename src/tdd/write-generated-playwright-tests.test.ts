@@ -302,8 +302,848 @@ test("writeGeneratedPlaywrightTests Given a live Intent Studio indicator flow Wh
     const generatedContent = matchingSpec!.content;
     assert.equal(generatedContent.includes('await page.route("**/api/state", async (route) => {'), false);
     assert.equal(generatedContent.includes('const attributeValue = await target.getAttribute("data-state-code");'), true);
-    assert.equal(generatedContent.includes('expect(attributeValue ?? "", "The live indicator exposes the generated Playwright QA state code while verification is running.").toContain("QA_GENERATED_PLAYWRIGHT_RUNNING");'), true);
+    assert.equal(generatedContent.includes('expect(attributeValue ?? "", "The live indicator exposes an active running stage code while the workflow is executing.").toContain("RUNNING");'), true);
     assert.equal(generatedContent.includes("[data-testid='test-status-indicator']"), true);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("writeGeneratedPlaywrightTests Given a click checkpoint When specs are generated Then the spec waits for the target to be enabled before clicking", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-click-enabled-"));
+
+  try {
+    const source = {
+      ...buildIntentPocAppBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent: NormalizedIntent = {
+      intentId: "intent-click-enabled-checkpoint",
+      receivedAt: new Date().toISOString(),
+      rawPrompt: "Start the Intent Studio run after the button becomes enabled.",
+      summary: "change behavior for intent-poc-app",
+      intentType: "change-behavior",
+      businessIntent: {
+        statement: "Start the Intent Studio run after the button becomes enabled.",
+        desiredOutcome: "Generated click checkpoints wait for enabled state before clicking.",
+        acceptanceCriteria: [],
+        scenarios: [],
+        workItems: [
+          {
+            id: "work-1-click-enabled-intent-poc-app",
+            type: "playwright-spec",
+            verificationMode: "tracked-playwright",
+            title: "Click waits for enabled state",
+            description: "Verify generated click checkpoints wait for enabled state.",
+            scenarioIds: [],
+            sourceIds: ["intent-poc-app"],
+            userVisibleOutcome: "Generated click checkpoints wait for enabled state.",
+            verification: "Generated click checkpoints wait for enabled state.",
+            execution: {
+              order: 1,
+              dependsOnWorkItemIds: []
+            },
+            playwright: {
+              generatedBy: "rules",
+              specs: [
+                {
+                  framework: "playwright",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/click-enabled.spec.ts",
+                  suiteName: "Intent-driven flow for intent-poc-app",
+                  testName: "Click waits for enabled state",
+                  scenarioIds: [],
+                  checkpoints: [
+                    {
+                      id: "checkpoint-open-studio",
+                      label: "Open Studio",
+                      action: "goto",
+                      assertion: "Studio loads.",
+                      screenshotId: "open-studio",
+                      path: "/",
+                      waitUntil: "domcontentloaded"
+                    },
+                    {
+                      id: "checkpoint-click-run",
+                      label: "Click Run Button",
+                      action: "click",
+                      assertion: "The run button becomes enabled before interaction.",
+                      screenshotId: "click-run-button",
+                      target: "[data-testid='run-tests-button']"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      planning: {
+        repoCandidates: [],
+        plannerSections: [],
+        reviewNotes: [],
+        linearPlan: {
+          mode: "new"
+        }
+      },
+      executionPlan: {
+        primarySourceId: "intent-poc-app",
+        sources: [
+          {
+            sourceId: "intent-poc-app",
+            selectionReason: "Requested source.",
+            captureScope: {
+              mode: "all",
+              captureIds: []
+            },
+            warnings: []
+          }
+        ],
+        destinations: [],
+        tools: [],
+        orchestrationStrategy: "single-source",
+        reviewNotes: []
+      },
+      sourceId: "intent-poc-app",
+      captureScope: {
+        mode: "all",
+        captureIds: []
+      },
+      artifacts: {
+        requireScreenshots: true,
+        requireManifest: true,
+        requireHashes: true
+      },
+      linear: {
+        createIssue: false,
+        issueTitle: ""
+      },
+      execution: {
+        continueOnCaptureError: false
+      },
+      normalizationMeta: {
+        source: "rules",
+        warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
+        stages: []
+      }
+    };
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "intent-poc-app",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "intent-poc-app"
+    });
+
+    const generatedContent = await fs.readFile(result!.files[0]!, "utf8");
+    assert.equal(
+      generatedContent.includes('await expect(target, "The run button becomes enabled before interaction.").toBeEnabled();'),
+      true
+    );
+    assert.equal(generatedContent.includes("await target.click();"), true);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("writeGeneratedPlaywrightTests Given a checkpoint timeout When specs are generated Then the timeout is emitted on waits and assertions", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-timeout-"));
+
+  try {
+    const source = {
+      ...buildIntentPocAppBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent: NormalizedIntent = {
+      intentId: "intent-timeout-checkpoint",
+      receivedAt: new Date().toISOString(),
+      rawPrompt: "Wait for the reviewed draft state in Intent Studio.",
+      summary: "change behavior for intent-poc-app",
+      intentType: "change-behavior",
+      businessIntent: {
+        statement: "Wait for the reviewed draft state in Intent Studio.",
+        desiredOutcome: "The reviewed draft wait uses an explicit timeout.",
+        acceptanceCriteria: [],
+        scenarios: [],
+        workItems: [
+          {
+            id: "work-1-reviewed-draft-timeout-intent-poc-app",
+            type: "playwright-spec",
+            verificationMode: "tracked-playwright",
+            title: "Reviewed draft timeout",
+            description: "Verify the reviewed draft wait uses an explicit timeout.",
+            scenarioIds: [],
+            sourceIds: ["intent-poc-app"],
+            userVisibleOutcome: "The reviewed draft wait uses an explicit timeout.",
+            verification: "The reviewed draft wait uses an explicit timeout.",
+            execution: {
+              order: 1,
+              dependsOnWorkItemIds: []
+            },
+            playwright: {
+              generatedBy: "rules",
+              specs: [
+                {
+                  framework: "playwright",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/reviewed-draft-timeout.spec.ts",
+                  suiteName: "Intent-driven flow for intent-poc-app",
+                  testName: "Reviewed draft timeout",
+                  scenarioIds: [],
+                  checkpoints: [
+                    {
+                      id: "checkpoint-open-studio",
+                      label: "Open Studio",
+                      action: "goto",
+                      assertion: "Studio loads.",
+                      screenshotId: "open-studio",
+                      path: "/",
+                      waitUntil: "domcontentloaded"
+                    },
+                    {
+                      id: "checkpoint-reviewed-draft-ready",
+                      label: "Scoping Draft Ready",
+                      action: "assert-visible",
+                      assertion: "The reviewed draft becomes visible.",
+                      screenshotId: "reviewed-draft-ready",
+                      locator: "text=Scoping IDD draft ready.",
+                      timeoutMs: 30_000
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      planning: {
+        repoCandidates: [],
+        plannerSections: [],
+        reviewNotes: [],
+        linearPlan: {
+          mode: "new"
+        }
+      },
+      executionPlan: {
+        primarySourceId: "intent-poc-app",
+        sources: [
+          {
+            sourceId: "intent-poc-app",
+            selectionReason: "Requested source.",
+            captureScope: {
+              mode: "all",
+              captureIds: []
+            },
+            warnings: []
+          }
+        ],
+        destinations: [],
+        tools: [],
+        orchestrationStrategy: "single-source",
+        reviewNotes: []
+      },
+      sourceId: "intent-poc-app",
+      captureScope: {
+        mode: "all",
+        captureIds: []
+      },
+      artifacts: {
+        requireScreenshots: true,
+        requireManifest: true,
+        requireHashes: true
+      },
+      linear: {
+        createIssue: false,
+        issueTitle: ""
+      },
+      execution: {
+        continueOnCaptureError: false
+      },
+      normalizationMeta: {
+        source: "rules",
+        warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
+        stages: []
+      }
+    };
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "intent-poc-app",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "intent-poc-app"
+    });
+
+    const generatedContent = await fs.readFile(result!.files[0]!, "utf8");
+    assert.equal(generatedContent.includes('text=Scoping IDD draft ready.'), true);
+    assert.equal(generatedContent.includes("test.setTimeout("), true);
+    assert.equal(
+      generatedContent.includes('await expect(target, "The reviewed draft becomes visible.").toBeVisible({ timeout: 30000 });'),
+      true
+    );
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("writeGeneratedPlaywrightTests Given a three-checkpoint visual flow When specs are generated Then the test timeout includes screenshot budget", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-timeout-budget-"));
+
+  try {
+    const source = {
+      ...buildIntentPocAppBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent: NormalizedIntent = {
+      intentId: "intent-timeout-budget-checkpoint",
+      receivedAt: new Date().toISOString(),
+      rawPrompt: "Verify the status indicator remains visible across the theme flow.",
+      summary: "change behavior for intent-poc-app",
+      intentType: "change-behavior",
+      businessIntent: {
+        statement: "Verify the status indicator remains visible across the theme flow.",
+        desiredOutcome: "The generated spec has enough time to capture visual evidence for every checkpoint.",
+        acceptanceCriteria: [],
+        scenarios: [],
+        workItems: [
+          {
+            id: "work-1-timeout-budget-intent-poc-app",
+            type: "playwright-spec",
+            verificationMode: "tracked-playwright",
+            title: "Timeout budget visual flow",
+            description: "Ensure generated test timeouts account for checkpoint screenshots.",
+            scenarioIds: [],
+            sourceIds: ["intent-poc-app"],
+            userVisibleOutcome: "The generated spec finishes without timing out during evidence capture.",
+            verification: "A generated Playwright spec captures reviewable screenshots so QA can run this verification automatically.",
+            execution: {
+              order: 1,
+              dependsOnWorkItemIds: []
+            },
+            playwright: {
+              generatedBy: "rules",
+              specs: [
+                {
+                  framework: "playwright",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/timeout-budget-visual-flow.spec.ts",
+                  suiteName: "Intent Studio Timeout Budget",
+                  testName: "Timeout budget visual flow",
+                  scenarioIds: [],
+                  checkpoints: [
+                    {
+                      id: "checkpoint-1",
+                      label: "Open Studio",
+                      action: "goto",
+                      assertion: "Intent Studio loads.",
+                      screenshotId: "open-studio",
+                      path: "/"
+                    },
+                    {
+                      id: "checkpoint-2",
+                      label: "Toggle dark mode",
+                      action: "click",
+                      assertion: "Dark mode toggles.",
+                      screenshotId: "toggle-dark-mode",
+                      target: "#dark-mode-toggle"
+                    },
+                    {
+                      id: "checkpoint-3",
+                      label: "Indicator visible",
+                      action: "assert-visible",
+                      assertion: "Indicator stays visible.",
+                      screenshotId: "indicator-visible",
+                      target: "[data-testid='test-status-indicator']"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      planning: {
+        repoCandidates: [],
+        plannerSections: [],
+        reviewNotes: [],
+        linearPlan: {
+          mode: "new"
+        }
+      },
+      executionPlan: {
+        primarySourceId: "intent-poc-app",
+        sources: [
+          {
+            sourceId: "intent-poc-app",
+            selectionReason: "Requested source.",
+            captureScope: {
+              mode: "all",
+              captureIds: []
+            },
+            warnings: []
+          }
+        ],
+        destinations: [],
+        tools: [],
+        orchestrationStrategy: "single-source",
+        reviewNotes: []
+      },
+      sourceId: "intent-poc-app",
+      captureScope: {
+        mode: "all",
+        captureIds: []
+      },
+      artifacts: {
+        requireScreenshots: true,
+        requireManifest: true,
+        requireHashes: true
+      },
+      linear: {
+        createIssue: false,
+        issueTitle: ""
+      },
+      execution: {
+        continueOnCaptureError: false
+      },
+      normalizationMeta: {
+        source: "rules",
+        warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
+        stages: []
+      }
+    };
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "intent-poc-app",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "intent-poc-app"
+    });
+
+    const generatedContent = await fs.readFile(result!.files[0]!, "utf8");
+    assert.equal(generatedContent.includes("test.setTimeout(45000);"), true);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("writeGeneratedPlaywrightTests Given an attribute-contains checkpoint When specs are generated Then the spec waits for the attribute substring before reading it", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-attribute-contains-"));
+
+  try {
+    const source = {
+      ...buildIntentPocAppBehaviorSource(rootDir),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent: NormalizedIntent = {
+      intentId: "intent-attribute-contains-checkpoint",
+      receivedAt: new Date().toISOString(),
+      rawPrompt: "Wait for workflow readiness before starting the run.",
+      summary: "change behavior for intent-poc-app",
+      intentType: "change-behavior",
+      businessIntent: {
+        statement: "Wait for workflow readiness before starting the run.",
+        desiredOutcome: "Generated attribute checkpoints wait for the expected substring.",
+        acceptanceCriteria: [],
+        scenarios: [],
+        workItems: [
+          {
+            id: "work-1-attribute-contains-intent-poc-app",
+            type: "playwright-spec",
+            verificationMode: "tracked-playwright",
+            title: "Attribute contains waits",
+            description: "Verify generated attribute assertions wait for matching values.",
+            scenarioIds: [],
+            sourceIds: ["intent-poc-app"],
+            userVisibleOutcome: "Generated attribute assertions wait for matching values.",
+            verification: "Generated attribute assertions wait for matching values.",
+            execution: {
+              order: 1,
+              dependsOnWorkItemIds: []
+            },
+            playwright: {
+              generatedBy: "rules",
+              specs: [
+                {
+                  framework: "playwright",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/attribute-contains.spec.ts",
+                  suiteName: "Intent-driven flow for intent-poc-app",
+                  testName: "Attribute contains waits",
+                  scenarioIds: [],
+                  checkpoints: [
+                    {
+                      id: "checkpoint-workflow-readiness",
+                      label: "Workflow Readiness Ready",
+                      action: "assert-attribute-contains",
+                      assertion: "Workflow readiness resolves before the run starts.",
+                      screenshotId: "workflow-readiness-ready",
+                      target: "#workflow-readiness-status",
+                      attributeName: "class",
+                      expectedSubstring: "target-ready",
+                      timeoutMs: 30_000
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      planning: {
+        repoCandidates: [],
+        plannerSections: [],
+        reviewNotes: [],
+        linearPlan: {
+          mode: "new"
+        }
+      },
+      executionPlan: {
+        primarySourceId: "intent-poc-app",
+        sources: [
+          {
+            sourceId: "intent-poc-app",
+            selectionReason: "Requested source.",
+            captureScope: {
+              mode: "all",
+              captureIds: []
+            },
+            warnings: []
+          }
+        ],
+        destinations: [],
+        tools: [],
+        orchestrationStrategy: "single-source",
+        reviewNotes: []
+      },
+      sourceId: "intent-poc-app",
+      captureScope: {
+        mode: "all",
+        captureIds: []
+      },
+      artifacts: {
+        requireScreenshots: true,
+        requireManifest: true,
+        requireHashes: true
+      },
+      linear: {
+        createIssue: false,
+        issueTitle: ""
+      },
+      execution: {
+        continueOnCaptureError: false
+      },
+      normalizationMeta: {
+        source: "rules",
+        warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
+        stages: []
+      }
+    };
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "intent-poc-app",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "intent-poc-app"
+    });
+
+    const generatedContent = await fs.readFile(result!.files[0]!, "utf8");
+    assert.equal(
+      generatedContent.includes('await expect(target, "Workflow readiness resolves before the run starts.").toHaveAttribute("class", new RegExp("target-ready"), { timeout: 30000 });'),
+      true
+    );
+    assert.equal(generatedContent.includes('const attributeValue = await target.getAttribute("class");'), true);
+  } finally {
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("writeGeneratedPlaywrightTests Given a goto checkpoint without waitUntil When UI-state specs are generated Then the writer defaults to domcontentloaded", async () => {
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "intent-poc-playwright-goto-default-"));
+
+  try {
+    const source = {
+      ...buildBehaviorSource({
+        rootDir,
+        aliases: ["intent-poc-app", "studio"],
+        planning: {
+          repoId: "intent-poc",
+          repoLabel: "Intent POC",
+          role: "controller-and-demo-source",
+          notes: [],
+          verificationNotes: ["Verify the requested UI state before trusting screenshot evidence."],
+          uiStates: [
+            {
+              id: "theme-mode",
+              label: "Theme mode",
+              description: "The demo app supports light and dark theme states that affect visual evidence.",
+              activation: [
+                {
+                  type: "query-param",
+                  target: "dark",
+                  values: {
+                    light: "false",
+                    dark: "true"
+                  },
+                  notes: []
+                }
+              ],
+              verificationStrategies: ["query-param-playwright"],
+              notes: []
+            }
+          ]
+        },
+        startCommand: "echo start",
+        baseUrl: "http://127.0.0.1:6006",
+        captureItems: [
+          {
+            id: "studio-home",
+            name: "Studio Home",
+            path: "/",
+            locator: "#prompt-input",
+            waitForSelector: "#prompt-input",
+            maskSelectors: [],
+            delayMs: 0
+          }
+        ]
+      }),
+      testing: {
+        playwright: {
+          enabled: true,
+          outputDir: "tests/intent"
+        }
+      }
+    };
+
+    const normalizedIntent: NormalizedIntent = {
+      intentId: "intent-goto-default-waituntil",
+      receivedAt: new Date().toISOString(),
+      rawPrompt: "Open Intent Studio in light mode.",
+      summary: "change behavior for intent-poc-app",
+      intentType: "change-behavior",
+      businessIntent: {
+        statement: "Open Intent Studio in light mode.",
+        desiredOutcome: "The Studio loads in light mode.",
+        acceptanceCriteria: [],
+        scenarios: [],
+        workItems: [
+          {
+            id: "work-1-open-studio-intent-poc-app",
+            type: "playwright-spec",
+            verificationMode: "tracked-playwright",
+            title: "Open Studio",
+            description: "Verify the Studio route opens without relying on networkidle.",
+            scenarioIds: [],
+            sourceIds: ["intent-poc-app"],
+            userVisibleOutcome: "The Studio loads in light mode.",
+            verification: "The Studio route loads in light mode.",
+            execution: {
+              order: 1,
+              dependsOnWorkItemIds: []
+            },
+            playwright: {
+              generatedBy: "rules",
+              specs: [
+                {
+                  framework: "playwright",
+                  sourceId: "intent-poc-app",
+                  relativeSpecPath: "intent-poc-app/open-studio.spec.ts",
+                  suiteName: "Intent-driven flow for intent-poc-app",
+                  testName: "Open Studio",
+                  scenarioIds: [],
+                  requiredUiStates: [
+                    {
+                      stateId: "theme-mode",
+                      label: "Theme mode",
+                      description: "The demo app supports light and dark theme states that affect visual evidence.",
+                      requestedValue: "light",
+                      activation: [
+                        {
+                          type: "query-param",
+                          target: "dark",
+                          values: {
+                            light: "false",
+                            dark: "true"
+                          },
+                          notes: []
+                        }
+                      ],
+                      verificationStrategies: ["query-param-playwright"],
+                      notes: [],
+                      reason: "Requested UI states: theme-mode=light."
+                    }
+                  ],
+                  checkpoints: [
+                    {
+                      id: "checkpoint-open-studio",
+                      label: "Open Studio",
+                      action: "goto",
+                      assertion: "The Studio route loads in light mode.",
+                      screenshotId: "open-studio",
+                      path: "/?dark=false"
+                    },
+                    {
+                      id: "checkpoint-prompt-visible",
+                      label: "Prompt Visible",
+                      action: "assert-visible",
+                      assertion: "The prompt input is visible.",
+                      screenshotId: "prompt-visible",
+                      target: "#prompt-input"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      planning: {
+        repoCandidates: [],
+        plannerSections: [],
+        reviewNotes: [],
+        linearPlan: {
+          mode: "new"
+        }
+      },
+      executionPlan: {
+        primarySourceId: "intent-poc-app",
+        sources: [
+          {
+            sourceId: "intent-poc-app",
+            selectionReason: "Requested source.",
+            captureScope: {
+              mode: "all",
+              captureIds: []
+            },
+            warnings: []
+          }
+        ],
+        destinations: [],
+        tools: [],
+        orchestrationStrategy: "single-source",
+        reviewNotes: []
+      },
+      sourceId: "intent-poc-app",
+      captureScope: {
+        mode: "all",
+        captureIds: []
+      },
+      artifacts: {
+        requireScreenshots: true,
+        requireManifest: true,
+        requireHashes: true
+      },
+      linear: {
+        createIssue: false,
+        issueTitle: ""
+      },
+      execution: {
+        continueOnCaptureError: false
+      },
+      normalizationMeta: {
+        source: "rules",
+        warnings: [],
+        requestedPlanningDepth: "full",
+        effectivePlanningDepth: "full",
+        ambiguity: {
+          isAmbiguous: false,
+          reasons: []
+        },
+        stages: []
+      }
+    };
+
+    const result = await writeGeneratedPlaywrightTests({
+      workspace: {
+        sourceId: "intent-poc-app",
+        source,
+        rootDir,
+        appDir: rootDir,
+        baseUrl: source.app.baseUrl,
+        sourceType: source.source.type
+      },
+      normalizedIntent,
+      sourceId: "intent-poc-app"
+    });
+
+    const specPath = result?.files.find((filePath) => filePath.includes("open-studio"));
+    assert.ok(specPath);
+
+    const generatedContent = await fs.readFile(specPath!, "utf8");
+    assert.equal(
+      generatedContent.includes('await page.goto(buildUrlWithUiStates("/?dark=false", requiredUiStates), { waitUntil: "domcontentloaded" });'),
+      true
+    );
   } finally {
     await fs.rm(rootDir, { recursive: true, force: true });
   }

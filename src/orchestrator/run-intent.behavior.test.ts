@@ -614,11 +614,13 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
     }
   });
 
+  const generatedSpecPath = `/tmp/intent-poc/tests/intent/${normalizedIntent.businessIntent.workItems[0]!.playwright.specs[0]!.relativeSpecPath}`;
+
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
     sourceId: "intent-poc-app",
     activeWorkItemIds: [normalizedIntent.businessIntent.workItems[0]!.id],
-    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/intent-poc-app/work-1.spec.ts"],
+    generatedPlaywrightTests: [generatedSpecPath],
     implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
     workspaceRootDir: "/tmp/intent-poc"
   });
@@ -635,7 +637,55 @@ test("buildQAVerificationExecutionPlan Given active Playwright work with generat
     })),
     [{ stateId: "theme-mode", requestedValue: "dark" }]
   );
-  assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
+  assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test --workers=1/);
+});
+
+test("buildQAVerificationExecutionPlan Given retry-scoped Playwright work When QA planning runs Then it only runs specs for the active work item", () => {
+  const normalizedIntent = normalizeIntent({
+    rawPrompt:
+      "The space under the prompt run input box and instructions must be collapsable in dark mode. All the optional config and setup should be collapsable.",
+    defaultSourceId: "intent-poc-app",
+    continueOnCaptureError: false,
+    availableSources: {
+      "intent-poc-app": buildIntentPocAppBehaviorSource("/tmp/intent-poc")
+    }
+  });
+
+  const inactiveWorkItem = normalizedIntent.businessIntent.workItems[0]!;
+  const activeWorkItem = {
+    ...inactiveWorkItem,
+    id: "work-2-retry-scope",
+    title: "Retry scope only",
+    playwright: {
+      generatedBy: inactiveWorkItem.playwright.generatedBy,
+      specs: [
+        {
+          ...inactiveWorkItem.playwright.specs[0]!,
+          relativeSpecPath: "intent-poc-app/retry-scope-only.spec.ts",
+          testName: "Retry scope only"
+        }
+      ]
+    }
+  };
+  normalizedIntent.businessIntent.workItems.push(activeWorkItem);
+
+  const activeSpecPath = `/tmp/intent-poc/tests/intent/${activeWorkItem.playwright.specs[0]!.relativeSpecPath}`;
+  const inactiveSpecPath = `/tmp/intent-poc/tests/intent/${inactiveWorkItem.playwright.specs[0]!.relativeSpecPath}`;
+
+  const plan = buildQAVerificationExecutionPlan({
+    normalizedIntent,
+    sourceId: "intent-poc-app",
+    activeWorkItemIds: [activeWorkItem.id],
+    generatedPlaywrightTests: [inactiveSpecPath, activeSpecPath],
+    implementationFileOperations: [{ operation: "replace", filePath: "src/demo-app/render/render-intent-studio-page.ts", rationale: "ui", status: "applied" }],
+    workspaceRootDir: "/tmp/intent-poc"
+  });
+
+  assert.equal(plan.error, undefined);
+  assert.equal(
+    plan.commands?.[1]?.command,
+    `npx playwright test --workers=1 "tests/intent/${activeWorkItem.playwright.specs[0]!.relativeSpecPath}"`
+  );
 });
 
 test("buildQAVerificationExecutionPlan Given active targeted code-validation work When QA planning runs Then it falls back to targeted code regression", () => {
@@ -700,11 +750,13 @@ test("buildQAVerificationExecutionPlan Given mixed verification modes When QA pl
     }
   });
 
+  const generatedSpecPath = `/tmp/intent-poc/tests/intent/${normalizedIntent.businessIntent.workItems[0]!.playwright.specs[0]!.relativeSpecPath}`;
+
   const plan = buildQAVerificationExecutionPlan({
     normalizedIntent,
     sourceId: "intent-poc-app",
     activeWorkItemIds: normalizedIntent.businessIntent.workItems.map((workItem) => workItem.id),
-    generatedPlaywrightTests: ["/tmp/intent-poc/tests/intent/intent-poc-app/work-1.spec.ts"],
+    generatedPlaywrightTests: [generatedSpecPath],
     implementationFileOperations: [{ operation: "replace", filePath: "src/orchestrator/run-intent.ts", rationale: "qa", status: "applied" }],
     workspaceRootDir: "/tmp/intent-poc"
   });
@@ -714,7 +766,7 @@ test("buildQAVerificationExecutionPlan Given mixed verification modes When QA pl
     plan.commands?.map((command) => command.label),
     ["typecheck", "generated-playwright", "test-code-targeted"]
   );
-  assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test/);
+  assert.match(plan.commands?.[1]?.command ?? "", /npx playwright test --workers=1/);
   assert.equal(
     plan.commands?.[2]?.command,
     'npm run test:code -- "src/orchestrator/run-intent.behavior.test.ts"'

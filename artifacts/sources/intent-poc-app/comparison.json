@@ -1,11 +1,10 @@
 {
-  "runId": "2026-04-22T04-33-51-900Z-intent-poc-app",
+  "runId": "2026-04-22T20-04-52-960Z-intent-poc-app",
   "sourceId": "intent-poc-app",
-  "status": "failed",
-  "error": "QA verification failed for source 'intent-poc-app' on attempt 2: Command failed (1). Progress: completed 1/1 targeted work items.",
+  "status": "completed",
   "businessIntent": {
-    "statement": "Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests to enable live monitoring of code state.",
-    "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+    "statement": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+    "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
     "sourceIds": [
       "intent-poc-app"
     ],
@@ -25,13 +24,11 @@
   },
   "captureCoverage": {
     "configuredCaptureCount": 48,
-    "executedCaptureCount": 0,
+    "executedCaptureCount": 48,
     "scopeMode": "all",
     "scopeCaptureIds": []
   },
-  "warnings": [
-    "Requested UI states: theme-mode=light."
-  ],
+  "warnings": [],
   "comparisonIssues": [],
   "items": []
 }

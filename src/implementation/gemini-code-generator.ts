@@ -681,6 +681,9 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
       )
     )
   );
+  const highlightedVerificationNotes = dedupeStrings(
+    input.activeWorkItems.flatMap((workItem) => workItem.verificationNotes)
+  );
 
   return [
     "You are selecting the minimal bounded file operations needed to implement one source lane for an intent-driven development runner.",
@@ -715,6 +718,12 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
           JSON.stringify(input.sourceUiStateRequirements, null, 2)
         ]
       : []),
+    ...(highlightedVerificationNotes.length > 0
+      ? [
+          "Highlighted downstream verification expectations:",
+          JSON.stringify(highlightedVerificationNotes, null, 2)
+        ]
+      : []),
     "Acceptance criteria:",
     JSON.stringify(input.acceptanceCriteria, null, 2),
     "Relevant scenarios:",
@@ -737,7 +746,8 @@ function buildPlanningPrompt(input: ImplementationPromptContext): string {
     ...(requiredSelectors.length > 0
       ? [
           "Required selectors referenced by the tracked Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
-          JSON.stringify(requiredSelectors, null, 2)
+          JSON.stringify(requiredSelectors, null, 2),
+          "If the change needs a new selector, add it intentionally on the owning UI surface instead of silently replacing an existing contract."
         ]
       : []),
     ...(requiredRelationships.length > 0
@@ -778,6 +788,9 @@ function buildMaterializationPrompt(input: {
       )
     )
   );
+  const highlightedVerificationNotes = dedupeStrings(
+    input.context.activeWorkItems.flatMap((workItem) => workItem.verificationNotes)
+  );
 
   return [
     "You are materializing full file contents for a bounded implementation change set.",
@@ -795,10 +808,17 @@ function buildMaterializationPrompt(input: {
     JSON.stringify(input.context.relevantFiles, null, 2),
     "Tracked Playwright specs:",
     JSON.stringify(input.context.generatedSpecs, null, 2),
+    ...(highlightedVerificationNotes.length > 0
+      ? [
+          "Highlighted downstream verification expectations:",
+          JSON.stringify(highlightedVerificationNotes, null, 2)
+        ]
+      : []),
     ...(requiredSelectors.length > 0
       ? [
           "Required selectors referenced by the tracked Playwright specs. Preserve these exactly in the final source when editing the owning UI:",
-          JSON.stringify(requiredSelectors, null, 2)
+          JSON.stringify(requiredSelectors, null, 2),
+          "If the change needs a new selector, add it intentionally on the owning UI surface instead of silently replacing an existing contract."
         ]
       : []),
     ...(requiredRelationships.length > 0

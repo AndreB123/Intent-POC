@@ -317,13 +317,40 @@ function extractRequiredElementIds(workItems: TDDWorkItem[]): string[] {
   return Array.from(ids).sort();
 }
 
+function extractRequiredDataTestIds(workItems: TDDWorkItem[]): string[] {
+  const testIds = new Set<string>();
+
+  for (const workItem of workItems) {
+    for (const spec of workItem.playwright.specs) {
+      for (const checkpoint of spec.checkpoints) {
+        for (const selector of [checkpoint.target, checkpoint.locator, checkpoint.waitForSelector]) {
+          if (!selector) {
+            continue;
+          }
+
+          for (const match of selector.matchAll(/\[data-testid=(['"])([^'"]+)\1\]/g)) {
+            testIds.add(match[2]);
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(testIds).sort();
+}
+
+function includesAttributeValue(content: string, attributeName: string, value: string): boolean {
+  return new RegExp(`${attributeName}=("|')${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\1`).test(content);
+}
+
 function validateRequiredSelectorsRetained(input: {
   operations: Array<{ operation: "create" | "replace" | "delete"; filePath: string }>;
   existingFiles: ImplementationExistingFileContext[];
   materializedFiles: Array<{ filePath: string; content: string }>;
   requiredElementIds: string[];
+  requiredDataTestIds: string[];
 }): void {
-  if (input.requiredElementIds.length === 0) {
+  if (input.requiredElementIds.length === 0 && input.requiredDataTestIds.length === 0) {
     return;
   }
 
@@ -343,10 +370,19 @@ function validateRequiredSelectorsRetained(input: {
     const droppedIds = input.requiredElementIds.filter(
       (id) => existingContent.includes(`id="${id}"`) && !nextContent.includes(`id="${id}"`)
     );
+    const droppedDataTestIds = input.requiredDataTestIds.filter(
+      (testId) => includesAttributeValue(existingContent, "data-testid", testId) && !includesAttributeValue(nextContent, "data-testid", testId)
+    );
 
     if (droppedIds.length > 0) {
       throw new Error(
         `Implementation removed required selector ids from ${filePath}: ${droppedIds.map((id) => `#${id}`).join(", ")}`
+      );
+    }
+
+    if (droppedDataTestIds.length > 0) {
+      throw new Error(
+        `Implementation removed required selector test ids from ${filePath}: ${droppedDataTestIds.map((testId) => `[data-testid='${testId}']`).join(", ")}`
       );
     }
   }
@@ -441,6 +477,7 @@ export async function executeImplementationStage(
       (workItem) => input.remainingWorkItemIds.includes(workItem.id) && !input.activeWorkItemIds.includes(workItem.id)
     );
     const requiredElementIds = extractRequiredElementIds(activeWorkItems);
+    const requiredDataTestIds = extractRequiredDataTestIds(activeWorkItems);
     const relevantFiles = await activeDependencies.collectRelevantFiles({
       rootDir: input.workspace.rootDir,
       rawPrompt: input.normalizedIntent.rawPrompt,
@@ -567,7 +604,8 @@ export async function executeImplementationStage(
       operations: plannedChangeSet.operations,
       existingFiles,
       materializedFiles: materializedChangeSet.files,
-      requiredElementIds
+      requiredElementIds,
+      requiredDataTestIds
     });
 
     const applyStartedAt = new Date().toISOString();

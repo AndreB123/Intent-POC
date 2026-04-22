@@ -9,8 +9,38 @@ export interface GeneratedPlaywrightSpecBundle {
   files: string[];
 }
 
+const DEFAULT_CHECKPOINT_TIMEOUT_MS = 5_000;
+const GENERATED_TEST_TIMEOUT_SLACK_MS = 15_000;
+const GENERATED_TEST_TIMEOUT_PER_CHECKPOINT_MS = 5_000;
+
 function quote(value: string): string {
   return JSON.stringify(value);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildAttributeContainsPattern(value: string): string {
+  return `new RegExp(${quote(escapeRegExp(value))})`;
+}
+
+function buildExpectArgument(timeoutMs?: number): string {
+  return timeoutMs ? `{ timeout: ${timeoutMs} }` : "";
+}
+
+function buildWaitForSelectorOptions(input: { state?: "hidden"; timeoutMs?: number }): string {
+  const options: string[] = [];
+
+  if (input.state) {
+    options.push(`state: ${quote(input.state)}`);
+  }
+
+  if (input.timeoutMs) {
+    options.push(`timeout: ${input.timeoutMs}`);
+  }
+
+  return options.length > 0 ? `, { ${options.join(", ")} }` : "";
 }
 
 function sanitizeOutputFileName(input: string, fallback: string): string {
@@ -169,7 +199,9 @@ function buildCheckpointLines(
     }
 
     if (checkpoint.waitForSelector) {
-      lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
+      lines.push(
+        `      await page.waitForSelector(${quote(checkpoint.waitForSelector)}${buildWaitForSelectorOptions({ timeoutMs: checkpoint.timeoutMs })});`
+      );
     }
 
     if (input.hasRequiredUiStates && checkpoint.path) {
@@ -185,15 +217,19 @@ function buildCheckpointLines(
 
   if (checkpoint.action === "goto") {
     lines.push(
-      `      await page.goto(${urlExpression}, { waitUntil: ${quote(checkpoint.waitUntil ?? "networkidle")} });`
+      `      await page.goto(${urlExpression}, { waitUntil: ${quote(checkpoint.waitUntil ?? "domcontentloaded")} });`
     );
   }
 
   if (checkpoint.waitForSelector) {
     if (checkpoint.action === "assert-hidden") {
-      lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)}, { state: "hidden" });`);
+      lines.push(
+        `      await page.waitForSelector(${quote(checkpoint.waitForSelector)}${buildWaitForSelectorOptions({ state: "hidden", timeoutMs: checkpoint.timeoutMs })});`
+      );
     } else {
-      lines.push(`      await page.waitForSelector(${quote(checkpoint.waitForSelector)});`);
+      lines.push(
+        `      await page.waitForSelector(${quote(checkpoint.waitForSelector)}${buildWaitForSelectorOptions({ timeoutMs: checkpoint.timeoutMs })});`
+      );
     }
   }
 
@@ -214,7 +250,10 @@ function buildCheckpointLines(
 
   if (checkpoint.action === "assert-attribute-contains") {
     lines.push(`      const target = page.locator(${quote(checkpoint.target ?? checkpoint.locator ?? "body")}).first();`);
-    lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible();`);
+    lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible(${buildExpectArgument(checkpoint.timeoutMs)});`);
+    lines.push(
+      `      await expect(target, ${quote(checkpoint.assertion)}).toHaveAttribute(${quote(checkpoint.attributeName ?? "href")}, ${buildAttributeContainsPattern(checkpoint.expectedSubstring ?? "")}${buildExpectArgument(checkpoint.timeoutMs) ? `, ${buildExpectArgument(checkpoint.timeoutMs)}` : ""});`
+    );
     lines.push(`      const attributeValue = await target.getAttribute(${quote(checkpoint.attributeName ?? "href")});`);
     lines.push(`      expect(attributeValue, ${quote(checkpoint.assertion)}).toBeTruthy();`);
     lines.push(`      expect(attributeValue ?? "", ${quote(checkpoint.assertion)}).toContain(${quote(checkpoint.expectedSubstring ?? "")});`);
@@ -233,12 +272,13 @@ function buildCheckpointLines(
   ) {
     lines.push(`      const target = page.locator(${quote(checkpoint.target ?? checkpoint.locator ?? "body")});`);
     if (checkpoint.action === "assert-hidden") {
-      lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeHidden();`);
+      lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeHidden(${buildExpectArgument(checkpoint.timeoutMs)});`);
     } else {
-      lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible();`);
+      lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible(${buildExpectArgument(checkpoint.timeoutMs)});`);
     }
 
     if (checkpoint.action === "click") {
+      lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeEnabled(${buildExpectArgument(checkpoint.timeoutMs)});`);
       lines.push(`      await target.click();`);
     }
 
@@ -255,7 +295,7 @@ function buildCheckpointLines(
 
   if (checkpoint.locator) {
     lines.push(`      const target = page.locator(${quote(checkpoint.locator)});`);
-    lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible();`);
+    lines.push(`      await expect(target, ${quote(checkpoint.assertion)}).toBeVisible(${buildExpectArgument(checkpoint.timeoutMs)});`);
     lines.push(`      const screenshotPath = ${screenshotPathExpression};`);
     lines.push("      await mkdir(path.dirname(screenshotPath), { recursive: true });");
     lines.push("      await target.screenshot({ path: screenshotPath });");
@@ -269,6 +309,19 @@ function buildCheckpointLines(
   lines.push("      await page.screenshot({ path: screenshotPath, fullPage: true });");
   lines.push(`    });`);
   return lines;
+}
+
+function buildGeneratedTestTimeoutMs(spec: PlaywrightSpecArtifact, variantCount: number): number {
+  const checkpointBudgetMs = spec.checkpoints.reduce((total, checkpoint) => {
+    return total + (checkpoint.timeoutMs ?? DEFAULT_CHECKPOINT_TIMEOUT_MS);
+  }, 0);
+
+  return Math.max(
+    30_000,
+    variantCount * checkpointBudgetMs
+      + variantCount * spec.checkpoints.length * GENERATED_TEST_TIMEOUT_PER_CHECKPOINT_MS
+      + GENERATED_TEST_TIMEOUT_SLACK_MS
+  );
 }
 
 function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshotRoot: string): string {
@@ -430,6 +483,9 @@ function buildSpecFile(spec: PlaywrightSpecArtifact, baseUrl: string, screenshot
           uiStateVariableName: "requiredUiStates"
         }
       ];
+  const generatedTestTimeoutMs = buildGeneratedTestTimeoutMs(spec, checkpointVariants.length);
+
+  lines.push(`    test.setTimeout(${generatedTestTimeoutMs});`);
 
   for (const variant of checkpointVariants) {
     for (const [index, checkpoint] of spec.checkpoints.entries()) {

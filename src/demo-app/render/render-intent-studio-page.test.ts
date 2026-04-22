@@ -25,6 +25,7 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
   assert.match(html, /implementation, QA, screenshots, comparison, and artifacts/);
   assert.ok(promptInputIndex >= 0);
   assert.ok(submitButtonIndex > promptInputIndex);
+  assert.match(html, /id="submit-button"[^>]*data-testid="run-tests-button"/);
   assert.ok(workScopeIndex > submitButtonIndex);
   assert.ok(stepsPanelIndex > submitButtonIndex);
   assert.match(html, /id="step-bdd"/);
@@ -52,5 +53,8 @@ test("renderIntentStudioPage Given the default studio shell When rendered Then i
   assert.match(html, /fetch\("\/api\/plan"/);
   assert.match(html, /fetch\("\/api\/drafts\/" \+ encodeURIComponent\(previewDraft\.draftId\)/);
   assert.match(html, /fetch\("\/api\/runs"/);
+  assert.match(html, /const sourceRuns = Array\.isArray\(run\.sourceRuns\) \? run\.sourceRuns : \[\];/);
+  assert.match(html, /const isRunning = run\.status === "running" \|\| sourceRuns\.some/);
+  assert.match(html, /\? \(activeSourceRun && activeSourceRun\.qaCommandStateCode \? activeSourceRun\.qaCommandStateCode : "RUNNING"\)/);
   assert.match(html, /<\/html>\s*$/);
 });

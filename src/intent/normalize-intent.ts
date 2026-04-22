@@ -119,6 +119,294 @@ interface PlaywrightSpecBuildResult {
   warnings: string[];
 }
 
+const INTENT_STUDIO_SUBMIT_BUTTON_SELECTORS = ["#submit-button", "[data-testid='run-tests-button']"] as const;
+const INTENT_STUDIO_PROMPT_INPUT_SELECTOR = "#prompt-input";
+const INTENT_STUDIO_WORKFLOW_READINESS_SELECTOR = "#workflow-readiness-status";
+const INTENT_STUDIO_RUNNING_STATE_CODE_SUBSTRING = "RUNNING";
+const INTENT_STUDIO_REVIEWED_DRAFT_READY_SELECTOR = "text=Scoping IDD draft ready.";
+const INTENT_STUDIO_REVIEWED_DRAFT_TIMEOUT_MS = 30_000;
+const INTENT_STUDIO_RUNNING_STATE_TIMEOUT_MS = 45_000;
+
+function isIntentStudioRoute(pathValue: string | undefined): boolean {
+  if (!pathValue) {
+    return false;
+  }
+
+  return pathValue === "/"
+    || pathValue.startsWith("/?")
+    || pathValue === "/studio"
+    || pathValue.startsWith("/studio?")
+    || pathValue === "/intent-studio"
+    || pathValue.startsWith("/intent-studio?");
+}
+
+function normalizeIntentStudioPath(pathValue: string | undefined): string | undefined {
+  if (!pathValue || !isIntentStudioRoute(pathValue)) {
+    return pathValue;
+  }
+
+  if (pathValue === "/studio" || pathValue === "/intent-studio") {
+    return "/";
+  }
+
+  if (pathValue.startsWith("/studio?")) {
+    return `/${pathValue.slice("/studio".length)}`;
+  }
+
+  if (pathValue.startsWith("/intent-studio?")) {
+    return `/${pathValue.slice("/intent-studio".length)}`;
+  }
+
+  return pathValue;
+}
+
+function normalizeIntentStudioSelector(selector: string | undefined): string | undefined {
+  if (!selector) {
+    return selector;
+  }
+
+  if (selector.includes("[data-testid='test-status-indicator']") && selector.includes("QA_GENERATED_PLAYWRIGHT_PASSED")) {
+    return "[data-testid='test-status-indicator'][data-status='passed']";
+  }
+
+  return INTENT_STUDIO_SUBMIT_BUTTON_SELECTORS.includes(selector as (typeof INTENT_STUDIO_SUBMIT_BUTTON_SELECTORS)[number])
+    ? "[data-testid='run-tests-button']"
+    : selector;
+}
+
+function isIntentStudioPromptFillCheckpoint(checkpoint: {
+  action: PlaywrightCheckpoint["action"];
+  target?: string;
+  locator?: string;
+  waitForSelector?: string;
+}): boolean {
+  if (checkpoint.action !== "fill") {
+    return false;
+  }
+
+  return checkpoint.target === INTENT_STUDIO_PROMPT_INPUT_SELECTOR
+    || checkpoint.locator === INTENT_STUDIO_PROMPT_INPUT_SELECTOR
+    || checkpoint.waitForSelector === INTENT_STUDIO_PROMPT_INPUT_SELECTOR;
+}
+
+function isIntentStudioSubmitClickCheckpoint(checkpoint: {
+  action: PlaywrightCheckpoint["action"];
+  target?: string;
+  locator?: string;
+  waitForSelector?: string;
+}): boolean {
+  if (checkpoint.action !== "click") {
+    return false;
+  }
+
+  const normalizedTarget = normalizeIntentStudioSelector(checkpoint.target);
+  const normalizedLocator = normalizeIntentStudioSelector(checkpoint.locator);
+  const normalizedWaitForSelector = normalizeIntentStudioSelector(checkpoint.waitForSelector);
+
+  return normalizedTarget === "[data-testid='run-tests-button']"
+    || normalizedLocator === "[data-testid='run-tests-button']"
+    || normalizedWaitForSelector === "[data-testid='run-tests-button']";
+}
+
+function normalizeIntentStudioGeminiCheckpoint(checkpoint: {
+  label: string;
+  action: PlaywrightCheckpoint["action"];
+  assertion: string;
+  screenshotId: string;
+  timeoutMs?: number;
+  path?: string;
+  target?: string;
+  value?: string;
+  captureId?: string;
+  locator?: string;
+  referenceTarget?: string;
+  attributeName?: string;
+  expectedSubstring?: string;
+  waitForSelector?: string;
+  waitUntil?: PlaywrightCheckpoint["waitUntil"];
+  mockStudioState?: Record<string, unknown>;
+}): typeof checkpoint {
+  const normalizedPath = normalizeIntentStudioPath(checkpoint.path);
+  const normalizedTarget = normalizeIntentStudioSelector(checkpoint.target);
+  const normalizedLocator = normalizeIntentStudioSelector(checkpoint.locator);
+  const normalizedReferenceTarget = normalizeIntentStudioSelector(checkpoint.referenceTarget);
+  const normalizedWaitForSelector = normalizeIntentStudioSelector(checkpoint.waitForSelector);
+  const normalizedWaitUntil =
+    checkpoint.action === "goto" && isIntentStudioRoute(normalizedPath) && checkpoint.waitUntil === "networkidle"
+      ? "domcontentloaded"
+      : checkpoint.waitUntil;
+  const isReviewedDraftWait = checkpoint.action === "assert-visible"
+    && [normalizedTarget, normalizedLocator, normalizedWaitForSelector].some(
+      (value) => typeof value === "string" && /Scoping (IDD )?draft ready\./.test(value)
+    );
+  const shouldNormalizeStateCode =
+    checkpoint.action === "assert-attribute-contains"
+    && checkpoint.attributeName === "data-state-code"
+    && (normalizedTarget === "[data-testid='test-status-indicator']" || normalizedLocator === "[data-testid='test-status-indicator']");
+  const shouldExtendRunningStateTimeout = shouldNormalizeStateCode
+    && (checkpoint.expectedSubstring ?? "").length > 0;
+
+  return {
+    ...checkpoint,
+    ...(normalizedPath ? { path: normalizedPath } : {}),
+    ...(normalizedTarget
+      ? { target: /Scoping (IDD )?draft ready\./.test(normalizedTarget) ? INTENT_STUDIO_REVIEWED_DRAFT_READY_SELECTOR : normalizedTarget }
+      : {}),
+    ...(normalizedLocator
+      ? { locator: /Scoping (IDD )?draft ready\./.test(normalizedLocator) ? INTENT_STUDIO_REVIEWED_DRAFT_READY_SELECTOR : normalizedLocator }
+      : {}),
+    ...(normalizedReferenceTarget ? { referenceTarget: normalizedReferenceTarget } : {}),
+    ...(normalizedWaitForSelector
+      ? {
+          waitForSelector: /Scoping (IDD )?draft ready\./.test(normalizedWaitForSelector)
+            ? INTENT_STUDIO_REVIEWED_DRAFT_READY_SELECTOR
+            : normalizedWaitForSelector
+        }
+      : {}),
+    ...(normalizedWaitUntil ? { waitUntil: normalizedWaitUntil } : {}),
+    ...(isReviewedDraftWait ? { timeoutMs: INTENT_STUDIO_REVIEWED_DRAFT_TIMEOUT_MS } : {}),
+    ...(shouldNormalizeStateCode ? { expectedSubstring: INTENT_STUDIO_RUNNING_STATE_CODE_SUBSTRING } : {}),
+    ...(shouldExtendRunningStateTimeout
+      ? { timeoutMs: Math.max(checkpoint.timeoutMs ?? 0, INTENT_STUDIO_RUNNING_STATE_TIMEOUT_MS) }
+      : {})
+  };
+}
+
+function normalizeIntentStudioGeminiCheckpoints(checkpoints: Array<{
+  label: string;
+  action: PlaywrightCheckpoint["action"];
+  assertion: string;
+  screenshotId: string;
+  timeoutMs?: number;
+  path?: string;
+  target?: string;
+  value?: string;
+  captureId?: string;
+  locator?: string;
+  referenceTarget?: string;
+  attributeName?: string;
+  expectedSubstring?: string;
+  waitForSelector?: string;
+  waitUntil?: PlaywrightCheckpoint["waitUntil"];
+  mockStudioState?: Record<string, unknown>;
+}>): Array<{
+  label: string;
+  action: PlaywrightCheckpoint["action"];
+  assertion: string;
+  screenshotId: string;
+  timeoutMs?: number;
+  path?: string;
+  target?: string;
+  value?: string;
+  captureId?: string;
+  locator?: string;
+  referenceTarget?: string;
+  attributeName?: string;
+  expectedSubstring?: string;
+  waitForSelector?: string;
+  waitUntil?: PlaywrightCheckpoint["waitUntil"];
+  mockStudioState?: Record<string, unknown>;
+}> {
+  const normalizedCheckpoints = checkpoints.map((checkpoint) => normalizeIntentStudioGeminiCheckpoint(checkpoint));
+  const checkpointsWithSubmissionFill: typeof normalizedCheckpoints = [];
+  const firstCheckpoint = normalizedCheckpoints[0];
+  const startsAtIntentStudio = firstCheckpoint?.action === "goto" && isIntentStudioRoute(firstCheckpoint.path);
+  const submitClickCount = normalizedCheckpoints.filter((checkpoint) => isIntentStudioSubmitClickCheckpoint(checkpoint)).length;
+  const alreadyModelsWorkflowReadiness = normalizedCheckpoints.some((checkpoint) => {
+    const selector = checkpoint.target ?? checkpoint.locator ?? checkpoint.waitForSelector ?? "";
+    return checkpoint.action === "assert-attribute-contains"
+      && selector === INTENT_STUDIO_WORKFLOW_READINESS_SELECTOR
+      && checkpoint.attributeName === "class"
+      && checkpoint.expectedSubstring === "target-ready";
+  });
+  const alreadyModelsReviewedDraftWait = normalizedCheckpoints.some((checkpoint) => {
+    const selector = checkpoint.locator ?? checkpoint.target ?? "";
+    return checkpoint.action === "assert-visible" && /Scoping (IDD )?draft ready\./.test(selector);
+  });
+  let reviewedDraftFlowInjected = false;
+
+  if (!startsAtIntentStudio) {
+    checkpointsWithSubmissionFill.push({
+      label: "Navigate to Intent Studio",
+      action: "goto",
+      assertion: "Studio is loaded",
+      screenshotId: "navigate-to-intent-studio",
+      path: "/",
+      waitUntil: "domcontentloaded"
+    });
+  }
+
+  for (const checkpoint of normalizedCheckpoints) {
+    const hasPromptFill = checkpointsWithSubmissionFill.some((existingCheckpoint) => isIntentStudioPromptFillCheckpoint(existingCheckpoint));
+
+    if (isIntentStudioSubmitClickCheckpoint(checkpoint) && !hasPromptFill) {
+      checkpointsWithSubmissionFill.push({
+        label: "Fill Intent Prompt",
+        action: "fill",
+        assertion: "The prompt input is populated so the Run intent button becomes enabled.",
+        screenshotId: "intent-prompt-filled",
+        target: INTENT_STUDIO_PROMPT_INPUT_SELECTOR,
+        waitForSelector: INTENT_STUDIO_PROMPT_INPUT_SELECTOR,
+        value: "Validate the live test run indicator in Intent Studio."
+      });
+    }
+
+    if (isIntentStudioSubmitClickCheckpoint(checkpoint) && !alreadyModelsWorkflowReadiness) {
+      const hasWorkflowReadinessCheckpoint = checkpointsWithSubmissionFill.some((existingCheckpoint) => {
+        const selector = existingCheckpoint.target ?? existingCheckpoint.locator ?? existingCheckpoint.waitForSelector ?? "";
+        return existingCheckpoint.action === "assert-attribute-contains"
+          && selector === INTENT_STUDIO_WORKFLOW_READINESS_SELECTOR
+          && existingCheckpoint.attributeName === "class"
+          && existingCheckpoint.expectedSubstring === "target-ready";
+      });
+
+      if (!hasWorkflowReadinessCheckpoint) {
+        checkpointsWithSubmissionFill.push({
+          label: "Workflow Readiness Ready",
+          action: "assert-attribute-contains",
+          assertion: "The Studio workflow readiness resolves before the run button is used.",
+          screenshotId: "workflow-readiness-ready",
+          target: INTENT_STUDIO_WORKFLOW_READINESS_SELECTOR,
+          attributeName: "class",
+          expectedSubstring: "target-ready",
+          waitForSelector: INTENT_STUDIO_WORKFLOW_READINESS_SELECTOR,
+          timeoutMs: INTENT_STUDIO_REVIEWED_DRAFT_TIMEOUT_MS
+        });
+      }
+    }
+
+    if (isIntentStudioSubmitClickCheckpoint(checkpoint) && !alreadyModelsReviewedDraftWait && !reviewedDraftFlowInjected) {
+      checkpointsWithSubmissionFill.push(checkpoint);
+      checkpointsWithSubmissionFill.push({
+        label: "Scoping Draft Ready",
+        action: "assert-visible",
+        assertion: "The scoping draft is ready for approval before execution starts.",
+        screenshotId: "scoping-draft-ready",
+        locator: INTENT_STUDIO_REVIEWED_DRAFT_READY_SELECTOR,
+        timeoutMs: INTENT_STUDIO_REVIEWED_DRAFT_TIMEOUT_MS
+      });
+
+      if (submitClickCount === 1) {
+        checkpointsWithSubmissionFill.push({
+          ...checkpoint,
+          label: "Approve Reviewed Intent",
+          assertion: "The reviewed draft is approved and execution starts.",
+          screenshotId: "approve-reviewed-intent"
+        });
+      }
+
+      reviewedDraftFlowInjected = true;
+      continue;
+    }
+
+    checkpointsWithSubmissionFill.push(checkpoint);
+  }
+
+  return checkpointsWithSubmissionFill;
+}
+
+type NormalizedGeminiPlaywrightCheckpoint = ReturnType<typeof normalizeIntentStudioGeminiCheckpoints>[number];
+
 interface WorkItemBuildResult {
   workItems: NormalizedIntent["businessIntent"]["workItems"];
   decomposition?: NormalizedIntent["businessIntent"]["decomposition"];
@@ -1504,13 +1792,13 @@ function buildIntentStudioPlaywrightCheckpoints(input: {
       },
       {
         id: createPlanId("checkpoint", `${input.workItemTitle}-indicator-state-code`, checkpoints.length + 2),
-        label: "Test Status Indicator Shows QA State Code",
+        label: "Test Status Indicator Shows Running State Code",
         action: "assert-attribute-contains",
-        assertion: "The live indicator exposes the generated Playwright QA state code while verification is running.",
+        assertion: "The live indicator exposes an active running stage code while the workflow is executing.",
         screenshotId: createPlanId("shot", `${input.workItemTitle}-indicator-state-code`, checkpoints.length + 2),
         target: "[data-testid='test-status-indicator']",
         attributeName: "data-state-code",
-        expectedSubstring: "QA_GENERATED_PLAYWRIGHT_RUNNING",
+        expectedSubstring: INTENT_STUDIO_RUNNING_STATE_CODE_SUBSTRING,
         waitForSelector: "[data-testid='test-status-indicator']",
         ...checkpointUiStateFields
       },
@@ -3627,8 +3915,11 @@ function buildTddWorkItemPlanFromGemini(input: {
 
       const uiStateRequirements = sourcePlanMap.get(spec.sourceId)?.uiStateRequirements ?? [];
       const specScenarioIds = dedupeValues((spec.scenarioIds ?? scenarioIds).filter((scenarioId) => validScenarioIds.has(scenarioId)));
+      const normalizedCheckpoints: NormalizedGeminiPlaywrightCheckpoint[] = input.codeSurface.id === "intent-studio"
+        ? normalizeIntentStudioGeminiCheckpoints(spec.checkpoints)
+        : spec.checkpoints;
 
-      if (disallowMockedState && spec.checkpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")) {
+      if (disallowMockedState && normalizedCheckpoints.some((checkpoint) => checkpoint.action === "mock-studio-state")) {
         throw new Error(
           "Gemini TDD planning must use live tracked Playwright verification for Intent Studio run-indicator workflows; mocked Studio state is not allowed."
         );
@@ -3641,12 +3932,13 @@ function buildTddWorkItemPlanFromGemini(input: {
         suiteName: spec.suiteName,
         testName: spec.testName,
         scenarioIds: specScenarioIds,
-        checkpoints: spec.checkpoints.map((checkpoint, checkpointIndex) => ({
+        checkpoints: normalizedCheckpoints.map((checkpoint, checkpointIndex) => ({
           id: createPlanId("checkpoint", `${spec.testName}-${checkpoint.label}`, checkpointIndex),
           label: checkpoint.label,
           action: checkpoint.action,
           assertion: checkpoint.assertion,
           screenshotId: checkpoint.screenshotId,
+          ...(checkpoint.timeoutMs ? { timeoutMs: checkpoint.timeoutMs } : {}),
           ...(checkpoint.path ? { path: checkpoint.path } : {}),
           ...(checkpoint.target ? { target: checkpoint.target } : {}),
           ...(checkpoint.value ? { value: checkpoint.value } : {}),

@@ -26,7 +26,9 @@ function renderBody(definition: SurfaceDefinition, variant: LibraryVariant): str
 
 export function renderSurfacePage(definition: SurfaceDefinition, variant: LibraryVariant): string {
   const body = renderBody(definition, variant);
-  return `<!doctype html><html><head><meta charset="utf-8" /><title>${definition.title}</title></head><body><div class="page">${renderSurfaceFrame({ title: definition.title, testId: definition.testId, layer: definition.layer, body, variant })}</div></body></html>`;
+  const frame = renderSurfaceFrame({ title: definition.title, testId: definition.testId, layer: definition.layer, body, variant });
+  const injectedFrame = frame.replace('data-testid="theme-toggle"', 'id="dark-mode-toggle" data-testid="theme-toggle"');
+  return `<!doctype html><html><head><meta charset="utf-8" /><title>${definition.title}</title></head><body><div class="page">${injectedFrame}</div></body></html>`;
 }
 
 export function renderSurfaceLibraryIndex(catalog: SurfaceDefinition[], variant: LibraryVariant): string {

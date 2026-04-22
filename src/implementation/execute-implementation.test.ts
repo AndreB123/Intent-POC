@@ -1001,6 +1001,71 @@ test("executeImplementationStage Given active generated selector ids When a repl
   }
 });
 
+test("executeImplementationStage Given active generated data-testid selectors When a replacement drops them Then it fails before apply", async () => {
+  const { rootDir, input } = await createImplementationInput();
+  const previousApiKey = process.env.TEST_GEMINI_API_KEY;
+  process.env.TEST_GEMINI_API_KEY = "test-key";
+  let applyCalls = 0;
+
+  try {
+    input.normalizedIntent.businessIntent.workItems[0]!.playwright.specs[0]!.checkpoints = [
+      {
+        id: "checkpoint-1",
+        label: "Run Intent Button Visible",
+        action: "assert-visible",
+        assertion: "The run intent button is visible before interaction.",
+        screenshotId: "shot-1",
+        target: "[data-testid='run-tests-button']",
+        waitForSelector: "[data-testid='run-tests-button']"
+      }
+    ];
+
+    await fs.writeFile(
+      path.join(rootDir, "src", "existing.ts"),
+      'export const markup = `<button id="submit-button" data-testid="run-tests-button">Run intent</button>`;\n'
+    );
+
+    const result = await executeImplementationStage(input, {
+      planChanges: async () => ({
+        operations: [
+          {
+            operation: "replace",
+            filePath: "src/existing.ts",
+            rationale: "Update the existing dashboard implementation."
+          }
+        ],
+        warnings: []
+      }),
+      materializeChanges: async () => ({
+        files: [
+          {
+            filePath: "src/existing.ts",
+            content: 'export const markup = `<button id="submit-button">Run intent</button>`;\n'
+          }
+        ],
+        warnings: []
+      }),
+      applyChangeSet: async () => {
+        applyCalls += 1;
+        return [];
+      }
+    });
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /removed required selector test ids/);
+    assert.match(result.error ?? "", /\[data-testid='run-tests-button'\]/);
+    assert.equal(applyCalls, 0);
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.TEST_GEMINI_API_KEY;
+    } else {
+      process.env.TEST_GEMINI_API_KEY = previousApiKey;
+    }
+
+    await fs.rm(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("executeImplementationStage Given a hallucinated replace target When the file does not exist Then it fails before materialization", async () => {
   const { rootDir, input } = await createImplementationInput();
   const previousApiKey = process.env.TEST_GEMINI_API_KEY;

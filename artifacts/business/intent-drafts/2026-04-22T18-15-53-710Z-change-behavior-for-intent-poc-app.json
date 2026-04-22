@@ -1,0 +1,418 @@
+{
+  "reviewedIntentId": "2026-04-22T18-15-53-710Z-change-behavior-for-intent-poc-app",
+  "status": "draft",
+  "createdAt": "2026-04-22T18:15:53.711Z",
+  "updatedAt": "2026-04-22T18:15:53.711Z",
+  "prompt": "## Intent\n\nTheme test for indicator\n\n## Desired Outcome\n\nImplement and verify theme-sensitive styling for the status indicator component.\n\n## Repo Context\n\n- Intent Driven Development POC workspace\n- Theme-sensitive UI component development\n- Start in Surface Library: src/demo-app/render/render-surface-frame.ts and src/demo-app/render/render-surface-page.ts.\n- If the owner is adjacent, check src/demo-app/model/catalog.ts and src/demo-app/model/types.ts next.\n- UI State Metadata: Source planning metadata is the reusable UI-state contract; prefer planning.verificationNotes and planning.uiStates over prompt-specific routing rules.\n- Open routing question: Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app.\n\n## Source Scope\n\n- intent-poc-app\n- Selected source: intent-poc-app.\n- Likely owning surface: Surface Library (medium confidence).\n- Fallback surfaces to inspect next: Intent Studio.\n\n## Adaptive Boundaries\n\n- Must support light and dark theme modes\n- Must use shared dark query parameter for verification\n- Keep this draft inside intent-poc-app until the owning surface is confirmed.\n- Start with Surface Library before widening into adjacent surfaces.\n- Resolve whether the change belongs to Intent Studio before touching multiple UI surfaces.\n\n## Minimum Success\n\n- Status indicator renders correctly in both light and dark modes\n- Visual evidence captured for both theme states\n- Implement and verify theme-sensitive styling for the status indicator component.\n- The draft keeps the change centered on Surface Library instead of the whole repo.\n- The final plan names one existing UI verification path instead of inventing a new workflow.\n\n## Baseline\n\n- Existing status indicator implementation in surface-library\n- Capture the current baseline in Surface Library before changing behavior.\n\n## Verification Obligations\n\n- Verify theme state via query-param before screenshot capture\n- Provide paired light-mode and dark-mode screenshot evidence\n- Name the existing Playwright or screenshot check that will prove the behavior change.\n\n## Raw Intent\n\nTheme test for indicator\n",
+  "requestedSourceIds": [
+    "intent-poc-app"
+  ],
+  "normalizedIntent": {
+    "intentId": "2026-04-22T18-15-53-710Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-22T18:15:53.710Z",
+    "rawPrompt": "Theme test for indicator",
+    "summary": "change behavior for intent-poc-app",
+    "intentType": "change-behavior",
+    "codeSurface": {
+      "sourceId": "intent-poc-app",
+      "id": "surface-library",
+      "label": "Surface Library",
+      "confidence": "medium",
+      "rationale": "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app.",
+      "alternatives": [
+        {
+          "id": "intent-studio",
+          "label": "Intent Studio",
+          "reason": "Prompt normalization kept this as a fallback interpretation."
+        }
+      ]
+    },
+    "businessIntent": {
+      "statement": "Theme test for indicator",
+      "desiredOutcome": "Implement and verify theme-sensitive styling for the status indicator component.",
+      "acceptanceCriteria": [],
+      "scenarios": [],
+      "workItems": [],
+      "decomposition": {
+        "objectives": [],
+        "workstreams": [],
+        "tasks": [],
+        "subtasks": [],
+        "verificationTasks": []
+      }
+    },
+    "planning": {
+      "repoCandidates": [
+        {
+          "repoId": "intent-poc",
+          "label": "Intent Driven Development POC",
+          "role": "controller-and-demo-source",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "selectionStatus": "selected",
+          "reason": "Source intent-poc-app was selected in the requested source scope.",
+          "summary": "Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.",
+          "sourceTypes": [
+            "local"
+          ],
+          "locations": [
+            "/home/andre/Desktop/GeniusMonkey/Intent POC"
+          ],
+          "refs": [],
+          "notes": [
+            "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+            "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
+            "Configured visual captures across linked sources: 48."
+          ],
+          "captureCount": 48
+        }
+      ],
+      "scopingContext": {
+        "matchedPromptTerms": [
+          "theme"
+        ],
+        "sourceMatches": [
+          {
+            "sourceId": "intent-poc-app",
+            "matchedTerms": [],
+            "reason": "Source intent-poc-app was selected in the requested source scope."
+          }
+        ],
+        "primarySurface": {
+          "sourceId": "intent-poc-app",
+          "id": "surface-library",
+          "label": "Surface Library",
+          "confidence": "medium",
+          "rationale": "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app.",
+          "matchedTerms": [],
+          "primaryPaths": [
+            "src/demo-app/render/render-surface-frame.ts",
+            "src/demo-app/render/render-surface-page.ts"
+          ],
+          "adjacentPaths": [
+            "src/demo-app/model/catalog.ts",
+            "src/demo-app/model/types.ts"
+          ]
+        },
+        "alternativeSurfaces": [
+          {
+            "sourceId": "intent-poc-app",
+            "id": "intent-studio",
+            "label": "Intent Studio",
+            "confidence": "low",
+            "rationale": "Prompt normalization kept this as a fallback interpretation.",
+            "matchedTerms": [
+              "theme"
+            ],
+            "primaryPaths": [
+              "src/demo-app/render/render-intent-studio-page.ts"
+            ],
+            "adjacentPaths": [
+              "src/demo-app/server/start-intent-studio-server.ts",
+              "src/demo-app/serve-demo-app.ts"
+            ]
+          }
+        ],
+        "pathHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/render/render-surface-frame.ts",
+            "reason": "Primary implementation path for Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/render/render-surface-page.ts",
+            "reason": "Primary implementation path for Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/model/catalog.ts",
+            "reason": "Adjacent path to confirm ownership for Surface Library."
+          },
+          {
+            "sourceId": "intent-poc-app",
+            "path": "src/demo-app/model/types.ts",
+            "reason": "Adjacent path to confirm ownership for Surface Library."
+          }
+        ],
+        "uiStateHints": [],
+        "verificationHints": [],
+        "repoNoteHints": [],
+        "repoMemoryHints": [
+          {
+            "memoryId": "ui-state-metadata",
+            "title": "UI State Metadata",
+            "sourcePath": "/memories/repo/ui-state-metadata.md",
+            "note": "Source planning metadata is the reusable UI-state contract; prefer planning.verificationNotes and planning.uiStates over prompt-specific routing rules.",
+            "reason": "Matched repo memory terms: theme."
+          }
+        ],
+        "captureHints": [],
+        "unresolvedQuestions": [
+          "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app."
+        ]
+      },
+      "scopingDetails": {
+        "repoContext": [
+          "Intent Driven Development POC workspace",
+          "Theme-sensitive UI component development"
+        ],
+        "sourceScope": [
+          "intent-poc-app"
+        ],
+        "adaptiveBoundaries": [
+          "Must support light and dark theme modes",
+          "Must use shared dark query parameter for verification"
+        ],
+        "minimumSuccess": [
+          "Status indicator renders correctly in both light and dark modes",
+          "Visual evidence captured for both theme states"
+        ],
+        "baseline": [
+          "Existing status indicator implementation in surface-library"
+        ],
+        "verificationObligations": [
+          "Verify theme state via query-param before screenshot capture",
+          "Provide paired light-mode and dark-mode screenshot evidence"
+        ]
+      },
+      "plannerSections": [
+        {
+          "id": "idd-plan",
+          "title": "IDD Plan",
+          "scope": "business",
+          "summary": "Planner-owned business plan with acceptance criteria, repo context, execution lanes, and delivery notes."
+        },
+        {
+          "id": "idd-source-lane-intent-poc-app",
+          "title": "IDD Source Lane: intent-poc-app",
+          "scope": "source",
+          "sourceId": "intent-poc-app",
+          "summary": "Planner-owned lane for intent-poc-app, intended for downstream implementation and verification handoff."
+        }
+      ],
+      "reviewNotes": [],
+      "linearPlan": {
+        "mode": "new"
+      }
+    },
+    "executionPlan": {
+      "primarySourceId": "intent-poc-app",
+      "sources": [
+        {
+          "sourceId": "intent-poc-app",
+          "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
+          "captureScope": {
+            "mode": "all",
+            "captureIds": []
+          },
+          "warnings": [
+            "Gemini suggested narrowing intent-poc-app captures to primitive-status-indicator, but the prompt did not explicitly name those captures, so all configured captures were preserved."
+          ]
+        }
+      ],
+      "destinations": [
+        {
+          "id": "controller-artifacts",
+          "type": "controller",
+          "label": "Controller artifacts",
+          "status": "active",
+          "reason": "Local evidence bundles are always written by the controller.",
+          "details": [
+            "Stores plan, manifests, logs, captures, and summaries on disk."
+          ]
+        },
+        {
+          "id": "source-workspace",
+          "type": "source-workspace",
+          "label": "Source workspace publication",
+          "status": "inactive",
+          "reason": "Workspace publishing is disabled until artifacts.storageMode is set to 'both'.",
+          "details": [
+            "Useful when evidence should live beside the source repository."
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "id": "bdd-planning",
+          "type": "intent-planning",
+          "label": "BDD planning",
+          "enabled": false,
+          "reason": "BDD planning is deferred until the full reviewed plan pass.",
+          "details": [
+            "The full reviewed plan pass will add acceptance criteria and scenarios after the scoping draft is reviewed."
+          ]
+        },
+        {
+          "id": "playwright-tdd",
+          "type": "playwright-tdd",
+          "label": "Playwright TDD generation",
+          "enabled": false,
+          "reason": "Playwright-first TDD planning is deferred until the full reviewed plan pass.",
+          "details": [
+            "The full reviewed plan pass will attach Playwright-first work items after the scoping draft is reviewed."
+          ]
+        },
+        {
+          "id": "screenshot-evidence",
+          "type": "screenshot",
+          "label": "Visual verification",
+          "enabled": true,
+          "reason": "Applicable sources currently expose visual checkpoints and capture definitions.",
+          "details": [
+            "Playwright screenshots remain one execution tool rather than the top-level product model."
+          ]
+        },
+        {
+          "id": "environment-deployment",
+          "type": "environment-deployment",
+          "label": "Environment deployment",
+          "enabled": false,
+          "reason": "A generic local or Kubernetes deployment stage is planned but not yet wired into the runner.",
+          "details": [
+            "This will become the shared path for local, minikube, and k3s-backed execution."
+          ]
+        },
+        {
+          "id": "implementation",
+          "type": "implementation",
+          "label": "Implementation loop",
+          "enabled": true,
+          "reason": "The runner can execute bounded implementation attempts against the prepared source workspace.",
+          "details": [
+            "QA failures can feed directly back into the next bounded implementation attempt."
+          ]
+        },
+        {
+          "id": "qa-verification",
+          "type": "qa-verification",
+          "label": "QA verification",
+          "enabled": true,
+          "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
+          "details": [
+            "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
+          ]
+        },
+        {
+          "id": "reporting",
+          "type": "reporting",
+          "label": "Evidence reporting",
+          "enabled": true,
+          "reason": "Every run produces summaries and machine-readable manifests.",
+          "details": [
+            "Reports become distribution inputs for downstream review and publishing surfaces."
+          ]
+        }
+      ],
+      "orchestrationStrategy": "single-source",
+      "reviewNotes": [
+        "BDD and Playwright-first TDD planning are deferred until the full reviewed plan pass."
+      ]
+    },
+    "sourceId": "intent-poc-app",
+    "captureScope": {
+      "mode": "all",
+      "captureIds": []
+    },
+    "artifacts": {
+      "requireScreenshots": true,
+      "requireManifest": true,
+      "requireHashes": true
+    },
+    "linear": {
+      "createIssue": true,
+      "issueTitle": "IDD: Theme test for indicator"
+    },
+    "execution": {
+      "continueOnCaptureError": false
+    },
+    "normalizationMeta": {
+      "source": "llm",
+      "warnings": [
+        "BDD and Playwright-first TDD planning are deferred until the full reviewed plan pass."
+      ],
+      "requestedPlanningDepth": "scoping",
+      "effectivePlanningDepth": "scoping",
+      "ambiguity": {
+        "isAmbiguous": true,
+        "reasons": [
+          "Prompt normalization identified Surface Library as the most likely code surface within intent-poc-app."
+        ]
+      },
+      "stages": [
+        {
+          "stageId": "promptNormalization",
+          "label": "Prompt Interpretation",
+          "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": []
+        },
+        {
+          "stageId": "linearScoping",
+          "label": "Linear Scoping",
+          "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Linear support is disabled in this POC."
+          ]
+        },
+        {
+          "stageId": "bddPlanning",
+          "label": "BDD Planning",
+          "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "BDD planning is deferred until the full reviewed plan pass."
+          ]
+        },
+        {
+          "stageId": "tddPlanning",
+          "label": "TDD Planning",
+          "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Playwright-first TDD planning is deferred until the full reviewed plan pass."
+          ]
+        },
+        {
+          "stageId": "implementation",
+          "label": "Implementation",
+          "description": "Apply the planned changes against the scoped source workspace.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Implementation stage configuration is recorded and executes during source runs before QA verification."
+          ]
+        },
+        {
+          "stageId": "qaVerification",
+          "label": "QA Verification",
+          "description": "Verify implementation output, tests, and evidence before completion or retry.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "QA verification configuration is recorded and executes during source runs after implementation completes."
+          ]
+        }
+      ]
+    }
+  }
+}

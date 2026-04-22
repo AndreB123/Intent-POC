@@ -241,7 +241,12 @@ function buildTddPlanningPrompt(input: GeminiTddPlanningInput): string {
     ...(isIntentStudioRunIndicatorFlow
       ? [
           "For Intent Studio run-indicator workflows, do not use 'mocked-state-playwright' or 'mock-studio-state'.",
-          "Use live 'tracked-playwright' verification against the running Studio and assert the real indicator state from the active session."
+          "Use live 'tracked-playwright' verification against the running Studio and assert the real indicator state from the active session.",
+          "Intent Studio keeps a live event stream open, so Studio goto checkpoints must not wait for 'networkidle'; prefer 'domcontentloaded' unless a stronger route-specific wait is required.",
+          "Before clicking the Intent Studio submit control, fill '#prompt-input' with a non-empty prompt because the real 'Run intent' button stays disabled until prompt text is present.",
+          "Intent Studio uses a reviewed-draft gate: the first Run intent click generates the scoping draft, then execution starts only after the next Run intent click approves that reviewed draft. Model that real two-step flow in your checkpoints.",
+          "Stable Intent Studio selector contracts currently include '#submit-button' and '[data-testid=\"run-tests-button\"]' for the same submit control, '[data-testid=\"test-status-indicator\"]', '#current-status-pill', '#prompt-input', and '#dark-mode-toggle'. Reuse them instead of inventing new selectors.",
+          "When verifying the live Intent Studio run indicator state code, assert a running-stage code that contains 'RUNNING'; live runs can surface 'IMPLEMENTATION_RUNNING' before 'QA_GENERATED_PLAYWRIGHT_RUNNING'."
         ]
       : []),
     "Prefer executable, bounded verification over placeholder checks.",

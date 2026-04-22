@@ -56,6 +56,7 @@ export interface PlaywrightCheckpoint {
   action: PlaywrightCheckpointAction;
   assertion: string;
   screenshotId: string;
+  timeoutMs?: number;
   path?: string;
   target?: string;
   value?: string;

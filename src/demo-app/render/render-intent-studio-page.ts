@@ -397,6 +397,11 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         color: var(--text);
       }
 
+      .dark-mode .dark-mode-toggle {
+        background: rgba(15, 23, 42, 0.72);
+        color: var(--text);
+      }
+
       .form-actions {
         display: flex;
         flex-direction: column;
@@ -490,6 +495,44 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
       .status-completed {
         background: rgba(31, 122, 70, 0.12);
         color: var(--success);
+      }
+
+      .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        transition: all 160ms ease;
+        white-space: nowrap;
+      }
+
+      .status-indicator::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+      }
+
+      .status-running::before {
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.2); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+
+      .dark-mode .status-indicator {
+        background: rgba(30, 41, 59, 0.72);
+        color: var(--text);
       }
 
       .event-warn {
@@ -1090,6 +1133,33 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         animation: rise 280ms ease-out;
       }
 
+      .dark-mode .hero-link,
+      .dark-mode .ghost-link,
+      .dark-mode .ghost-button {
+        background: rgba(30, 41, 59, 0.72);
+        color: var(--text);
+      }
+
+      .dark-mode .status-ready {
+        background: rgba(20, 184, 166, 0.15);
+        color: #5eead4;
+      }
+
+      .dark-mode .status-running {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fcd34d;
+      }
+
+      .dark-mode .status-failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+      }
+
+      .dark-mode .status-completed {
+        background: rgba(34, 197, 94, 0.15);
+        color: #86efac;
+      }
+
       @keyframes rise {
         from {
           opacity: 0;
@@ -1162,7 +1232,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             <a class="hero-link" href="/library">Browse Asset Library</a>
             <a class="hero-link" href="/health">Health Check</a>
             <span class="hero-link" id="connection-state">Connecting stream…</span>
-            <span class="hero-link" id="test-status-indicator" data-testid="test-status-indicator" style="display: none;">Ready</span>
+            <span class="status-indicator status-ready" id="current-status-pill" data-testid="test-status-indicator">Ready</span>
           </div>
           <div class="error-banner" id="config-error"></div>
         </section>
@@ -1207,7 +1277,6 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                   <h2>Prompt Run</h2>
                   <div class="panel-copy">Define the business intent first. The first click builds a reviewed IDD draft with repo context, boundaries, baseline, and minimum success. Internal AC, BDD, TDD, and execution planning stay behind the approval step.</div>
                 </div>
-                <span class="status-pill status-ready" id="current-status-pill">Ready</span>
               </div>
 
               <form id="run-form">
@@ -1224,7 +1293,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                       <div class="submit-row">
                         <span class="notice" id="form-note">No run in progress.</span>
                         ${renderButton({ label: "Start new intent", className: "ghost-button", id: "reset-intent-button", type: "button" })}
-                        ${renderButton({ label: "Run intent", className: "primary-button", id: "submit-button", type: "submit", attributes: { disabled: "disabled" } })}
+                        ${renderButton({ label: "Run intent", className: "primary-button", id: "submit-button", type: "submit", attributes: { disabled: "disabled", "data-testid": "run-tests-button" } })}
                       </div>
                     </div>
                   </div>
@@ -1378,7 +1447,6 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
     <script>
       (function () {
         const darkModeToggle = document.getElementById("dark-mode-toggle");
-        const testStatusIndicator = document.getElementById("test-status-indicator");
 
         function setDarkMode(enabled, syncUrl) {
           document.body.classList.toggle("dark-mode", enabled);
@@ -1406,42 +1474,45 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
         });
 
         function updateTestStatusIndicator(run) {
-          if (!run || !run.sourceRuns || run.sourceRuns.length === 0) {
-            testStatusIndicator.style.display = "none";
-            testStatusIndicator.removeAttribute("data-state-code");
-            testStatusIndicator.removeAttribute("data-command-label");
+          if (!run) {
             return;
           }
 
-          const activeSourceRun = run.sourceRuns.find(function(sr) {
-            return sr.qaVerificationStageStatus === "running" || sr.implementationStageStatus === "running";
-          }) || run.sourceRuns[0];
-          const isRunning = run.sourceRuns.some(sr => sr.implementationStageStatus === "running" || sr.qaVerificationStageStatus === "running");
+          const sourceRuns = Array.isArray(run.sourceRuns) ? run.sourceRuns : [];
+
+          const activeSourceRun = sourceRuns.find(function(sr) {
+            return sr.implementationStageStatus === "running" || sr.qaVerificationStageStatus === "running";
+          }) || sourceRuns[0] || null;
+          
+          const isRunning = run.status === "running" || sourceRuns.some(function(sr) {
+            return sr.implementationStageStatus === "running" || sr.qaVerificationStageStatus === "running";
+          });
+          
           const isCompleted = run.status === "completed";
           const isFailed = run.status === "failed";
           const qaCommandLabel = activeSourceRun && activeSourceRun.qaCommandLabel ? activeSourceRun.qaCommandLabel : "";
+          
           const stateCode = activeSourceRun && activeSourceRun.qaVerificationStageStatus === "running"
-            ? (activeSourceRun.qaCommandStateCode || "QA_RUNNING")
+            ? (activeSourceRun.qaCommandStateCode || "QA_GENERATED_PLAYWRIGHT_RUNNING")
             : activeSourceRun && activeSourceRun.implementationStageStatus === "running"
               ? "IMPLEMENTATION_RUNNING"
+              : isRunning
+                ? (activeSourceRun && activeSourceRun.qaCommandStateCode ? activeSourceRun.qaCommandStateCode : "RUNNING")
               : isCompleted
                 ? "RUN_COMPLETED"
                 : isFailed
                   ? "RUN_FAILED"
                   : "READY";
+          
           const statusLabel = isRunning ? "Running" : isCompleted ? "Passed" : isFailed ? "Failed" : "Ready";
 
-          testStatusIndicator.style.display = "inline-flex";
-          testStatusIndicator.textContent = qaCommandLabel
+          currentStatusPill.textContent = qaCommandLabel
             ? statusLabel + " · " + stateCode + " · " + qaCommandLabel
             : statusLabel + " · " + stateCode;
-          testStatusIndicator.className = "hero-link " + (isRunning ? "status-running" : isCompleted ? "status-completed" : isFailed ? "status-failed" : "status-ready");
-          testStatusIndicator.setAttribute("data-state-code", stateCode);
-          if (qaCommandLabel) {
-            testStatusIndicator.setAttribute("data-command-label", qaCommandLabel);
-          } else {
-            testStatusIndicator.removeAttribute("data-command-label");
-          }
+          
+          currentStatusPill.className = "status-indicator " + (isRunning ? "status-running" : isCompleted ? "status-completed" : isFailed ? "status-failed" : "status-ready");
+          currentStatusPill.setAttribute("data-state-code", stateCode);
+          currentStatusPill.setAttribute("data-status", isRunning ? "running" : isCompleted ? "passed" : isFailed ? "failed" : "ready");
         }
 
         function wireCollapseToggle(toggleId, panelId, expandedDisplay) {
@@ -1804,6 +1875,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
               )
             );
             return;
+
           }
 
           options.forEach(function (source) {
@@ -2733,8 +2805,7 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
             }
 
             body.appendChild(links);
-            card.appendChild(body);
-            captures.appendChild(card);
+            card.appendChild(card);
           });
         }
 
@@ -2817,7 +2888,17 @@ export function renderIntentStudioPage(input: { configPath: string }): string {
                 ? "full review"
                 : "scoping draft"
               : "ready";
-          currentStatusPill.className = "status-pill " + formatStatusClass(run ? run.status : "ready");
+          currentStatusPill.className = "status-indicator " + formatStatusClass(run ? run.status : "ready");
+          
+          if (run) {
+            currentStatusPill.setAttribute("data-state-code", "RUN_QUEUED");
+          } else {
+            const stateCode = hasDraftReady
+              ? (getPlanDepth(previewPlan) === "full" ? "FULL_REVIEW_READY" : "SCOPING_DRAFT_READY")
+              : "READY";
+            currentStatusPill.setAttribute("data-state-code", stateCode);
+          }
+
           runIdNode.textContent = run && run.runId
             ? run.runId
             : hasDraftReady && previewDraft

@@ -650,7 +650,7 @@ test("normalizeIntent builds indicator checkpoints around real Studio QA state i
   );
   assert.equal(
     indicatorSpec?.checkpoints.some(
-      (checkpoint) => checkpoint.attributeName === "data-state-code" && checkpoint.expectedSubstring === "QA_GENERATED_PLAYWRIGHT_RUNNING"
+      (checkpoint) => checkpoint.attributeName === "data-state-code" && checkpoint.expectedSubstring === "RUNNING"
     ),
     true
   );
@@ -1279,6 +1279,226 @@ test("normalizeIntentWithAgent falls back to live tracked Playwright when Gemini
     normalized.normalizationMeta.stages.find((stage) => stage.stageId === "tddPlanning")?.source,
     "rules"
   );
+});
+
+test("normalizeIntentWithAgent normalizes Gemini Intent Studio checkpoints to live-stream waits and running stage state codes", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt:
+        "i need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state.",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        requireAIWorkflow: true,
+        allowBDDPlanning: true,
+        stages: {
+          ...geminiAgent.stages,
+          promptNormalization: {
+            ...geminiAgent.stages.promptNormalization,
+            fallbackToRules: false
+          },
+          bddPlanning: {
+            ...geminiAgent.stages.bddPlanning,
+            fallbackToRules: false
+          },
+          tddPlanning: {
+            ...geminiAgent.stages.tddPlanning,
+            fallbackToRules: false
+          }
+        }
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "intent-studio"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        acceptanceCriteria: [
+          { description: "A visual test run indicator is visible while QA is active." }
+        ],
+        scenarios: [
+          {
+            title: "Verify real-time test run indicator updates",
+            goal: "Verify the real test run indicator updates during QA.",
+            given: ["The user is in Intent Studio during an active run."],
+            when: ["QA verification is executing."],
+            then: ["The visual test run indicator is visible while QA is active."],
+            applicableSourceIds: ["intent-poc-app"]
+          }
+        ]
+      }),
+      refineIntentTddWithGemini: async () => ({
+        workItems: [
+          {
+            title: "Verify real-time test run indicator updates",
+            description: "Verify that the real test run indicator updates during QA.",
+            verificationMode: "tracked-playwright",
+            sourceIds: ["intent-poc-app"],
+            scenarioIds: ["scenario-1-verify-real-time-test-run-indicator-updates"],
+            userVisibleOutcome: "The visual test run indicator is visible while QA is active.",
+            verification: "A Gemini-authored Playwright spec validates the indicator against the live Studio session.",
+            specs: [
+              {
+                sourceId: "intent-poc-app",
+                relativeSpecPath: "intent-poc-app/test-run-indicator.spec.ts",
+                suiteName: "Intent Studio Execution Monitoring",
+                testName: "Verify real-time test run indicator updates",
+                scenarioIds: ["scenario-1-verify-real-time-test-run-indicator-updates"],
+                checkpoints: [
+                  {
+                    label: "Navigate to Intent Studio",
+                    action: "goto",
+                    assertion: "Studio interface is loaded",
+                    screenshotId: "studio-initial-load",
+                    path: "/intent-studio?dark=false",
+                    waitUntil: "networkidle"
+                  },
+                  {
+                    label: "Trigger test execution",
+                    action: "click",
+                    assertion: "Execution starts",
+                    screenshotId: "execution-triggered",
+                    target: "#submit-button",
+                    waitForSelector: "#submit-button"
+                  },
+                  {
+                    label: "Verify state code display",
+                    action: "assert-attribute-contains",
+                    assertion: "Indicator displays correct state code",
+                    screenshotId: "indicator-state-code",
+                    target: "[data-testid='test-status-indicator']",
+                    attributeName: "data-state-code",
+                    expectedSubstring: "RUNNING_001"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      })
+    }
+  );
+
+  const indicatorSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
+
+  assert.ok(indicatorSpec);
+  assert.equal(indicatorSpec?.checkpoints[0]?.path, "/?dark=false");
+  assert.equal(indicatorSpec?.checkpoints[0]?.waitUntil, "domcontentloaded");
+  assert.equal(indicatorSpec?.checkpoints[1]?.action, "fill");
+  assert.equal(indicatorSpec?.checkpoints[1]?.target, "#prompt-input");
+  assert.equal(indicatorSpec?.checkpoints[2]?.target, "#workflow-readiness-status");
+  assert.equal(indicatorSpec?.checkpoints[2]?.attributeName, "class");
+  assert.equal(indicatorSpec?.checkpoints[2]?.expectedSubstring, "target-ready");
+  assert.equal(indicatorSpec?.checkpoints[2]?.timeoutMs, 30_000);
+  assert.equal(indicatorSpec?.checkpoints[3]?.target, "[data-testid='run-tests-button']");
+  assert.equal(indicatorSpec?.checkpoints[3]?.waitForSelector, "[data-testid='run-tests-button']");
+  assert.equal(indicatorSpec?.checkpoints[4]?.locator, "text=Scoping IDD draft ready.");
+  assert.equal(indicatorSpec?.checkpoints[4]?.timeoutMs, 30_000);
+  assert.equal(indicatorSpec?.checkpoints[5]?.label, "Approve Reviewed Intent");
+  assert.equal(indicatorSpec?.checkpoints[5]?.target, "[data-testid='run-tests-button']");
+  assert.equal(indicatorSpec?.checkpoints[6]?.expectedSubstring, "RUNNING");
+  assert.equal(indicatorSpec?.checkpoints[6]?.timeoutMs, 45_000);
+  assert.equal(normalized.businessIntent.workItems[0]?.playwright.generatedBy, "llm");
+});
+
+test("normalizeIntentWithAgent injects an initial Studio navigation checkpoint when Gemini omits it for Intent Studio specs", async () => {
+  const normalized = await normalizeIntentWithAgent(
+    {
+      rawPrompt: "verify the status indicator remains readable in dark mode while the studio is open",
+      defaultSourceId: "intent-poc-app",
+      continueOnCaptureError: false,
+      availableSources: intentPocAppSources,
+      agent: {
+        ...geminiAgent,
+        requireAIWorkflow: true,
+        allowBDDPlanning: true,
+        stages: {
+          ...geminiAgent.stages,
+          promptNormalization: {
+            ...geminiAgent.stages.promptNormalization,
+            fallbackToRules: false
+          },
+          bddPlanning: {
+            ...geminiAgent.stages.bddPlanning,
+            fallbackToRules: false
+          },
+          tddPlanning: {
+            ...geminiAgent.stages.tddPlanning,
+            fallbackToRules: false
+          }
+        }
+      }
+    },
+    {
+      normalizePromptWithGemini: async () => ({
+        sourceIds: ["intent-poc-app"],
+        codeSurfaceId: "intent-studio"
+      }),
+      refineIntentPlanWithGemini: async () => ({
+        acceptanceCriteria: [{ description: "The indicator remains readable in dark mode." }],
+        scenarios: [
+          {
+            title: "Verify dark mode indicator readability",
+            goal: "Verify the indicator remains readable in dark mode.",
+            given: ["The user is in Intent Studio."],
+            when: ["Dark mode is enabled."],
+            then: ["The status indicator remains visible and readable."],
+            applicableSourceIds: ["intent-poc-app"]
+          }
+        ]
+      }),
+      refineIntentTddWithGemini: async () => ({
+        workItems: [
+          {
+            title: "Verify dark mode indicator readability",
+            description: "Verify the indicator remains readable in dark mode.",
+            verificationMode: "tracked-playwright",
+            sourceIds: ["intent-poc-app"],
+            scenarioIds: ["scenario-1-verify-dark-mode-indicator-readability"],
+            userVisibleOutcome: "The status indicator remains readable in dark mode.",
+            verification: "A Gemini-authored Playwright spec validates the indicator in dark mode.",
+            specs: [
+              {
+                sourceId: "intent-poc-app",
+                relativeSpecPath: "intent-poc-app/status-indicator-theme.spec.ts",
+                suiteName: "Intent Studio Status Indicator Theme",
+                testName: "Verify dark mode indicator readability",
+                scenarioIds: ["scenario-1-verify-dark-mode-indicator-readability"],
+                checkpoints: [
+                  {
+                    label: "Toggle dark mode",
+                    action: "click",
+                    assertion: "Dark mode enabled",
+                    screenshotId: "toggle-dark-mode",
+                    target: "#dark-mode-toggle"
+                  },
+                  {
+                    label: "Verify indicator visibility in dark mode",
+                    action: "assert-visible",
+                    assertion: "Indicator is visible in dark mode",
+                    screenshotId: "indicator-visible-dark-mode",
+                    target: "[data-testid='test-status-indicator']"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      })
+    }
+  );
+
+  const indicatorSpec = normalized.businessIntent.workItems[0]?.playwright.specs[0];
+
+  assert.ok(indicatorSpec);
+  assert.equal(indicatorSpec?.checkpoints[0]?.action, "goto");
+  assert.equal(indicatorSpec?.checkpoints[0]?.path, "/");
+  assert.equal(indicatorSpec?.checkpoints[0]?.waitUntil, "domcontentloaded");
+  assert.equal(indicatorSpec?.checkpoints[1]?.action, "click");
+  assert.equal(indicatorSpec?.checkpoints[1]?.target, "#dark-mode-toggle");
 });
 
 test("normalizeIntentWithAgent fails loudly when AI-first TDD generation cannot produce artifacts", async () => {

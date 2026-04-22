@@ -1,15 +1,13 @@
 {
   "version": 1,
-  "runId": "2026-04-22T04-33-51-900Z-intent-poc-app",
-  "timestamp": "2026-04-22T04:36:46.999Z",
-  "status": "failed",
-  "errors": [
-    "QA verification failed for source 'intent-poc-app' on attempt 2: Command failed (1). Progress: completed 1/1 targeted work items."
-  ],
+  "runId": "2026-04-22T20-04-52-960Z-intent-poc-app",
+  "timestamp": "2026-04-22T20:16:33.798Z",
+  "status": "completed",
+  "errors": [],
   "intent": {
-    "intentId": "2026-04-22T04-29-56-932Z-change-behavior-for-intent-poc-app",
-    "receivedAt": "2026-04-22T04:33:51.786Z",
-    "rawPrompt": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
+    "intentId": "2026-04-22T20-04-52-959Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-22T20:04:52.959Z",
+    "rawPrompt": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
     "summary": "change behavior for intent-poc-app",
     "intentType": "change-behavior",
     "codeSurface": {
@@ -32,63 +30,64 @@
       ]
     },
     "businessIntent": {
-      "statement": "Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests to enable live monitoring of code state.",
-      "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+      "statement": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+      "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
       "acceptanceCriteria": [
         {
-          "id": "ac-1-a-new-ui-component-is-integrated-into-the-intent-studio-layout-to-display-test-e",
-          "description": "A new UI component is integrated into the Intent Studio layout to display test execution status.",
+          "id": "ac-1-a-new-status-indicator-component-is-integrated-into-the-intent-studio-header",
+          "description": "A new status indicator component is integrated into the Intent Studio header.",
           "origin": "inferred"
         },
         {
-          "id": "ac-2-the-indicator-updates-in-real-time-as-test-execution-progresses",
-          "description": "The indicator updates in real-time as test execution progresses.",
+          "id": "ac-2-the-indicator-updates-in-real-time-based-on-the-test-execution-lifecycle",
+          "description": "The indicator updates in real-time based on the test execution lifecycle.",
           "origin": "inferred"
         },
         {
-          "id": "ac-3-the-indicator-displays-both-the-human-readable-status-and-the-machine-readable-s",
-          "description": "The indicator displays both the human-readable status and the machine-readable state code.",
+          "id": "ac-3-the-component-displays-both-human-readable-status-labels-and-technical-state-cod",
+          "description": "The component displays both human-readable status labels and technical state codes.",
           "origin": "inferred"
         },
         {
-          "id": "ac-4-visual-verification-confirms-the-indicator-renders-correctly-in-both-light-and-d",
-          "description": "Visual verification confirms the indicator renders correctly in both light and dark themes.",
+          "id": "ac-4-visual-evidence-of-the-indicator-in-running-success-and-error-states-is-captured",
+          "description": "Visual evidence of the indicator in 'Running', 'Success', and 'Error' states is captured via Playwright.",
           "origin": "inferred"
         }
       ],
       "scenarios": [
         {
-          "id": "scenario-1-display-test-execution-status-in-intent-studio",
-          "title": "Display test execution status in Intent Studio",
-          "goal": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+          "id": "scenario-1-display-active-test-status-during-execution",
+          "title": "Display active test status during execution",
+          "goal": "Verify the indicator shows the correct status while a test is running.",
           "given": [
-            "The user is in the Intent Studio interface",
-            "An AI-generated test is initiated"
+            "The user is in Intent Studio",
+            "A test execution process has been triggered"
           ],
           "when": [
-            "The test execution begins"
+            "The test runner reports an active status"
           ],
           "then": [
-            "The test run indicator component is visible",
-            "The indicator displays a 'Running' status and the corresponding state code"
+            "The status indicator displays 'Running'",
+            "The indicator shows the corresponding active state code"
           ],
           "applicableSourceIds": [
             "intent-poc-app"
           ]
         },
         {
-          "id": "scenario-2-update-test-status-in-real-time",
-          "title": "Update test status in real-time",
-          "goal": "Verify that the indicator updates dynamically as the test state changes.",
+          "id": "scenario-2-verify-status-indicator-visual-consistency",
+          "title": "Verify status indicator visual consistency",
+          "goal": "Ensure the indicator renders correctly in both light and dark themes.",
           "given": [
-            "The test run indicator is visible and showing 'Running' status"
+            "The Intent Studio page is loaded"
           ],
           "when": [
-            "The test execution completes successfully"
+            "The theme is toggled between light and dark modes",
+            "The test status is set to 'Passed'"
           ],
           "then": [
-            "The indicator updates to 'Passed' status",
-            "The indicator displays the updated state code"
+            "The status indicator maintains correct contrast and styling in both themes",
+            "The indicator displays 'Passed' and the success state code"
           ],
           "applicableSourceIds": [
             "intent-poc-app"
@@ -97,27 +96,26 @@
       ],
       "workItems": [
         {
-          "id": "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
+          "id": "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
           "type": "playwright-spec",
-          "verificationMode": "mocked-state-playwright",
-          "title": "Implement real-time test execution status indicator",
-          "description": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+          "verificationMode": "tracked-playwright",
+          "title": "Verify status indicator real-time execution states",
+          "description": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
           "scenarioIds": [
-            "scenario-1-display-test-execution-status-in-intent-studio",
-            "scenario-2-update-test-status-in-real-time"
+            "scenario-1-display-active-test-status-during-execution"
           ],
           "sourceIds": [
             "intent-poc-app"
           ],
-          "userVisibleOutcome": "A visible status indicator in the Intent Studio UI that updates from 'Running' to 'Passed' based on test execution state.",
-          "verification": "Playwright specs will mock the Studio state to verify the indicator renders correctly in both 'running' and 'passed' states, ensuring the UI reflects the underlying machine state.",
+          "userVisibleOutcome": "The status indicator displays 'Running' and the correct state code during test execution.",
+          "verification": "Use tracked-playwright to trigger a test run and assert the presence of the status indicator with the expected running state code.",
           "execution": {
             "order": 1,
             "dependsOnWorkItemIds": [],
-            "objectiveId": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
+            "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
             "workstreamId": "workstream-1-intent-poc-app",
-            "taskId": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-            "subtaskId": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "taskId": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+            "subtaskId": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           },
           "playwright": {
             "generatedBy": "llm",
@@ -125,255 +123,148 @@
               {
                 "framework": "playwright",
                 "sourceId": "intent-poc-app",
-                "relativeSpecPath": "intent-poc-app/test-execution-indicator.spec.ts",
-                "suiteName": "Intent Studio Test Execution Indicator",
-                "testName": "Verify status indicator lifecycle",
+                "relativeSpecPath": "intent-poc-app/verify-status-indicator-execution.spec.ts",
+                "suiteName": "Intent Studio Status Indicator",
+                "testName": "Verify status indicator real-time execution states",
                 "scenarioIds": [
-                  "scenario-1-display-test-execution-status-in-intent-studio",
-                  "scenario-2-update-test-status-in-real-time"
+                  "scenario-1-display-active-test-status-during-execution"
                 ],
                 "checkpoints": [
                   {
-                    "id": "checkpoint-1-verify-status-indicator-lifecycle-verify-running-state-indicator",
-                    "label": "Verify running state indicator",
-                    "action": "mock-studio-state",
-                    "assertion": "The indicator displays 'Running' status and code when the test is active.",
-                    "screenshotId": "indicator-running-state",
-                    "requiredUiStates": [
-                      {
-                        "stateId": "theme-mode",
-                        "label": "Theme mode",
-                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                        "requestedValue": "light",
-                        "activation": [
-                          {
-                            "type": "query-param",
-                            "target": "dark",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "[data-testid='theme-toggle']",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The library surface toggle remains available for manual verification flows."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "#dark-mode-toggle",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                            ]
-                          }
-                        ],
-                        "verificationStrategies": [
-                          "ui-interaction-playwright"
-                        ],
-                        "notes": [
-                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                          "Verify the active theme state before trusting screenshot comparisons.",
-                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                        ],
-                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                      }
-                    ]
+                    "id": "checkpoint-1-verify-status-indicator-real-time-execution-states-navigate-to-intent-studio",
+                    "label": "Navigate to Intent Studio",
+                    "action": "goto",
+                    "assertion": "Studio is loaded and prompt input is ready.",
+                    "screenshotId": "primitive-status-indicator",
+                    "path": "/",
+                    "waitUntil": "domcontentloaded"
                   },
                   {
-                    "id": "checkpoint-2-verify-status-indicator-lifecycle-verify-passed-state-indicator",
-                    "label": "Verify passed state indicator",
-                    "action": "mock-studio-state",
-                    "assertion": "The indicator updates to 'Passed' status and code upon successful completion.",
-                    "screenshotId": "indicator-passed-state",
-                    "requiredUiStates": [
-                      {
-                        "stateId": "theme-mode",
-                        "label": "Theme mode",
-                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                        "requestedValue": "light",
-                        "activation": [
-                          {
-                            "type": "query-param",
-                            "target": "dark",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "[data-testid='theme-toggle']",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The library surface toggle remains available for manual verification flows."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "#dark-mode-toggle",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                            ]
-                          }
-                        ],
-                        "verificationStrategies": [
-                          "ui-interaction-playwright"
-                        ],
-                        "notes": [
-                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                          "Verify the active theme state before trusting screenshot comparisons.",
-                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                        ],
-                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                      }
-                    ]
+                    "id": "checkpoint-2-verify-status-indicator-real-time-execution-states-enter-prompt-text",
+                    "label": "Enter prompt text",
+                    "action": "fill",
+                    "assertion": "Prompt input is populated to enable the run button.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "#prompt-input",
+                    "value": "Generate a test for the login flow"
                   },
                   {
-                    "id": "checkpoint-3-verify-status-indicator-lifecycle-assert-indicator-visibility",
-                    "label": "Assert indicator visibility",
+                    "id": "checkpoint-3-verify-status-indicator-real-time-execution-states-workflow-readiness-ready",
+                    "label": "Workflow Readiness Ready",
+                    "action": "assert-attribute-contains",
+                    "assertion": "The Studio workflow readiness resolves before the run button is used.",
+                    "screenshotId": "workflow-readiness-ready",
+                    "timeoutMs": 30000,
+                    "target": "#workflow-readiness-status",
+                    "attributeName": "class",
+                    "expectedSubstring": "target-ready",
+                    "waitForSelector": "#workflow-readiness-status"
+                  },
+                  {
+                    "id": "checkpoint-4-verify-status-indicator-real-time-execution-states-first-click-to-generate-draft",
+                    "label": "First click to generate draft",
+                    "action": "click",
+                    "assertion": "The draft generation process is initiated.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "[data-testid='run-tests-button']"
+                  },
+                  {
+                    "id": "checkpoint-5-verify-status-indicator-real-time-execution-states-scoping-draft-ready",
+                    "label": "Scoping Draft Ready",
                     "action": "assert-visible",
-                    "assertion": "The status indicator component is present in the UI.",
-                    "screenshotId": "indicator-visibility-check",
-                    "locator": "[data-testid='test-status-indicator']",
-                    "requiredUiStates": [
-                      {
-                        "stateId": "theme-mode",
-                        "label": "Theme mode",
-                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                        "requestedValue": "light",
-                        "activation": [
-                          {
-                            "type": "query-param",
-                            "target": "dark",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "[data-testid='theme-toggle']",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The library surface toggle remains available for manual verification flows."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "#dark-mode-toggle",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                            ]
-                          }
-                        ],
-                        "verificationStrategies": [
-                          "ui-interaction-playwright"
-                        ],
-                        "notes": [
-                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                          "Verify the active theme state before trusting screenshot comparisons.",
-                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                        ],
-                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                      }
-                    ]
-                  }
-                ],
-                "requiredUiStates": [
+                    "assertion": "The scoping draft is ready for approval before execution starts.",
+                    "screenshotId": "scoping-draft-ready",
+                    "timeoutMs": 30000,
+                    "locator": "text=Scoping IDD draft ready."
+                  },
                   {
-                    "stateId": "theme-mode",
-                    "label": "Theme mode",
-                    "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                    "requestedValue": "light",
-                    "activation": [
-                      {
-                        "type": "query-param",
-                        "target": "dark",
-                        "values": {
-                          "light": "false",
-                          "dark": "true"
-                        },
-                        "notes": [
-                          "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                        ]
-                      },
-                      {
-                        "type": "ui-control",
-                        "target": "[data-testid='theme-toggle']",
-                        "values": {
-                          "light": "false",
-                          "dark": "true"
-                        },
-                        "notes": [
-                          "The library surface toggle remains available for manual verification flows."
-                        ]
-                      },
-                      {
-                        "type": "ui-control",
-                        "target": "#dark-mode-toggle",
-                        "values": {
-                          "light": "false",
-                          "dark": "true"
-                        },
-                        "notes": [
-                          "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                        ]
-                      }
-                    ],
-                    "verificationStrategies": [
-                      "ui-interaction-playwright"
-                    ],
-                    "notes": [
-                      "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                      "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                      "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                      "Verify the active theme state before trusting screenshot comparisons.",
-                      "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                      "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                    ],
-                    "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                    "id": "checkpoint-6-verify-status-indicator-real-time-execution-states-second-click-to-approve-and-r",
+                    "label": "Second click to approve and run",
+                    "action": "click",
+                    "assertion": "The execution process is started.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "[data-testid='run-tests-button']"
+                  },
+                  {
+                    "id": "checkpoint-7-verify-status-indicator-real-time-execution-states-assert-running-state",
+                    "label": "Assert running state",
+                    "action": "assert-visible",
+                    "assertion": "The status indicator shows the running state code.",
+                    "screenshotId": "primitive-status-indicator",
+                    "locator": "[data-testid='test-status-indicator']:has-text('RUNNING')"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+          "type": "playwright-spec",
+          "verificationMode": "tracked-playwright",
+          "title": "Verify status indicator visual consistency",
+          "description": "Ensure the indicator renders correctly in both light and dark themes.",
+          "scenarioIds": [
+            "scenario-2-verify-status-indicator-visual-consistency"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "userVisibleOutcome": "The status indicator maintains correct contrast and styling in both themes.",
+          "verification": "Capture screenshots of the indicator in both light and dark modes to verify visual consistency.",
+          "execution": {
+            "order": 2,
+            "dependsOnWorkItemIds": [],
+            "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+            "workstreamId": "workstream-1-intent-poc-app",
+            "taskId": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+            "subtaskId": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          },
+          "playwright": {
+            "generatedBy": "llm",
+            "specs": [
+              {
+                "framework": "playwright",
+                "sourceId": "intent-poc-app",
+                "relativeSpecPath": "intent-poc-app/verify-status-indicator-visual-consistency.spec.ts",
+                "suiteName": "Intent Studio Status Indicator",
+                "testName": "Verify status indicator visual consistency",
+                "scenarioIds": [
+                  "scenario-2-verify-status-indicator-visual-consistency"
+                ],
+                "checkpoints": [
+                  {
+                    "id": "checkpoint-1-verify-status-indicator-visual-consistency-navigate-to-studio-in-light-mode",
+                    "label": "Navigate to Studio in light mode",
+                    "action": "goto",
+                    "assertion": "Studio is loaded in light mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "path": "/?dark=false",
+                    "waitUntil": "domcontentloaded"
+                  },
+                  {
+                    "id": "checkpoint-2-verify-status-indicator-visual-consistency-assert-light-mode-indicator",
+                    "label": "Assert light mode indicator",
+                    "action": "assert-visible",
+                    "assertion": "Indicator is visible in light mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "locator": "#current-status-pill"
+                  },
+                  {
+                    "id": "checkpoint-3-verify-status-indicator-visual-consistency-toggle-to-dark-mode",
+                    "label": "Toggle to dark mode",
+                    "action": "click",
+                    "assertion": "Theme is switched to dark mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "#dark-mode-toggle"
+                  },
+                  {
+                    "id": "checkpoint-4-verify-status-indicator-visual-consistency-assert-dark-mode-indicator",
+                    "label": "Assert dark mode indicator",
+                    "action": "assert-visible",
+                    "assertion": "Indicator is visible in dark mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "locator": "#current-status-pill"
                   }
                 ]
               }
@@ -384,10 +275,10 @@
       "decomposition": {
         "objectives": [
           {
-            "id": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
-            "title": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-            "summary": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-            "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+            "id": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+            "title": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+            "summary": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+            "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
             "workstreamIds": [
               "workstream-1-intent-poc-app"
             ]
@@ -402,64 +293,112 @@
               "intent-poc-app"
             ],
             "taskIds": [
-              "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio"
+              "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+              "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency"
             ]
           }
         ],
         "tasks": [
           {
-            "id": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-            "title": "Display test execution status in Intent Studio",
-            "summary": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+            "id": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+            "title": "Display active test status during execution",
+            "summary": "Verify the indicator shows the correct status while a test is running.",
             "sourceIds": [
               "intent-poc-app"
             ],
             "scenarioIds": [
-              "scenario-1-display-test-execution-status-in-intent-studio",
-              "scenario-2-update-test-status-in-real-time"
+              "scenario-1-display-active-test-status-during-execution"
             ],
             "workItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
             "subtaskIds": [
-              "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
             "verificationTaskIds": [
-              "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ]
+          },
+          {
+            "id": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+            "title": "Verify status indicator visual consistency",
+            "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "scenarioIds": [
+              "scenario-2-verify-status-indicator-visual-consistency"
+            ],
+            "workItemIds": [
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+            ],
+            "subtaskIds": [
+              "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ]
           }
         ],
         "subtasks": [
           {
-            "id": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-            "title": "Implement real-time test execution status indicator",
-            "summary": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+            "id": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+            "title": "Verify status indicator real-time execution states",
+            "summary": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
             "scenarioIds": [
-              "scenario-1-display-test-execution-status-in-intent-studio",
-              "scenario-2-update-test-status-in-real-time"
+              "scenario-1-display-active-test-status-during-execution"
             ],
             "sourceIds": [
               "intent-poc-app"
             ],
             "workItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
             "verificationTaskIds": [
-              "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ],
+            "dependsOnSubtaskIds": []
+          },
+          {
+            "id": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+            "title": "Verify status indicator visual consistency",
+            "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+            "scenarioIds": [
+              "scenario-2-verify-status-indicator-visual-consistency"
+            ],
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
             "dependsOnSubtaskIds": []
           }
         ],
         "verificationTasks": [
           {
-            "id": "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-            "title": "Verify Implement real-time test execution status indicator",
-            "summary": "Verify the user-visible outcome for Implement real-time test execution status indicator.",
+            "id": "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+            "title": "Verify Verify status indicator real-time execution states",
+            "summary": "Verify the user-visible outcome for Verify status indicator real-time execution states.",
             "sourceIds": [
               "intent-poc-app"
             ],
             "workItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ]
+          },
+          {
+            "id": "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+            "title": "Verify Verify status indicator visual consistency",
+            "summary": "Verify the user-visible outcome for Verify status indicator visual consistency.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ]
           }
         ]
@@ -566,40 +505,22 @@
             "reason": "Primary implementation path for Intent Studio."
           }
         ],
-        "uiStateHints": [
-          {
-            "sourceId": "intent-poc-app",
-            "stateId": "theme-mode",
-            "label": "Theme mode",
-            "reason": "Prompt requests the Theme mode UI state with value \"light\".",
-            "verificationStrategies": [
-              "ui-interaction-playwright"
-            ],
-            "notes": [
-              "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-              "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-              "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-              "Verify the active theme state before trusting screenshot comparisons.",
-              "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-              "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-            ]
-          }
-        ],
+        "uiStateHints": [],
         "verificationHints": [
           {
             "sourceId": "intent-poc-app",
             "note": "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-            "reason": "Supports verification for requested UI state context in intent-poc-app."
+            "reason": "Matched prompt terms: state, Intent Studio, intent, studio."
           },
           {
             "sourceId": "intent-poc-app",
             "note": "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-            "reason": "Supports verification for requested UI state context in intent-poc-app."
+            "reason": "Matched prompt terms: state, Intent Studio, intent, studio."
           },
           {
             "sourceId": "intent-poc-app",
             "note": "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-            "reason": "Supports verification for requested UI state context in intent-poc-app."
+            "reason": "Matched prompt terms: Intent Studio, intent, studio."
           }
         ],
         "repoNoteHints": [
@@ -611,7 +532,7 @@
           {
             "sourceId": "intent-poc-app",
             "note": "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
-            "reason": "Matched prompt terms: with, Intent Studio, intent, studio."
+            "reason": "Matched prompt terms: Intent Studio, intent, studio."
           }
         ],
         "repoMemoryHints": [
@@ -623,18 +544,18 @@
             "reason": "Matched repo memory terms: intent studio, intent, studio."
           },
           {
-            "memoryId": "reviewed-intent-runner",
-            "title": "Reviewed Intent Runner",
-            "sourcePath": "/memories/repo/reviewed-intent-runner.md",
-            "note": "Studio starts reviewed runs with both prompt and artifact.normalizedIntent when launching from draftId.",
-            "reason": "Matched repo memory terms: studio, with."
+            "memoryId": "ui-state-metadata",
+            "title": "UI State Metadata",
+            "sourcePath": "/memories/repo/ui-state-metadata.md",
+            "note": "theme-mode uses a shared dark query-param contract across Studio and library routes, so verification should prefer route state before UI controls.",
+            "reason": "Matched repo memory terms: studio, state."
           },
           {
             "memoryId": "studio-lifecycle-preview",
             "title": "Studio Lifecycle Preview",
             "sourcePath": "/memories/repo/studio-lifecycle-preview.md",
-            "note": "Studio execution stays locked until the reviewed draft is explicitly sent through /api/drafts/:id/send.",
-            "reason": "Matched repo memory terms: studio, execution."
+            "note": "POST /api/plan returns a scoping-only reviewed IDD draft first, and that preview should stay lean and prompt-relevant.",
+            "reason": "Matched repo memory terms: studio, that."
           }
         ],
         "captureHints": [],
@@ -642,22 +563,22 @@
       },
       "scopingDetails": {
         "repoContext": [
-          "Intent Studio serves as the primary runtime for demo UI and test execution monitoring."
+          "Intent Studio serves as the primary demo runtime for test status visualization."
         ],
         "sourceScope": [
           "intent-poc-app"
         ],
         "adaptiveBoundaries": [
-          "Indicator must update in real-time without blocking the main Studio execution loop."
+          "Indicator must integrate with existing Studio lifecycle hooks without disrupting current test execution flows."
         ],
         "minimumSuccess": [
-          "Visual indicator displays active test status and state codes during AI-generated test runs."
+          "Visual indicator appears in Studio during test runs, displaying accurate status and state codes."
         ],
         "baseline": [
-          "Studio execution currently locks until the reviewed draft is sent via /api/drafts/:id/send."
+          "Current Intent Studio UI lacks real-time test status feedback."
         ],
         "verificationObligations": [
-          "Verify indicator state updates using Playwright interactions; ensure theme-sensitive UI consistency."
+          "Verify indicator visibility across both light and dark theme modes using the shared dark query-param contract."
         ]
       },
       "plannerSections": [
@@ -690,64 +611,7 @@
             "mode": "all",
             "captureIds": []
           },
-          "warnings": [
-            "Requested UI states: theme-mode=light."
-          ],
-          "uiStateRequirements": [
-            {
-              "stateId": "theme-mode",
-              "label": "Theme mode",
-              "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-              "requestedValue": "light",
-              "activation": [
-                {
-                  "type": "query-param",
-                  "target": "dark",
-                  "values": {
-                    "light": "false",
-                    "dark": "true"
-                  },
-                  "notes": [
-                    "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                  ]
-                },
-                {
-                  "type": "ui-control",
-                  "target": "[data-testid='theme-toggle']",
-                  "values": {
-                    "light": "false",
-                    "dark": "true"
-                  },
-                  "notes": [
-                    "The library surface toggle remains available for manual verification flows."
-                  ]
-                },
-                {
-                  "type": "ui-control",
-                  "target": "#dark-mode-toggle",
-                  "values": {
-                    "light": "false",
-                    "dark": "true"
-                  },
-                  "notes": [
-                    "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                  ]
-                }
-              ],
-              "verificationStrategies": [
-                "ui-interaction-playwright"
-              ],
-              "notes": [
-                "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                "Verify the active theme state before trusting screenshot comparisons.",
-                "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-              ],
-              "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-            }
-          ]
+          "warnings": []
         }
       ],
       "destinations": [
@@ -845,14 +709,7 @@
         }
       ],
       "orchestrationStrategy": "single-source",
-      "reviewNotes": [
-        "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-        "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-        "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-        "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
-        "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-        "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-      ]
+      "reviewNotes": []
     },
     "sourceId": "intent-poc-app",
     "captureScope": {
@@ -866,7 +723,7 @@
     },
     "linear": {
       "createIssue": true,
-      "issueTitle": "IDD: I  need a visual test run indicator added to the ui so i know what tests are run and the status "
+      "issueTitle": "IDD: Implement a real-time visual test run indicator in Intent Studio that displays active test statu"
     },
     "execution": {
       "continueOnCaptureError": false
@@ -874,14 +731,8 @@
     "normalizationMeta": {
       "source": "llm",
       "warnings": [
-        "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-        "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-        "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-        "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
-        "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-        "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.",
-        "Ensure the indicator does not obstruct critical Studio functionality.",
-        "Verify that theme-mode toggling does not reset the test execution state."
+        "Ensure the status indicator does not obstruct existing Studio navigation elements.",
+        "Verify that state codes are accessible and clearly defined in the UI."
       ],
       "requestedPlanningDepth": "full",
       "effectivePlanningDepth": "full",
@@ -921,8 +772,8 @@
           "status": "completed",
           "source": "llm",
           "warnings": [
-            "Ensure the indicator does not obstruct critical Studio functionality.",
-            "Verify that theme-mode toggling does not reset the test execution state."
+            "Ensure the status indicator does not obstruct existing Studio navigation elements.",
+            "Verify that state codes are accessible and clearly defined in the UI."
           ]
         },
         {
@@ -963,63 +814,64 @@
     }
   },
   "businessIntent": {
-    "statement": "Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests to enable live monitoring of code state.",
-    "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+    "statement": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+    "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
     "acceptanceCriteria": [
       {
-        "id": "ac-1-a-new-ui-component-is-integrated-into-the-intent-studio-layout-to-display-test-e",
-        "description": "A new UI component is integrated into the Intent Studio layout to display test execution status.",
+        "id": "ac-1-a-new-status-indicator-component-is-integrated-into-the-intent-studio-header",
+        "description": "A new status indicator component is integrated into the Intent Studio header.",
         "origin": "inferred"
       },
       {
-        "id": "ac-2-the-indicator-updates-in-real-time-as-test-execution-progresses",
-        "description": "The indicator updates in real-time as test execution progresses.",
+        "id": "ac-2-the-indicator-updates-in-real-time-based-on-the-test-execution-lifecycle",
+        "description": "The indicator updates in real-time based on the test execution lifecycle.",
         "origin": "inferred"
       },
       {
-        "id": "ac-3-the-indicator-displays-both-the-human-readable-status-and-the-machine-readable-s",
-        "description": "The indicator displays both the human-readable status and the machine-readable state code.",
+        "id": "ac-3-the-component-displays-both-human-readable-status-labels-and-technical-state-cod",
+        "description": "The component displays both human-readable status labels and technical state codes.",
         "origin": "inferred"
       },
       {
-        "id": "ac-4-visual-verification-confirms-the-indicator-renders-correctly-in-both-light-and-d",
-        "description": "Visual verification confirms the indicator renders correctly in both light and dark themes.",
+        "id": "ac-4-visual-evidence-of-the-indicator-in-running-success-and-error-states-is-captured",
+        "description": "Visual evidence of the indicator in 'Running', 'Success', and 'Error' states is captured via Playwright.",
         "origin": "inferred"
       }
     ],
     "scenarios": [
       {
-        "id": "scenario-1-display-test-execution-status-in-intent-studio",
-        "title": "Display test execution status in Intent Studio",
-        "goal": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+        "id": "scenario-1-display-active-test-status-during-execution",
+        "title": "Display active test status during execution",
+        "goal": "Verify the indicator shows the correct status while a test is running.",
         "given": [
-          "The user is in the Intent Studio interface",
-          "An AI-generated test is initiated"
+          "The user is in Intent Studio",
+          "A test execution process has been triggered"
         ],
         "when": [
-          "The test execution begins"
+          "The test runner reports an active status"
         ],
         "then": [
-          "The test run indicator component is visible",
-          "The indicator displays a 'Running' status and the corresponding state code"
+          "The status indicator displays 'Running'",
+          "The indicator shows the corresponding active state code"
         ],
         "applicableSourceIds": [
           "intent-poc-app"
         ]
       },
       {
-        "id": "scenario-2-update-test-status-in-real-time",
-        "title": "Update test status in real-time",
-        "goal": "Verify that the indicator updates dynamically as the test state changes.",
+        "id": "scenario-2-verify-status-indicator-visual-consistency",
+        "title": "Verify status indicator visual consistency",
+        "goal": "Ensure the indicator renders correctly in both light and dark themes.",
         "given": [
-          "The test run indicator is visible and showing 'Running' status"
+          "The Intent Studio page is loaded"
         ],
         "when": [
-          "The test execution completes successfully"
+          "The theme is toggled between light and dark modes",
+          "The test status is set to 'Passed'"
         ],
         "then": [
-          "The indicator updates to 'Passed' status",
-          "The indicator displays the updated state code"
+          "The status indicator maintains correct contrast and styling in both themes",
+          "The indicator displays 'Passed' and the success state code"
         ],
         "applicableSourceIds": [
           "intent-poc-app"
@@ -1028,27 +880,26 @@
     ],
     "workItems": [
       {
-        "id": "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
+        "id": "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
         "type": "playwright-spec",
-        "verificationMode": "mocked-state-playwright",
-        "title": "Implement real-time test execution status indicator",
-        "description": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+        "verificationMode": "tracked-playwright",
+        "title": "Verify status indicator real-time execution states",
+        "description": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
         "scenarioIds": [
-          "scenario-1-display-test-execution-status-in-intent-studio",
-          "scenario-2-update-test-status-in-real-time"
+          "scenario-1-display-active-test-status-during-execution"
         ],
         "sourceIds": [
           "intent-poc-app"
         ],
-        "userVisibleOutcome": "A visible status indicator in the Intent Studio UI that updates from 'Running' to 'Passed' based on test execution state.",
-        "verification": "Playwright specs will mock the Studio state to verify the indicator renders correctly in both 'running' and 'passed' states, ensuring the UI reflects the underlying machine state.",
+        "userVisibleOutcome": "The status indicator displays 'Running' and the correct state code during test execution.",
+        "verification": "Use tracked-playwright to trigger a test run and assert the presence of the status indicator with the expected running state code.",
         "execution": {
           "order": 1,
           "dependsOnWorkItemIds": [],
-          "objectiveId": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
+          "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
           "workstreamId": "workstream-1-intent-poc-app",
-          "taskId": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-          "subtaskId": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "taskId": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+          "subtaskId": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
         },
         "playwright": {
           "generatedBy": "llm",
@@ -1056,255 +907,148 @@
             {
               "framework": "playwright",
               "sourceId": "intent-poc-app",
-              "relativeSpecPath": "intent-poc-app/test-execution-indicator.spec.ts",
-              "suiteName": "Intent Studio Test Execution Indicator",
-              "testName": "Verify status indicator lifecycle",
+              "relativeSpecPath": "intent-poc-app/verify-status-indicator-execution.spec.ts",
+              "suiteName": "Intent Studio Status Indicator",
+              "testName": "Verify status indicator real-time execution states",
               "scenarioIds": [
-                "scenario-1-display-test-execution-status-in-intent-studio",
-                "scenario-2-update-test-status-in-real-time"
+                "scenario-1-display-active-test-status-during-execution"
               ],
               "checkpoints": [
                 {
-                  "id": "checkpoint-1-verify-status-indicator-lifecycle-verify-running-state-indicator",
-                  "label": "Verify running state indicator",
-                  "action": "mock-studio-state",
-                  "assertion": "The indicator displays 'Running' status and code when the test is active.",
-                  "screenshotId": "indicator-running-state",
-                  "requiredUiStates": [
-                    {
-                      "stateId": "theme-mode",
-                      "label": "Theme mode",
-                      "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                      "requestedValue": "light",
-                      "activation": [
-                        {
-                          "type": "query-param",
-                          "target": "dark",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "[data-testid='theme-toggle']",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The library surface toggle remains available for manual verification flows."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "#dark-mode-toggle",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                          ]
-                        }
-                      ],
-                      "verificationStrategies": [
-                        "ui-interaction-playwright"
-                      ],
-                      "notes": [
-                        "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                        "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                        "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                        "Verify the active theme state before trusting screenshot comparisons.",
-                        "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                        "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                      ],
-                      "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                    }
-                  ]
+                  "id": "checkpoint-1-verify-status-indicator-real-time-execution-states-navigate-to-intent-studio",
+                  "label": "Navigate to Intent Studio",
+                  "action": "goto",
+                  "assertion": "Studio is loaded and prompt input is ready.",
+                  "screenshotId": "primitive-status-indicator",
+                  "path": "/",
+                  "waitUntil": "domcontentloaded"
                 },
                 {
-                  "id": "checkpoint-2-verify-status-indicator-lifecycle-verify-passed-state-indicator",
-                  "label": "Verify passed state indicator",
-                  "action": "mock-studio-state",
-                  "assertion": "The indicator updates to 'Passed' status and code upon successful completion.",
-                  "screenshotId": "indicator-passed-state",
-                  "requiredUiStates": [
-                    {
-                      "stateId": "theme-mode",
-                      "label": "Theme mode",
-                      "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                      "requestedValue": "light",
-                      "activation": [
-                        {
-                          "type": "query-param",
-                          "target": "dark",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "[data-testid='theme-toggle']",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The library surface toggle remains available for manual verification flows."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "#dark-mode-toggle",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                          ]
-                        }
-                      ],
-                      "verificationStrategies": [
-                        "ui-interaction-playwright"
-                      ],
-                      "notes": [
-                        "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                        "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                        "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                        "Verify the active theme state before trusting screenshot comparisons.",
-                        "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                        "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                      ],
-                      "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                    }
-                  ]
+                  "id": "checkpoint-2-verify-status-indicator-real-time-execution-states-enter-prompt-text",
+                  "label": "Enter prompt text",
+                  "action": "fill",
+                  "assertion": "Prompt input is populated to enable the run button.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "#prompt-input",
+                  "value": "Generate a test for the login flow"
                 },
                 {
-                  "id": "checkpoint-3-verify-status-indicator-lifecycle-assert-indicator-visibility",
-                  "label": "Assert indicator visibility",
+                  "id": "checkpoint-3-verify-status-indicator-real-time-execution-states-workflow-readiness-ready",
+                  "label": "Workflow Readiness Ready",
+                  "action": "assert-attribute-contains",
+                  "assertion": "The Studio workflow readiness resolves before the run button is used.",
+                  "screenshotId": "workflow-readiness-ready",
+                  "timeoutMs": 30000,
+                  "target": "#workflow-readiness-status",
+                  "attributeName": "class",
+                  "expectedSubstring": "target-ready",
+                  "waitForSelector": "#workflow-readiness-status"
+                },
+                {
+                  "id": "checkpoint-4-verify-status-indicator-real-time-execution-states-first-click-to-generate-draft",
+                  "label": "First click to generate draft",
+                  "action": "click",
+                  "assertion": "The draft generation process is initiated.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "[data-testid='run-tests-button']"
+                },
+                {
+                  "id": "checkpoint-5-verify-status-indicator-real-time-execution-states-scoping-draft-ready",
+                  "label": "Scoping Draft Ready",
                   "action": "assert-visible",
-                  "assertion": "The status indicator component is present in the UI.",
-                  "screenshotId": "indicator-visibility-check",
-                  "locator": "[data-testid='test-status-indicator']",
-                  "requiredUiStates": [
-                    {
-                      "stateId": "theme-mode",
-                      "label": "Theme mode",
-                      "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                      "requestedValue": "light",
-                      "activation": [
-                        {
-                          "type": "query-param",
-                          "target": "dark",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "[data-testid='theme-toggle']",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The library surface toggle remains available for manual verification flows."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "#dark-mode-toggle",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                          ]
-                        }
-                      ],
-                      "verificationStrategies": [
-                        "ui-interaction-playwright"
-                      ],
-                      "notes": [
-                        "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                        "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                        "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                        "Verify the active theme state before trusting screenshot comparisons.",
-                        "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                        "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                      ],
-                      "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                    }
-                  ]
-                }
-              ],
-              "requiredUiStates": [
+                  "assertion": "The scoping draft is ready for approval before execution starts.",
+                  "screenshotId": "scoping-draft-ready",
+                  "timeoutMs": 30000,
+                  "locator": "text=Scoping IDD draft ready."
+                },
                 {
-                  "stateId": "theme-mode",
-                  "label": "Theme mode",
-                  "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                  "requestedValue": "light",
-                  "activation": [
-                    {
-                      "type": "query-param",
-                      "target": "dark",
-                      "values": {
-                        "light": "false",
-                        "dark": "true"
-                      },
-                      "notes": [
-                        "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                      ]
-                    },
-                    {
-                      "type": "ui-control",
-                      "target": "[data-testid='theme-toggle']",
-                      "values": {
-                        "light": "false",
-                        "dark": "true"
-                      },
-                      "notes": [
-                        "The library surface toggle remains available for manual verification flows."
-                      ]
-                    },
-                    {
-                      "type": "ui-control",
-                      "target": "#dark-mode-toggle",
-                      "values": {
-                        "light": "false",
-                        "dark": "true"
-                      },
-                      "notes": [
-                        "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                      ]
-                    }
-                  ],
-                  "verificationStrategies": [
-                    "ui-interaction-playwright"
-                  ],
-                  "notes": [
-                    "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                    "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                    "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                    "Verify the active theme state before trusting screenshot comparisons.",
-                    "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                    "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                  ],
-                  "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                  "id": "checkpoint-6-verify-status-indicator-real-time-execution-states-second-click-to-approve-and-r",
+                  "label": "Second click to approve and run",
+                  "action": "click",
+                  "assertion": "The execution process is started.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "[data-testid='run-tests-button']"
+                },
+                {
+                  "id": "checkpoint-7-verify-status-indicator-real-time-execution-states-assert-running-state",
+                  "label": "Assert running state",
+                  "action": "assert-visible",
+                  "assertion": "The status indicator shows the running state code.",
+                  "screenshotId": "primitive-status-indicator",
+                  "locator": "[data-testid='test-status-indicator']:has-text('RUNNING')"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+        "type": "playwright-spec",
+        "verificationMode": "tracked-playwright",
+        "title": "Verify status indicator visual consistency",
+        "description": "Ensure the indicator renders correctly in both light and dark themes.",
+        "scenarioIds": [
+          "scenario-2-verify-status-indicator-visual-consistency"
+        ],
+        "sourceIds": [
+          "intent-poc-app"
+        ],
+        "userVisibleOutcome": "The status indicator maintains correct contrast and styling in both themes.",
+        "verification": "Capture screenshots of the indicator in both light and dark modes to verify visual consistency.",
+        "execution": {
+          "order": 2,
+          "dependsOnWorkItemIds": [],
+          "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+          "workstreamId": "workstream-1-intent-poc-app",
+          "taskId": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+          "subtaskId": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+        },
+        "playwright": {
+          "generatedBy": "llm",
+          "specs": [
+            {
+              "framework": "playwright",
+              "sourceId": "intent-poc-app",
+              "relativeSpecPath": "intent-poc-app/verify-status-indicator-visual-consistency.spec.ts",
+              "suiteName": "Intent Studio Status Indicator",
+              "testName": "Verify status indicator visual consistency",
+              "scenarioIds": [
+                "scenario-2-verify-status-indicator-visual-consistency"
+              ],
+              "checkpoints": [
+                {
+                  "id": "checkpoint-1-verify-status-indicator-visual-consistency-navigate-to-studio-in-light-mode",
+                  "label": "Navigate to Studio in light mode",
+                  "action": "goto",
+                  "assertion": "Studio is loaded in light mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "path": "/?dark=false",
+                  "waitUntil": "domcontentloaded"
+                },
+                {
+                  "id": "checkpoint-2-verify-status-indicator-visual-consistency-assert-light-mode-indicator",
+                  "label": "Assert light mode indicator",
+                  "action": "assert-visible",
+                  "assertion": "Indicator is visible in light mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "locator": "#current-status-pill"
+                },
+                {
+                  "id": "checkpoint-3-verify-status-indicator-visual-consistency-toggle-to-dark-mode",
+                  "label": "Toggle to dark mode",
+                  "action": "click",
+                  "assertion": "Theme is switched to dark mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "#dark-mode-toggle"
+                },
+                {
+                  "id": "checkpoint-4-verify-status-indicator-visual-consistency-assert-dark-mode-indicator",
+                  "label": "Assert dark mode indicator",
+                  "action": "assert-visible",
+                  "assertion": "Indicator is visible in dark mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "locator": "#current-status-pill"
                 }
               ]
             }
@@ -1315,10 +1059,10 @@
     "decomposition": {
       "objectives": [
         {
-          "id": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
-          "title": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-          "summary": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-          "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+          "id": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+          "title": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+          "summary": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+          "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
           "workstreamIds": [
             "workstream-1-intent-poc-app"
           ]
@@ -1333,64 +1077,112 @@
             "intent-poc-app"
           ],
           "taskIds": [
-            "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio"
+            "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+            "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency"
           ]
         }
       ],
       "tasks": [
         {
-          "id": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-          "title": "Display test execution status in Intent Studio",
-          "summary": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+          "id": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+          "title": "Display active test status during execution",
+          "summary": "Verify the indicator shows the correct status while a test is running.",
           "sourceIds": [
             "intent-poc-app"
           ],
           "scenarioIds": [
-            "scenario-1-display-test-execution-status-in-intent-studio",
-            "scenario-2-update-test-status-in-real-time"
+            "scenario-1-display-active-test-status-during-execution"
           ],
           "workItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
           "subtaskIds": [
-            "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
           "verificationTaskIds": [
-            "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+          ]
+        },
+        {
+          "id": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+          "title": "Verify status indicator visual consistency",
+          "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "scenarioIds": [
+            "scenario-2-verify-status-indicator-visual-consistency"
+          ],
+          "workItemIds": [
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          ],
+          "subtaskIds": [
+            "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ]
         }
       ],
       "subtasks": [
         {
-          "id": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-          "title": "Implement real-time test execution status indicator",
-          "summary": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+          "id": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+          "title": "Verify status indicator real-time execution states",
+          "summary": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
           "scenarioIds": [
-            "scenario-1-display-test-execution-status-in-intent-studio",
-            "scenario-2-update-test-status-in-real-time"
+            "scenario-1-display-active-test-status-during-execution"
           ],
           "sourceIds": [
             "intent-poc-app"
           ],
           "workItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
           "verificationTaskIds": [
-            "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+          ],
+          "dependsOnSubtaskIds": []
+        },
+        {
+          "id": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+          "title": "Verify status indicator visual consistency",
+          "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+          "scenarioIds": [
+            "scenario-2-verify-status-indicator-visual-consistency"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ],
           "dependsOnSubtaskIds": []
         }
       ],
       "verificationTasks": [
         {
-          "id": "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-          "title": "Verify Implement real-time test execution status indicator",
-          "summary": "Verify the user-visible outcome for Implement real-time test execution status indicator.",
+          "id": "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+          "title": "Verify Verify status indicator real-time execution states",
+          "summary": "Verify the user-visible outcome for Verify status indicator real-time execution states.",
           "sourceIds": [
             "intent-poc-app"
           ],
           "workItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+          ]
+        },
+        {
+          "id": "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+          "title": "Verify Verify status indicator visual consistency",
+          "summary": "Verify the user-visible outcome for Verify status indicator visual consistency.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ]
         }
       ]
@@ -1406,64 +1198,7 @@
           "mode": "all",
           "captureIds": []
         },
-        "warnings": [
-          "Requested UI states: theme-mode=light."
-        ],
-        "uiStateRequirements": [
-          {
-            "stateId": "theme-mode",
-            "label": "Theme mode",
-            "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-            "requestedValue": "light",
-            "activation": [
-              {
-                "type": "query-param",
-                "target": "dark",
-                "values": {
-                  "light": "false",
-                  "dark": "true"
-                },
-                "notes": [
-                  "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                ]
-              },
-              {
-                "type": "ui-control",
-                "target": "[data-testid='theme-toggle']",
-                "values": {
-                  "light": "false",
-                  "dark": "true"
-                },
-                "notes": [
-                  "The library surface toggle remains available for manual verification flows."
-                ]
-              },
-              {
-                "type": "ui-control",
-                "target": "#dark-mode-toggle",
-                "values": {
-                  "light": "false",
-                  "dark": "true"
-                },
-                "notes": [
-                  "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                ]
-              }
-            ],
-            "verificationStrategies": [
-              "ui-interaction-playwright"
-            ],
-            "notes": [
-              "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-              "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-              "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-              "Verify the active theme state before trusting screenshot comparisons.",
-              "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-              "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-            ],
-            "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-          }
-        ]
+        "warnings": []
       }
     ],
     "destinations": [
@@ -1561,14 +1296,7 @@
       }
     ],
     "orchestrationStrategy": "single-source",
-    "reviewNotes": [
-      "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-      "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-      "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-      "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
-      "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-      "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-    ]
+    "reviewNotes": []
   },
   "linear": {
     "parentIssue": null,
@@ -1578,106 +1306,151 @@
   "sources": [
     {
       "sourceId": "intent-poc-app",
-      "status": "failed",
-      "error": "QA verification failed for source 'intent-poc-app' on attempt 2: Command failed (1). Progress: completed 1/1 targeted work items.",
+      "status": "completed",
       "linearIssue": null,
       "generatedPlaywrightTests": [
-        "tests/intent/intent-poc-app/test-execution-indicator.spec.ts"
+        "tests/intent/intent-poc-app/verify-status-indicator-execution.spec.ts",
+        "tests/intent/intent-poc-app/verify-status-indicator-visual-consistency.spec.ts"
       ],
       "attemptCount": 2,
       "attempts": [
         {
           "attemptNumber": 1,
-          "startedAt": "2026-04-22T04:33:52.050Z",
-          "finishedAt": "2026-04-22T04:34:40.193Z",
-          "status": "failed",
-          "failureStage": "implementation",
+          "startedAt": "2026-04-22T20:04:52.989Z",
+          "finishedAt": "2026-04-22T20:08:40.963Z",
+          "status": "completed",
           "targetedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
-          "completedInAttemptWorkItemIds": [],
-          "pendingTargetedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "completedInAttemptWorkItemIds": [
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
-          "completedWorkItemIds": [],
+          "pendingTargetedWorkItemIds": [],
+          "completedWorkItemIds": [
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+          ],
           "remainingWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ],
           "implementation": {
-            "status": "failed",
-            "summary": "Implementation could not produce a valid bounded change set.",
-            "error": "{\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}}",
+            "status": "completed",
+            "summary": "Applied 1 file operation (0 create, 1 replace, 0 delete).",
             "targetedWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
-            "completedWorkItemIds": [],
+            "completedWorkItemIds": [
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ],
             "remainingWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
             "commands": [
               {
                 "label": "plan-change-set",
                 "command": "gemini:plan-implementation-change-set",
                 "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-                "startedAt": "2026-04-22T04:33:52.276Z",
-                "finishedAt": "2026-04-22T04:34:36.076Z",
-                "durationMs": 43800,
+                "startedAt": "2026-04-22T20:04:53.060Z",
+                "finishedAt": "2026-04-22T20:05:11.864Z",
+                "durationMs": 18804,
                 "status": "completed",
                 "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-plan.json"
               },
               {
-                "label": "implementation-failure",
-                "command": "implementation:failed",
+                "label": "materialize-change-set",
+                "command": "gemini:materialize-implementation-files",
                 "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-                "startedAt": "2026-04-22T04:34:40.191Z",
-                "finishedAt": "2026-04-22T04:34:40.191Z",
-                "durationMs": 0,
-                "status": "failed",
-                "error": "{\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}}",
-                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-failure.json"
+                "startedAt": "2026-04-22T20:05:11.866Z",
+                "finishedAt": "2026-04-22T20:06:44.431Z",
+                "durationMs": 92565,
+                "status": "completed",
+                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-materialize.json"
+              },
+              {
+                "label": "apply-change-set",
+                "command": "apply:implementation-change-set",
+                "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+                "startedAt": "2026-04-22T20:06:44.526Z",
+                "finishedAt": "2026-04-22T20:06:44.529Z",
+                "durationMs": 3,
+                "status": "completed",
+                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-apply.json"
               }
             ],
-            "fileOperations": []
+            "fileOperations": [
+              {
+                "operation": "replace",
+                "filePath": "src/demo-app/render/render-intent-studio-page.ts",
+                "rationale": "Inject the status indicator component into the Intent Studio header, ensuring it displays the current execution state and state code as required by the acceptance criteria.",
+                "status": "applied"
+              }
+            ]
           },
           "qaVerification": {
-            "status": "skipped",
-            "summary": "QA verification was skipped because implementation did not complete successfully.",
+            "status": "completed",
+            "summary": "QA verification passed 2 commands.",
             "targetedWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
-            "completedWorkItemIds": [],
+            "completedWorkItemIds": [
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ],
             "remainingWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
-            "commands": [],
+            "commands": [
+              {
+                "label": "typecheck",
+                "command": "npm run typecheck",
+                "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+                "startedAt": "2026-04-22T20:06:46.838Z",
+                "finishedAt": "2026-04-22T20:06:56.716Z",
+                "durationMs": 9878,
+                "status": "completed",
+                "exitCode": 0,
+                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-typecheck.log"
+              },
+              {
+                "label": "generated-playwright",
+                "command": "npx playwright test --workers=1 \"tests/intent/intent-poc-app/verify-status-indicator-execution.spec.ts\"",
+                "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+                "startedAt": "2026-04-22T20:06:56.719Z",
+                "finishedAt": "2026-04-22T20:08:40.961Z",
+                "durationMs": 104242,
+                "status": "completed",
+                "exitCode": 0,
+                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-generated-playwright.log"
+              }
+            ],
             "fileOperations": []
           }
         },
         {
           "attemptNumber": 2,
-          "startedAt": "2026-04-22T04:34:40.193Z",
-          "finishedAt": "2026-04-22T04:36:46.987Z",
-          "status": "failed",
-          "failureStage": "qaVerification",
+          "startedAt": "2026-04-22T20:08:40.963Z",
+          "finishedAt": "2026-04-22T20:15:48.058Z",
+          "status": "completed",
           "targetedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ],
           "completedInAttemptWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ],
           "pendingTargetedWorkItemIds": [],
           "completedWorkItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ],
           "remainingWorkItemIds": [],
           "implementation": {
             "status": "completed",
-            "summary": "Applied 1 file operation (0 create, 1 replace, 0 delete). Requested UI states for downstream verification: theme-mode=light.",
+            "summary": "Applied 2 file operations (0 create, 2 replace, 0 delete).",
             "targetedWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
             "completedWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
             "remainingWorkItemIds": [],
             "commands": [
@@ -1685,9 +1458,9 @@
                 "label": "plan-change-set",
                 "command": "gemini:plan-implementation-change-set",
                 "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-                "startedAt": "2026-04-22T04:34:40.376Z",
-                "finishedAt": "2026-04-22T04:34:54.756Z",
-                "durationMs": 14380,
+                "startedAt": "2026-04-22T20:08:41.049Z",
+                "finishedAt": "2026-04-22T20:12:49.530Z",
+                "durationMs": 248481,
                 "status": "completed",
                 "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-implementation-plan.json"
               },
@@ -1695,9 +1468,9 @@
                 "label": "materialize-change-set",
                 "command": "gemini:materialize-implementation-files",
                 "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-                "startedAt": "2026-04-22T04:34:54.776Z",
-                "finishedAt": "2026-04-22T04:36:27.556Z",
-                "durationMs": 92780,
+                "startedAt": "2026-04-22T20:12:49.532Z",
+                "finishedAt": "2026-04-22T20:14:53.251Z",
+                "durationMs": 123719,
                 "status": "completed",
                 "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-implementation-materialize.json"
               },
@@ -1705,9 +1478,9 @@
                 "label": "apply-change-set",
                 "command": "apply:implementation-change-set",
                 "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-                "startedAt": "2026-04-22T04:36:27.708Z",
-                "finishedAt": "2026-04-22T04:36:27.715Z",
-                "durationMs": 7,
+                "startedAt": "2026-04-22T20:14:53.439Z",
+                "finishedAt": "2026-04-22T20:14:53.442Z",
+                "durationMs": 3,
                 "status": "completed",
                 "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-implementation-apply.json"
               }
@@ -1716,44 +1489,39 @@
               {
                 "operation": "replace",
                 "filePath": "src/demo-app/render/render-intent-studio-page.ts",
-                "rationale": "Integrate a persistent TestExecutionIndicator component into the Intent Studio layout to display real-time execution status and state codes as requested.",
+                "rationale": "Integrate the new real-time status indicator component into the Intent Studio header and ensure it is theme-aware to satisfy visual consistency requirements.",
+                "status": "applied"
+              },
+              {
+                "operation": "replace",
+                "filePath": "src/demo-app/server/start-intent-studio-server.ts",
+                "rationale": "Update the server logic to correctly propagate real-time test execution status and state codes to the Intent Studio UI.",
                 "status": "applied"
               }
             ]
           },
           "qaVerification": {
-            "status": "failed",
-            "summary": "QA verification failed while running 'generated-playwright'. Requested UI states: theme-mode=light.",
-            "error": "Command failed (1).",
+            "status": "completed",
+            "summary": "QA verification passed 1 command.",
             "targetedWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
             "completedWorkItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
             "remainingWorkItemIds": [],
             "commands": [
               {
-                "label": "typecheck",
-                "command": "npm run typecheck",
+                "label": "generated-playwright",
+                "command": "npx playwright test --workers=1 \"tests/intent/intent-poc-app/verify-status-indicator-visual-consistency.spec.ts\"",
                 "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-                "startedAt": "2026-04-22T04:36:27.777Z",
-                "finishedAt": "2026-04-22T04:36:38.264Z",
-                "durationMs": 10487,
+                "startedAt": "2026-04-22T20:15:10.951Z",
+                "finishedAt": "2026-04-22T20:15:48.057Z",
+                "durationMs": 37106,
                 "status": "completed",
                 "exitCode": 0,
-                "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-qaverification-typecheck.log"
-              },
-              {
-                "label": "generated-playwright",
-                "command": "npx playwright test \"tests/intent/intent-poc-app/test-execution-indicator.spec.ts\"",
-                "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-                "startedAt": "2026-04-22T04:36:38.266Z",
-                "finishedAt": "2026-04-22T04:36:46.986Z",
-                "durationMs": 8720,
-                "status": "failed",
-                "exitCode": 1,
-                "error": "Command failed (1).",
                 "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-qaverification-generated-playwright.log"
               }
             ],
@@ -1766,7 +1534,7 @@
         "rootDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
         "appDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
         "baseUrl": "http://127.0.0.1:6006",
-        "gitCommit": "78df2c5d8b6cf288aa78c1322c2d75f8c6efc130"
+        "gitCommit": "3feb1ca75b22f61a70b78c832c8add526082be2a"
       },
       "artifacts": {
         "manifestPath": "artifacts/sources/intent-poc-app/manifest.json",

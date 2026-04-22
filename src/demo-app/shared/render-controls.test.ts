@@ -8,9 +8,12 @@ test("renderButton preserves the app-backed submit button contract", () => {
       label: "Run intent",
       className: "primary-button",
       id: "submit-button",
-      type: "submit"
+      type: "submit",
+      attributes: {
+        "data-testid": "run-tests-button"
+      }
     }),
-    '<button class="primary-button" id="submit-button" type="submit">Run intent</button>'
+    '<button class="primary-button" id="submit-button" type="submit" data-testid="run-tests-button">Run intent</button>'
   );
 });
 

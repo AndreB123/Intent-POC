@@ -14,7 +14,7 @@
           "intent-poc-app"
         ],
         "selectionStatus": "selected",
-        "reason": "Source intent-poc-app matched the prompt alias 'surface library'.",
+        "reason": "Source intent-poc-app was selected by Gemini prompt normalization.",
         "summary": "Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.",
         "sourceTypes": [
           "local"
@@ -45,7 +45,7 @@
             "surface library",
             "library"
           ],
-          "reason": "Source intent-poc-app matched the prompt alias 'surface library'."
+          "reason": "Source intent-poc-app was selected by Gemini prompt normalization."
         }
       ],
       "primarySurface": {
@@ -168,18 +168,33 @@
           "reason": "Matched repo memory terms: library, baseline."
         }
       ],
-      "captureHints": [
-        {
-          "sourceId": "intent-poc-app",
-          "captureIds": [
-            "library-index",
-            "component-button-primary",
-            "page-analytics-overview"
-          ],
-          "reason": "Prompt already narrows verification to library-index, component-button-primary, page-analytics-overview."
-        }
-      ],
+      "captureHints": [],
       "unresolvedQuestions": []
+    },
+    "scopingDetails": {
+      "repoContext": [
+        "Surface library screenshot regeneration routes through intent-poc-app with an explicit library publish opt-in."
+      ],
+      "sourceScope": [
+        "src/demo-app/render/render-surface-frame.ts",
+        "src/demo-app/render/render-surface-page.ts"
+      ],
+      "adaptiveBoundaries": [
+        "Use dark query parameter for theme-mode activation.",
+        "Verify theme state before screenshot capture."
+      ],
+      "minimumSuccess": [
+        "Paired light-mode and dark-mode screenshot evidence.",
+        "Published evidence package for review."
+      ],
+      "baseline": [
+        "Persistent artifacts stored under artifacts/library/intent-poc-app."
+      ],
+      "verificationObligations": [
+        "Declare and verify theme-mode state.",
+        "Do not accept dark-mode-only capture sets.",
+        "Leave business process gate for baseline review."
+      ]
     },
     "plannerSections": [
       {
@@ -202,7 +217,7 @@
     }
   },
   "normalizationMeta": {
-    "source": "rules",
+    "source": "llm",
     "warnings": [
       "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
       "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
@@ -210,7 +225,10 @@
       "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
       "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
       "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.",
-      "Linear publishing is part of the plan, but it is inactive until config.linear.enabled is turned on."
+      "Ensure library publish opt-in is enabled for screenshot regeneration.",
+      "Verify theme-mode state before trusting screenshot comparisons.",
+      "Ensure light-mode reference screenshots are maintained for visual regression comparison.",
+      "Verify that the dark mode query parameter is correctly applied to all library routes."
     ],
     "requestedPlanningDepth": "full",
     "effectivePlanningDepth": "full",
@@ -223,51 +241,67 @@
         "stageId": "promptNormalization",
         "label": "Prompt Interpretation",
         "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
-        "status": "skipped",
-        "source": "skipped",
-        "warnings": []
+        "status": "completed",
+        "source": "llm",
+        "warnings": [
+          "Ensure library publish opt-in is enabled for screenshot regeneration.",
+          "Verify theme-mode state before trusting screenshot comparisons."
+        ]
       },
       {
         "stageId": "linearScoping",
         "label": "Linear Scoping",
         "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
-        "status": "completed",
-        "source": "rules",
-        "warnings": []
+        "status": "skipped",
+        "source": "skipped",
+        "warnings": [
+          "Linear support is disabled in this POC."
+        ]
       },
       {
         "stageId": "bddPlanning",
         "label": "BDD Planning",
         "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
-        "source": "rules",
-        "warnings": []
+        "source": "llm",
+        "warnings": [
+          "Ensure light-mode reference screenshots are maintained for visual regression comparison.",
+          "Verify that the dark mode query parameter is correctly applied to all library routes."
+        ]
       },
       {
         "stageId": "tddPlanning",
         "label": "TDD Planning",
         "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "completed",
-        "source": "rules",
+        "source": "llm",
         "warnings": []
       },
       {
         "stageId": "implementation",
         "label": "Implementation",
         "description": "Apply the planned changes against the scoped source workspace.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
-        "warnings": []
+        "warnings": [
+          "Implementation stage configuration is recorded and executes during source runs before QA verification."
+        ]
       },
       {
         "stageId": "qaVerification",
         "label": "QA Verification",
         "description": "Verify implementation output, tests, and evidence before completion or retry.",
+        "provider": "gemini",
         "model": "models/gemini-3.1-flash-lite-preview",
         "status": "skipped",
         "source": "skipped",
@@ -286,16 +320,13 @@
     {
       "sourceId": "intent-poc-app",
       "status": "planned",
-      "selectionReason": "Source intent-poc-app matched the prompt alias 'surface library'.",
+      "selectionReason": "Source intent-poc-app was selected by Gemini prompt normalization.",
       "captureScope": {
-        "mode": "subset",
-        "captureIds": [
-          "library-index",
-          "component-button-primary",
-          "page-analytics-overview"
-        ]
+        "mode": "all",
+        "captureIds": []
       },
       "warnings": [
+        "Gemini suggested narrowing intent-poc-app captures to library-index, component-button-primary, page-analytics-overview, but the prompt did not explicitly name those captures, so all configured captures were preserved.",
         "Requested UI states: theme-mode=dark."
       ],
       "uiStateRequirements": [

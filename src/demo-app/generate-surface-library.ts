@@ -76,7 +76,7 @@ export async function runSurfaceLibraryRefresh(): Promise<void> {
     await runPreflightChecks(workspaceRoot);
   }
 
-  const result = await runIntent(await buildRuntimeRunIntentOptions({
+  await runIntent(await buildRuntimeRunIntentOptions({
     configPath,
     sourceIds: ["intent-poc-app"],
     publishToLibrary: true,
@@ -90,16 +90,8 @@ export async function runSurfaceLibraryRefresh(): Promise<void> {
   );
 
   log.info("Surface library screenshots generated through the unified runIntent workflow.", {
-    runId: result.paths.runId,
-    sourceId: result.sourceId,
     screenshotRoot: path.relative(workspaceRoot, screenshotRoot),
     imageCount: capturedFiles.length,
-    summaryPath: path.relative(workspaceRoot, result.paths.summaryPath),
-    manifestPath: path.relative(workspaceRoot, result.paths.manifestPath),
-    preflightChecks: shouldSkipPreflightChecks() ? [] : ["npm run typecheck", "npm run test:code"],
-    legacyArtifactPathsCleared: getLegacyLibraryArtifactPaths(workspaceRoot).map((targetPath) =>
-      path.relative(workspaceRoot, targetPath)
-    ),
     files: capturedFiles
   });
 }

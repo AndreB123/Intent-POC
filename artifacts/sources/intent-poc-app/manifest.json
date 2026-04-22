@@ -1,13 +1,12 @@
 {
   "version": 1,
-  "runId": "2026-04-22T04-33-51-900Z-intent-poc-app",
-  "timestamp": "2026-04-22T04:36:46.988Z",
-  "status": "failed",
-  "error": "QA verification failed for source 'intent-poc-app' on attempt 2: Command failed (1). Progress: completed 1/1 targeted work items.",
+  "runId": "2026-04-22T20-04-52-960Z-intent-poc-app",
+  "timestamp": "2026-04-22T20:16:33.795Z",
+  "status": "completed",
   "intent": {
-    "intentId": "2026-04-22T04-29-56-932Z-change-behavior-for-intent-poc-app",
-    "receivedAt": "2026-04-22T04:33:51.786Z",
-    "rawPrompt": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
+    "intentId": "2026-04-22T20-04-52-959Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-22T20:04:52.959Z",
+    "rawPrompt": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
     "summary": "change behavior for intent-poc-app",
     "intentType": "change-behavior",
     "codeSurface": {
@@ -30,63 +29,64 @@
       ]
     },
     "businessIntent": {
-      "statement": "Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests to enable live monitoring of code state.",
-      "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+      "statement": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+      "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
       "acceptanceCriteria": [
         {
-          "id": "ac-1-a-new-ui-component-is-integrated-into-the-intent-studio-layout-to-display-test-e",
-          "description": "A new UI component is integrated into the Intent Studio layout to display test execution status.",
+          "id": "ac-1-a-new-status-indicator-component-is-integrated-into-the-intent-studio-header",
+          "description": "A new status indicator component is integrated into the Intent Studio header.",
           "origin": "inferred"
         },
         {
-          "id": "ac-2-the-indicator-updates-in-real-time-as-test-execution-progresses",
-          "description": "The indicator updates in real-time as test execution progresses.",
+          "id": "ac-2-the-indicator-updates-in-real-time-based-on-the-test-execution-lifecycle",
+          "description": "The indicator updates in real-time based on the test execution lifecycle.",
           "origin": "inferred"
         },
         {
-          "id": "ac-3-the-indicator-displays-both-the-human-readable-status-and-the-machine-readable-s",
-          "description": "The indicator displays both the human-readable status and the machine-readable state code.",
+          "id": "ac-3-the-component-displays-both-human-readable-status-labels-and-technical-state-cod",
+          "description": "The component displays both human-readable status labels and technical state codes.",
           "origin": "inferred"
         },
         {
-          "id": "ac-4-visual-verification-confirms-the-indicator-renders-correctly-in-both-light-and-d",
-          "description": "Visual verification confirms the indicator renders correctly in both light and dark themes.",
+          "id": "ac-4-visual-evidence-of-the-indicator-in-running-success-and-error-states-is-captured",
+          "description": "Visual evidence of the indicator in 'Running', 'Success', and 'Error' states is captured via Playwright.",
           "origin": "inferred"
         }
       ],
       "scenarios": [
         {
-          "id": "scenario-1-display-test-execution-status-in-intent-studio",
-          "title": "Display test execution status in Intent Studio",
-          "goal": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+          "id": "scenario-1-display-active-test-status-during-execution",
+          "title": "Display active test status during execution",
+          "goal": "Verify the indicator shows the correct status while a test is running.",
           "given": [
-            "The user is in the Intent Studio interface",
-            "An AI-generated test is initiated"
+            "The user is in Intent Studio",
+            "A test execution process has been triggered"
           ],
           "when": [
-            "The test execution begins"
+            "The test runner reports an active status"
           ],
           "then": [
-            "The test run indicator component is visible",
-            "The indicator displays a 'Running' status and the corresponding state code"
+            "The status indicator displays 'Running'",
+            "The indicator shows the corresponding active state code"
           ],
           "applicableSourceIds": [
             "intent-poc-app"
           ]
         },
         {
-          "id": "scenario-2-update-test-status-in-real-time",
-          "title": "Update test status in real-time",
-          "goal": "Verify that the indicator updates dynamically as the test state changes.",
+          "id": "scenario-2-verify-status-indicator-visual-consistency",
+          "title": "Verify status indicator visual consistency",
+          "goal": "Ensure the indicator renders correctly in both light and dark themes.",
           "given": [
-            "The test run indicator is visible and showing 'Running' status"
+            "The Intent Studio page is loaded"
           ],
           "when": [
-            "The test execution completes successfully"
+            "The theme is toggled between light and dark modes",
+            "The test status is set to 'Passed'"
           ],
           "then": [
-            "The indicator updates to 'Passed' status",
-            "The indicator displays the updated state code"
+            "The status indicator maintains correct contrast and styling in both themes",
+            "The indicator displays 'Passed' and the success state code"
           ],
           "applicableSourceIds": [
             "intent-poc-app"
@@ -95,27 +95,26 @@
       ],
       "workItems": [
         {
-          "id": "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
+          "id": "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
           "type": "playwright-spec",
-          "verificationMode": "mocked-state-playwright",
-          "title": "Implement real-time test execution status indicator",
-          "description": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+          "verificationMode": "tracked-playwright",
+          "title": "Verify status indicator real-time execution states",
+          "description": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
           "scenarioIds": [
-            "scenario-1-display-test-execution-status-in-intent-studio",
-            "scenario-2-update-test-status-in-real-time"
+            "scenario-1-display-active-test-status-during-execution"
           ],
           "sourceIds": [
             "intent-poc-app"
           ],
-          "userVisibleOutcome": "A visible status indicator in the Intent Studio UI that updates from 'Running' to 'Passed' based on test execution state.",
-          "verification": "Playwright specs will mock the Studio state to verify the indicator renders correctly in both 'running' and 'passed' states, ensuring the UI reflects the underlying machine state.",
+          "userVisibleOutcome": "The status indicator displays 'Running' and the correct state code during test execution.",
+          "verification": "Use tracked-playwright to trigger a test run and assert the presence of the status indicator with the expected running state code.",
           "execution": {
             "order": 1,
             "dependsOnWorkItemIds": [],
-            "objectiveId": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
+            "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
             "workstreamId": "workstream-1-intent-poc-app",
-            "taskId": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-            "subtaskId": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "taskId": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+            "subtaskId": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           },
           "playwright": {
             "generatedBy": "llm",
@@ -123,255 +122,148 @@
               {
                 "framework": "playwright",
                 "sourceId": "intent-poc-app",
-                "relativeSpecPath": "intent-poc-app/test-execution-indicator.spec.ts",
-                "suiteName": "Intent Studio Test Execution Indicator",
-                "testName": "Verify status indicator lifecycle",
+                "relativeSpecPath": "intent-poc-app/verify-status-indicator-execution.spec.ts",
+                "suiteName": "Intent Studio Status Indicator",
+                "testName": "Verify status indicator real-time execution states",
                 "scenarioIds": [
-                  "scenario-1-display-test-execution-status-in-intent-studio",
-                  "scenario-2-update-test-status-in-real-time"
+                  "scenario-1-display-active-test-status-during-execution"
                 ],
                 "checkpoints": [
                   {
-                    "id": "checkpoint-1-verify-status-indicator-lifecycle-verify-running-state-indicator",
-                    "label": "Verify running state indicator",
-                    "action": "mock-studio-state",
-                    "assertion": "The indicator displays 'Running' status and code when the test is active.",
-                    "screenshotId": "indicator-running-state",
-                    "requiredUiStates": [
-                      {
-                        "stateId": "theme-mode",
-                        "label": "Theme mode",
-                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                        "requestedValue": "light",
-                        "activation": [
-                          {
-                            "type": "query-param",
-                            "target": "dark",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "[data-testid='theme-toggle']",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The library surface toggle remains available for manual verification flows."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "#dark-mode-toggle",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                            ]
-                          }
-                        ],
-                        "verificationStrategies": [
-                          "ui-interaction-playwright"
-                        ],
-                        "notes": [
-                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                          "Verify the active theme state before trusting screenshot comparisons.",
-                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                        ],
-                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                      }
-                    ]
+                    "id": "checkpoint-1-verify-status-indicator-real-time-execution-states-navigate-to-intent-studio",
+                    "label": "Navigate to Intent Studio",
+                    "action": "goto",
+                    "assertion": "Studio is loaded and prompt input is ready.",
+                    "screenshotId": "primitive-status-indicator",
+                    "path": "/",
+                    "waitUntil": "domcontentloaded"
                   },
                   {
-                    "id": "checkpoint-2-verify-status-indicator-lifecycle-verify-passed-state-indicator",
-                    "label": "Verify passed state indicator",
-                    "action": "mock-studio-state",
-                    "assertion": "The indicator updates to 'Passed' status and code upon successful completion.",
-                    "screenshotId": "indicator-passed-state",
-                    "requiredUiStates": [
-                      {
-                        "stateId": "theme-mode",
-                        "label": "Theme mode",
-                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                        "requestedValue": "light",
-                        "activation": [
-                          {
-                            "type": "query-param",
-                            "target": "dark",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "[data-testid='theme-toggle']",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The library surface toggle remains available for manual verification flows."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "#dark-mode-toggle",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                            ]
-                          }
-                        ],
-                        "verificationStrategies": [
-                          "ui-interaction-playwright"
-                        ],
-                        "notes": [
-                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                          "Verify the active theme state before trusting screenshot comparisons.",
-                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                        ],
-                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                      }
-                    ]
+                    "id": "checkpoint-2-verify-status-indicator-real-time-execution-states-enter-prompt-text",
+                    "label": "Enter prompt text",
+                    "action": "fill",
+                    "assertion": "Prompt input is populated to enable the run button.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "#prompt-input",
+                    "value": "Generate a test for the login flow"
                   },
                   {
-                    "id": "checkpoint-3-verify-status-indicator-lifecycle-assert-indicator-visibility",
-                    "label": "Assert indicator visibility",
+                    "id": "checkpoint-3-verify-status-indicator-real-time-execution-states-workflow-readiness-ready",
+                    "label": "Workflow Readiness Ready",
+                    "action": "assert-attribute-contains",
+                    "assertion": "The Studio workflow readiness resolves before the run button is used.",
+                    "screenshotId": "workflow-readiness-ready",
+                    "timeoutMs": 30000,
+                    "target": "#workflow-readiness-status",
+                    "attributeName": "class",
+                    "expectedSubstring": "target-ready",
+                    "waitForSelector": "#workflow-readiness-status"
+                  },
+                  {
+                    "id": "checkpoint-4-verify-status-indicator-real-time-execution-states-first-click-to-generate-draft",
+                    "label": "First click to generate draft",
+                    "action": "click",
+                    "assertion": "The draft generation process is initiated.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "[data-testid='run-tests-button']"
+                  },
+                  {
+                    "id": "checkpoint-5-verify-status-indicator-real-time-execution-states-scoping-draft-ready",
+                    "label": "Scoping Draft Ready",
                     "action": "assert-visible",
-                    "assertion": "The status indicator component is present in the UI.",
-                    "screenshotId": "indicator-visibility-check",
-                    "locator": "[data-testid='test-status-indicator']",
-                    "requiredUiStates": [
-                      {
-                        "stateId": "theme-mode",
-                        "label": "Theme mode",
-                        "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                        "requestedValue": "light",
-                        "activation": [
-                          {
-                            "type": "query-param",
-                            "target": "dark",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "[data-testid='theme-toggle']",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "The library surface toggle remains available for manual verification flows."
-                            ]
-                          },
-                          {
-                            "type": "ui-control",
-                            "target": "#dark-mode-toggle",
-                            "values": {
-                              "light": "false",
-                              "dark": "true"
-                            },
-                            "notes": [
-                              "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                            ]
-                          }
-                        ],
-                        "verificationStrategies": [
-                          "ui-interaction-playwright"
-                        ],
-                        "notes": [
-                          "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                          "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                          "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                          "Verify the active theme state before trusting screenshot comparisons.",
-                          "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                          "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                        ],
-                        "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                      }
-                    ]
-                  }
-                ],
-                "requiredUiStates": [
+                    "assertion": "The scoping draft is ready for approval before execution starts.",
+                    "screenshotId": "scoping-draft-ready",
+                    "timeoutMs": 30000,
+                    "locator": "text=Scoping IDD draft ready."
+                  },
                   {
-                    "stateId": "theme-mode",
-                    "label": "Theme mode",
-                    "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                    "requestedValue": "light",
-                    "activation": [
-                      {
-                        "type": "query-param",
-                        "target": "dark",
-                        "values": {
-                          "light": "false",
-                          "dark": "true"
-                        },
-                        "notes": [
-                          "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                        ]
-                      },
-                      {
-                        "type": "ui-control",
-                        "target": "[data-testid='theme-toggle']",
-                        "values": {
-                          "light": "false",
-                          "dark": "true"
-                        },
-                        "notes": [
-                          "The library surface toggle remains available for manual verification flows."
-                        ]
-                      },
-                      {
-                        "type": "ui-control",
-                        "target": "#dark-mode-toggle",
-                        "values": {
-                          "light": "false",
-                          "dark": "true"
-                        },
-                        "notes": [
-                          "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                        ]
-                      }
-                    ],
-                    "verificationStrategies": [
-                      "ui-interaction-playwright"
-                    ],
-                    "notes": [
-                      "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                      "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                      "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                      "Verify the active theme state before trusting screenshot comparisons.",
-                      "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                      "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                    ],
-                    "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                    "id": "checkpoint-6-verify-status-indicator-real-time-execution-states-second-click-to-approve-and-r",
+                    "label": "Second click to approve and run",
+                    "action": "click",
+                    "assertion": "The execution process is started.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "[data-testid='run-tests-button']"
+                  },
+                  {
+                    "id": "checkpoint-7-verify-status-indicator-real-time-execution-states-assert-running-state",
+                    "label": "Assert running state",
+                    "action": "assert-visible",
+                    "assertion": "The status indicator shows the running state code.",
+                    "screenshotId": "primitive-status-indicator",
+                    "locator": "[data-testid='test-status-indicator']:has-text('RUNNING')"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+          "type": "playwright-spec",
+          "verificationMode": "tracked-playwright",
+          "title": "Verify status indicator visual consistency",
+          "description": "Ensure the indicator renders correctly in both light and dark themes.",
+          "scenarioIds": [
+            "scenario-2-verify-status-indicator-visual-consistency"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "userVisibleOutcome": "The status indicator maintains correct contrast and styling in both themes.",
+          "verification": "Capture screenshots of the indicator in both light and dark modes to verify visual consistency.",
+          "execution": {
+            "order": 2,
+            "dependsOnWorkItemIds": [],
+            "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+            "workstreamId": "workstream-1-intent-poc-app",
+            "taskId": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+            "subtaskId": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          },
+          "playwright": {
+            "generatedBy": "llm",
+            "specs": [
+              {
+                "framework": "playwright",
+                "sourceId": "intent-poc-app",
+                "relativeSpecPath": "intent-poc-app/verify-status-indicator-visual-consistency.spec.ts",
+                "suiteName": "Intent Studio Status Indicator",
+                "testName": "Verify status indicator visual consistency",
+                "scenarioIds": [
+                  "scenario-2-verify-status-indicator-visual-consistency"
+                ],
+                "checkpoints": [
+                  {
+                    "id": "checkpoint-1-verify-status-indicator-visual-consistency-navigate-to-studio-in-light-mode",
+                    "label": "Navigate to Studio in light mode",
+                    "action": "goto",
+                    "assertion": "Studio is loaded in light mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "path": "/?dark=false",
+                    "waitUntil": "domcontentloaded"
+                  },
+                  {
+                    "id": "checkpoint-2-verify-status-indicator-visual-consistency-assert-light-mode-indicator",
+                    "label": "Assert light mode indicator",
+                    "action": "assert-visible",
+                    "assertion": "Indicator is visible in light mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "locator": "#current-status-pill"
+                  },
+                  {
+                    "id": "checkpoint-3-verify-status-indicator-visual-consistency-toggle-to-dark-mode",
+                    "label": "Toggle to dark mode",
+                    "action": "click",
+                    "assertion": "Theme is switched to dark mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "target": "#dark-mode-toggle"
+                  },
+                  {
+                    "id": "checkpoint-4-verify-status-indicator-visual-consistency-assert-dark-mode-indicator",
+                    "label": "Assert dark mode indicator",
+                    "action": "assert-visible",
+                    "assertion": "Indicator is visible in dark mode.",
+                    "screenshotId": "primitive-status-indicator",
+                    "locator": "#current-status-pill"
                   }
                 ]
               }
@@ -382,10 +274,10 @@
       "decomposition": {
         "objectives": [
           {
-            "id": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
-            "title": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-            "summary": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-            "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+            "id": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+            "title": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+            "summary": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+            "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
             "workstreamIds": [
               "workstream-1-intent-poc-app"
             ]
@@ -400,64 +292,112 @@
               "intent-poc-app"
             ],
             "taskIds": [
-              "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio"
+              "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+              "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency"
             ]
           }
         ],
         "tasks": [
           {
-            "id": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-            "title": "Display test execution status in Intent Studio",
-            "summary": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+            "id": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+            "title": "Display active test status during execution",
+            "summary": "Verify the indicator shows the correct status while a test is running.",
             "sourceIds": [
               "intent-poc-app"
             ],
             "scenarioIds": [
-              "scenario-1-display-test-execution-status-in-intent-studio",
-              "scenario-2-update-test-status-in-real-time"
+              "scenario-1-display-active-test-status-during-execution"
             ],
             "workItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
             "subtaskIds": [
-              "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
             "verificationTaskIds": [
-              "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ]
+          },
+          {
+            "id": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+            "title": "Verify status indicator visual consistency",
+            "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "scenarioIds": [
+              "scenario-2-verify-status-indicator-visual-consistency"
+            ],
+            "workItemIds": [
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+            ],
+            "subtaskIds": [
+              "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ]
           }
         ],
         "subtasks": [
           {
-            "id": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-            "title": "Implement real-time test execution status indicator",
-            "summary": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+            "id": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+            "title": "Verify status indicator real-time execution states",
+            "summary": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
             "scenarioIds": [
-              "scenario-1-display-test-execution-status-in-intent-studio",
-              "scenario-2-update-test-status-in-real-time"
+              "scenario-1-display-active-test-status-during-execution"
             ],
             "sourceIds": [
               "intent-poc-app"
             ],
             "workItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
             ],
             "verificationTaskIds": [
-              "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ],
+            "dependsOnSubtaskIds": []
+          },
+          {
+            "id": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+            "title": "Verify status indicator visual consistency",
+            "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+            "scenarioIds": [
+              "scenario-2-verify-status-indicator-visual-consistency"
+            ],
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ],
             "dependsOnSubtaskIds": []
           }
         ],
         "verificationTasks": [
           {
-            "id": "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-            "title": "Verify Implement real-time test execution status indicator",
-            "summary": "Verify the user-visible outcome for Implement real-time test execution status indicator.",
+            "id": "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+            "title": "Verify Verify status indicator real-time execution states",
+            "summary": "Verify the user-visible outcome for Verify status indicator real-time execution states.",
             "sourceIds": [
               "intent-poc-app"
             ],
             "workItemIds": [
-              "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+              "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+            ]
+          },
+          {
+            "id": "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+            "title": "Verify Verify status indicator visual consistency",
+            "summary": "Verify the user-visible outcome for Verify status indicator visual consistency.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
             ]
           }
         ]
@@ -564,40 +504,22 @@
             "reason": "Primary implementation path for Intent Studio."
           }
         ],
-        "uiStateHints": [
-          {
-            "sourceId": "intent-poc-app",
-            "stateId": "theme-mode",
-            "label": "Theme mode",
-            "reason": "Prompt requests the Theme mode UI state with value \"light\".",
-            "verificationStrategies": [
-              "ui-interaction-playwright"
-            ],
-            "notes": [
-              "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-              "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-              "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-              "Verify the active theme state before trusting screenshot comparisons.",
-              "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-              "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-            ]
-          }
-        ],
+        "uiStateHints": [],
         "verificationHints": [
           {
             "sourceId": "intent-poc-app",
             "note": "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-            "reason": "Supports verification for requested UI state context in intent-poc-app."
+            "reason": "Matched prompt terms: state, Intent Studio, intent, studio."
           },
           {
             "sourceId": "intent-poc-app",
             "note": "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-            "reason": "Supports verification for requested UI state context in intent-poc-app."
+            "reason": "Matched prompt terms: state, Intent Studio, intent, studio."
           },
           {
             "sourceId": "intent-poc-app",
             "note": "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-            "reason": "Supports verification for requested UI state context in intent-poc-app."
+            "reason": "Matched prompt terms: Intent Studio, intent, studio."
           }
         ],
         "repoNoteHints": [
@@ -609,7 +531,7 @@
           {
             "sourceId": "intent-poc-app",
             "note": "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
-            "reason": "Matched prompt terms: with, Intent Studio, intent, studio."
+            "reason": "Matched prompt terms: Intent Studio, intent, studio."
           }
         ],
         "repoMemoryHints": [
@@ -621,18 +543,18 @@
             "reason": "Matched repo memory terms: intent studio, intent, studio."
           },
           {
-            "memoryId": "reviewed-intent-runner",
-            "title": "Reviewed Intent Runner",
-            "sourcePath": "/memories/repo/reviewed-intent-runner.md",
-            "note": "Studio starts reviewed runs with both prompt and artifact.normalizedIntent when launching from draftId.",
-            "reason": "Matched repo memory terms: studio, with."
+            "memoryId": "ui-state-metadata",
+            "title": "UI State Metadata",
+            "sourcePath": "/memories/repo/ui-state-metadata.md",
+            "note": "theme-mode uses a shared dark query-param contract across Studio and library routes, so verification should prefer route state before UI controls.",
+            "reason": "Matched repo memory terms: studio, state."
           },
           {
             "memoryId": "studio-lifecycle-preview",
             "title": "Studio Lifecycle Preview",
             "sourcePath": "/memories/repo/studio-lifecycle-preview.md",
-            "note": "Studio execution stays locked until the reviewed draft is explicitly sent through /api/drafts/:id/send.",
-            "reason": "Matched repo memory terms: studio, execution."
+            "note": "POST /api/plan returns a scoping-only reviewed IDD draft first, and that preview should stay lean and prompt-relevant.",
+            "reason": "Matched repo memory terms: studio, that."
           }
         ],
         "captureHints": [],
@@ -640,22 +562,22 @@
       },
       "scopingDetails": {
         "repoContext": [
-          "Intent Studio serves as the primary runtime for demo UI and test execution monitoring."
+          "Intent Studio serves as the primary demo runtime for test status visualization."
         ],
         "sourceScope": [
           "intent-poc-app"
         ],
         "adaptiveBoundaries": [
-          "Indicator must update in real-time without blocking the main Studio execution loop."
+          "Indicator must integrate with existing Studio lifecycle hooks without disrupting current test execution flows."
         ],
         "minimumSuccess": [
-          "Visual indicator displays active test status and state codes during AI-generated test runs."
+          "Visual indicator appears in Studio during test runs, displaying accurate status and state codes."
         ],
         "baseline": [
-          "Studio execution currently locks until the reviewed draft is sent via /api/drafts/:id/send."
+          "Current Intent Studio UI lacks real-time test status feedback."
         ],
         "verificationObligations": [
-          "Verify indicator state updates using Playwright interactions; ensure theme-sensitive UI consistency."
+          "Verify indicator visibility across both light and dark theme modes using the shared dark query-param contract."
         ]
       },
       "plannerSections": [
@@ -688,64 +610,7 @@
             "mode": "all",
             "captureIds": []
           },
-          "warnings": [
-            "Requested UI states: theme-mode=light."
-          ],
-          "uiStateRequirements": [
-            {
-              "stateId": "theme-mode",
-              "label": "Theme mode",
-              "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-              "requestedValue": "light",
-              "activation": [
-                {
-                  "type": "query-param",
-                  "target": "dark",
-                  "values": {
-                    "light": "false",
-                    "dark": "true"
-                  },
-                  "notes": [
-                    "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                  ]
-                },
-                {
-                  "type": "ui-control",
-                  "target": "[data-testid='theme-toggle']",
-                  "values": {
-                    "light": "false",
-                    "dark": "true"
-                  },
-                  "notes": [
-                    "The library surface toggle remains available for manual verification flows."
-                  ]
-                },
-                {
-                  "type": "ui-control",
-                  "target": "#dark-mode-toggle",
-                  "values": {
-                    "light": "false",
-                    "dark": "true"
-                  },
-                  "notes": [
-                    "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                  ]
-                }
-              ],
-              "verificationStrategies": [
-                "ui-interaction-playwright"
-              ],
-              "notes": [
-                "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                "Verify the active theme state before trusting screenshot comparisons.",
-                "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-              ],
-              "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-            }
-          ]
+          "warnings": []
         }
       ],
       "destinations": [
@@ -843,14 +708,7 @@
         }
       ],
       "orchestrationStrategy": "single-source",
-      "reviewNotes": [
-        "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-        "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-        "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-        "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
-        "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-        "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-      ]
+      "reviewNotes": []
     },
     "sourceId": "intent-poc-app",
     "captureScope": {
@@ -864,7 +722,7 @@
     },
     "linear": {
       "createIssue": true,
-      "issueTitle": "IDD: I  need a visual test run indicator added to the ui so i know what tests are run and the status "
+      "issueTitle": "IDD: Implement a real-time visual test run indicator in Intent Studio that displays active test statu"
     },
     "execution": {
       "continueOnCaptureError": false
@@ -872,14 +730,8 @@
     "normalizationMeta": {
       "source": "llm",
       "warnings": [
-        "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-        "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-        "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-        "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
-        "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-        "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence.",
-        "Ensure the indicator does not obstruct critical Studio functionality.",
-        "Verify that theme-mode toggling does not reset the test execution state."
+        "Ensure the status indicator does not obstruct existing Studio navigation elements.",
+        "Verify that state codes are accessible and clearly defined in the UI."
       ],
       "requestedPlanningDepth": "full",
       "effectivePlanningDepth": "full",
@@ -919,8 +771,8 @@
           "status": "completed",
           "source": "llm",
           "warnings": [
-            "Ensure the indicator does not obstruct critical Studio functionality.",
-            "Verify that theme-mode toggling does not reset the test execution state."
+            "Ensure the status indicator does not obstruct existing Studio navigation elements.",
+            "Verify that state codes are accessible and clearly defined in the UI."
           ]
         },
         {
@@ -961,63 +813,64 @@
     }
   },
   "businessIntent": {
-    "statement": "Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests to enable live monitoring of code state.",
-    "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+    "statement": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+    "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
     "acceptanceCriteria": [
       {
-        "id": "ac-1-a-new-ui-component-is-integrated-into-the-intent-studio-layout-to-display-test-e",
-        "description": "A new UI component is integrated into the Intent Studio layout to display test execution status.",
+        "id": "ac-1-a-new-status-indicator-component-is-integrated-into-the-intent-studio-header",
+        "description": "A new status indicator component is integrated into the Intent Studio header.",
         "origin": "inferred"
       },
       {
-        "id": "ac-2-the-indicator-updates-in-real-time-as-test-execution-progresses",
-        "description": "The indicator updates in real-time as test execution progresses.",
+        "id": "ac-2-the-indicator-updates-in-real-time-based-on-the-test-execution-lifecycle",
+        "description": "The indicator updates in real-time based on the test execution lifecycle.",
         "origin": "inferred"
       },
       {
-        "id": "ac-3-the-indicator-displays-both-the-human-readable-status-and-the-machine-readable-s",
-        "description": "The indicator displays both the human-readable status and the machine-readable state code.",
+        "id": "ac-3-the-component-displays-both-human-readable-status-labels-and-technical-state-cod",
+        "description": "The component displays both human-readable status labels and technical state codes.",
         "origin": "inferred"
       },
       {
-        "id": "ac-4-visual-verification-confirms-the-indicator-renders-correctly-in-both-light-and-d",
-        "description": "Visual verification confirms the indicator renders correctly in both light and dark themes.",
+        "id": "ac-4-visual-evidence-of-the-indicator-in-running-success-and-error-states-is-captured",
+        "description": "Visual evidence of the indicator in 'Running', 'Success', and 'Error' states is captured via Playwright.",
         "origin": "inferred"
       }
     ],
     "scenarios": [
       {
-        "id": "scenario-1-display-test-execution-status-in-intent-studio",
-        "title": "Display test execution status in Intent Studio",
-        "goal": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+        "id": "scenario-1-display-active-test-status-during-execution",
+        "title": "Display active test status during execution",
+        "goal": "Verify the indicator shows the correct status while a test is running.",
         "given": [
-          "The user is in the Intent Studio interface",
-          "An AI-generated test is initiated"
+          "The user is in Intent Studio",
+          "A test execution process has been triggered"
         ],
         "when": [
-          "The test execution begins"
+          "The test runner reports an active status"
         ],
         "then": [
-          "The test run indicator component is visible",
-          "The indicator displays a 'Running' status and the corresponding state code"
+          "The status indicator displays 'Running'",
+          "The indicator shows the corresponding active state code"
         ],
         "applicableSourceIds": [
           "intent-poc-app"
         ]
       },
       {
-        "id": "scenario-2-update-test-status-in-real-time",
-        "title": "Update test status in real-time",
-        "goal": "Verify that the indicator updates dynamically as the test state changes.",
+        "id": "scenario-2-verify-status-indicator-visual-consistency",
+        "title": "Verify status indicator visual consistency",
+        "goal": "Ensure the indicator renders correctly in both light and dark themes.",
         "given": [
-          "The test run indicator is visible and showing 'Running' status"
+          "The Intent Studio page is loaded"
         ],
         "when": [
-          "The test execution completes successfully"
+          "The theme is toggled between light and dark modes",
+          "The test status is set to 'Passed'"
         ],
         "then": [
-          "The indicator updates to 'Passed' status",
-          "The indicator displays the updated state code"
+          "The status indicator maintains correct contrast and styling in both themes",
+          "The indicator displays 'Passed' and the success state code"
         ],
         "applicableSourceIds": [
           "intent-poc-app"
@@ -1026,27 +879,26 @@
     ],
     "workItems": [
       {
-        "id": "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
+        "id": "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
         "type": "playwright-spec",
-        "verificationMode": "mocked-state-playwright",
-        "title": "Implement real-time test execution status indicator",
-        "description": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+        "verificationMode": "tracked-playwright",
+        "title": "Verify status indicator real-time execution states",
+        "description": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
         "scenarioIds": [
-          "scenario-1-display-test-execution-status-in-intent-studio",
-          "scenario-2-update-test-status-in-real-time"
+          "scenario-1-display-active-test-status-during-execution"
         ],
         "sourceIds": [
           "intent-poc-app"
         ],
-        "userVisibleOutcome": "A visible status indicator in the Intent Studio UI that updates from 'Running' to 'Passed' based on test execution state.",
-        "verification": "Playwright specs will mock the Studio state to verify the indicator renders correctly in both 'running' and 'passed' states, ensuring the UI reflects the underlying machine state.",
+        "userVisibleOutcome": "The status indicator displays 'Running' and the correct state code during test execution.",
+        "verification": "Use tracked-playwright to trigger a test run and assert the presence of the status indicator with the expected running state code.",
         "execution": {
           "order": 1,
           "dependsOnWorkItemIds": [],
-          "objectiveId": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
+          "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
           "workstreamId": "workstream-1-intent-poc-app",
-          "taskId": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-          "subtaskId": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "taskId": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+          "subtaskId": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
         },
         "playwright": {
           "generatedBy": "llm",
@@ -1054,255 +906,148 @@
             {
               "framework": "playwright",
               "sourceId": "intent-poc-app",
-              "relativeSpecPath": "intent-poc-app/test-execution-indicator.spec.ts",
-              "suiteName": "Intent Studio Test Execution Indicator",
-              "testName": "Verify status indicator lifecycle",
+              "relativeSpecPath": "intent-poc-app/verify-status-indicator-execution.spec.ts",
+              "suiteName": "Intent Studio Status Indicator",
+              "testName": "Verify status indicator real-time execution states",
               "scenarioIds": [
-                "scenario-1-display-test-execution-status-in-intent-studio",
-                "scenario-2-update-test-status-in-real-time"
+                "scenario-1-display-active-test-status-during-execution"
               ],
               "checkpoints": [
                 {
-                  "id": "checkpoint-1-verify-status-indicator-lifecycle-verify-running-state-indicator",
-                  "label": "Verify running state indicator",
-                  "action": "mock-studio-state",
-                  "assertion": "The indicator displays 'Running' status and code when the test is active.",
-                  "screenshotId": "indicator-running-state",
-                  "requiredUiStates": [
-                    {
-                      "stateId": "theme-mode",
-                      "label": "Theme mode",
-                      "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                      "requestedValue": "light",
-                      "activation": [
-                        {
-                          "type": "query-param",
-                          "target": "dark",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "[data-testid='theme-toggle']",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The library surface toggle remains available for manual verification flows."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "#dark-mode-toggle",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                          ]
-                        }
-                      ],
-                      "verificationStrategies": [
-                        "ui-interaction-playwright"
-                      ],
-                      "notes": [
-                        "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                        "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                        "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                        "Verify the active theme state before trusting screenshot comparisons.",
-                        "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                        "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                      ],
-                      "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                    }
-                  ]
+                  "id": "checkpoint-1-verify-status-indicator-real-time-execution-states-navigate-to-intent-studio",
+                  "label": "Navigate to Intent Studio",
+                  "action": "goto",
+                  "assertion": "Studio is loaded and prompt input is ready.",
+                  "screenshotId": "primitive-status-indicator",
+                  "path": "/",
+                  "waitUntil": "domcontentloaded"
                 },
                 {
-                  "id": "checkpoint-2-verify-status-indicator-lifecycle-verify-passed-state-indicator",
-                  "label": "Verify passed state indicator",
-                  "action": "mock-studio-state",
-                  "assertion": "The indicator updates to 'Passed' status and code upon successful completion.",
-                  "screenshotId": "indicator-passed-state",
-                  "requiredUiStates": [
-                    {
-                      "stateId": "theme-mode",
-                      "label": "Theme mode",
-                      "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                      "requestedValue": "light",
-                      "activation": [
-                        {
-                          "type": "query-param",
-                          "target": "dark",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "[data-testid='theme-toggle']",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The library surface toggle remains available for manual verification flows."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "#dark-mode-toggle",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                          ]
-                        }
-                      ],
-                      "verificationStrategies": [
-                        "ui-interaction-playwright"
-                      ],
-                      "notes": [
-                        "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                        "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                        "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                        "Verify the active theme state before trusting screenshot comparisons.",
-                        "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                        "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                      ],
-                      "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                    }
-                  ]
+                  "id": "checkpoint-2-verify-status-indicator-real-time-execution-states-enter-prompt-text",
+                  "label": "Enter prompt text",
+                  "action": "fill",
+                  "assertion": "Prompt input is populated to enable the run button.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "#prompt-input",
+                  "value": "Generate a test for the login flow"
                 },
                 {
-                  "id": "checkpoint-3-verify-status-indicator-lifecycle-assert-indicator-visibility",
-                  "label": "Assert indicator visibility",
+                  "id": "checkpoint-3-verify-status-indicator-real-time-execution-states-workflow-readiness-ready",
+                  "label": "Workflow Readiness Ready",
+                  "action": "assert-attribute-contains",
+                  "assertion": "The Studio workflow readiness resolves before the run button is used.",
+                  "screenshotId": "workflow-readiness-ready",
+                  "timeoutMs": 30000,
+                  "target": "#workflow-readiness-status",
+                  "attributeName": "class",
+                  "expectedSubstring": "target-ready",
+                  "waitForSelector": "#workflow-readiness-status"
+                },
+                {
+                  "id": "checkpoint-4-verify-status-indicator-real-time-execution-states-first-click-to-generate-draft",
+                  "label": "First click to generate draft",
+                  "action": "click",
+                  "assertion": "The draft generation process is initiated.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "[data-testid='run-tests-button']"
+                },
+                {
+                  "id": "checkpoint-5-verify-status-indicator-real-time-execution-states-scoping-draft-ready",
+                  "label": "Scoping Draft Ready",
                   "action": "assert-visible",
-                  "assertion": "The status indicator component is present in the UI.",
-                  "screenshotId": "indicator-visibility-check",
-                  "locator": "[data-testid='test-status-indicator']",
-                  "requiredUiStates": [
-                    {
-                      "stateId": "theme-mode",
-                      "label": "Theme mode",
-                      "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                      "requestedValue": "light",
-                      "activation": [
-                        {
-                          "type": "query-param",
-                          "target": "dark",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "[data-testid='theme-toggle']",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "The library surface toggle remains available for manual verification flows."
-                          ]
-                        },
-                        {
-                          "type": "ui-control",
-                          "target": "#dark-mode-toggle",
-                          "values": {
-                            "light": "false",
-                            "dark": "true"
-                          },
-                          "notes": [
-                            "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                          ]
-                        }
-                      ],
-                      "verificationStrategies": [
-                        "ui-interaction-playwright"
-                      ],
-                      "notes": [
-                        "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                        "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                        "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                        "Verify the active theme state before trusting screenshot comparisons.",
-                        "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                        "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                      ],
-                      "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-                    }
-                  ]
-                }
-              ],
-              "requiredUiStates": [
+                  "assertion": "The scoping draft is ready for approval before execution starts.",
+                  "screenshotId": "scoping-draft-ready",
+                  "timeoutMs": 30000,
+                  "locator": "text=Scoping IDD draft ready."
+                },
                 {
-                  "stateId": "theme-mode",
-                  "label": "Theme mode",
-                  "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-                  "requestedValue": "light",
-                  "activation": [
-                    {
-                      "type": "query-param",
-                      "target": "dark",
-                      "values": {
-                        "light": "false",
-                        "dark": "true"
-                      },
-                      "notes": [
-                        "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                      ]
-                    },
-                    {
-                      "type": "ui-control",
-                      "target": "[data-testid='theme-toggle']",
-                      "values": {
-                        "light": "false",
-                        "dark": "true"
-                      },
-                      "notes": [
-                        "The library surface toggle remains available for manual verification flows."
-                      ]
-                    },
-                    {
-                      "type": "ui-control",
-                      "target": "#dark-mode-toggle",
-                      "values": {
-                        "light": "false",
-                        "dark": "true"
-                      },
-                      "notes": [
-                        "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                      ]
-                    }
-                  ],
-                  "verificationStrategies": [
-                    "ui-interaction-playwright"
-                  ],
-                  "notes": [
-                    "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-                    "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-                    "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-                    "Verify the active theme state before trusting screenshot comparisons.",
-                    "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-                    "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-                  ],
-                  "reason": "Prompt requests the Theme mode UI state with value \"light\"."
+                  "id": "checkpoint-6-verify-status-indicator-real-time-execution-states-second-click-to-approve-and-r",
+                  "label": "Second click to approve and run",
+                  "action": "click",
+                  "assertion": "The execution process is started.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "[data-testid='run-tests-button']"
+                },
+                {
+                  "id": "checkpoint-7-verify-status-indicator-real-time-execution-states-assert-running-state",
+                  "label": "Assert running state",
+                  "action": "assert-visible",
+                  "assertion": "The status indicator shows the running state code.",
+                  "screenshotId": "primitive-status-indicator",
+                  "locator": "[data-testid='test-status-indicator']:has-text('RUNNING')"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+        "type": "playwright-spec",
+        "verificationMode": "tracked-playwright",
+        "title": "Verify status indicator visual consistency",
+        "description": "Ensure the indicator renders correctly in both light and dark themes.",
+        "scenarioIds": [
+          "scenario-2-verify-status-indicator-visual-consistency"
+        ],
+        "sourceIds": [
+          "intent-poc-app"
+        ],
+        "userVisibleOutcome": "The status indicator maintains correct contrast and styling in both themes.",
+        "verification": "Capture screenshots of the indicator in both light and dark modes to verify visual consistency.",
+        "execution": {
+          "order": 2,
+          "dependsOnWorkItemIds": [],
+          "objectiveId": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+          "workstreamId": "workstream-1-intent-poc-app",
+          "taskId": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+          "subtaskId": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+        },
+        "playwright": {
+          "generatedBy": "llm",
+          "specs": [
+            {
+              "framework": "playwright",
+              "sourceId": "intent-poc-app",
+              "relativeSpecPath": "intent-poc-app/verify-status-indicator-visual-consistency.spec.ts",
+              "suiteName": "Intent Studio Status Indicator",
+              "testName": "Verify status indicator visual consistency",
+              "scenarioIds": [
+                "scenario-2-verify-status-indicator-visual-consistency"
+              ],
+              "checkpoints": [
+                {
+                  "id": "checkpoint-1-verify-status-indicator-visual-consistency-navigate-to-studio-in-light-mode",
+                  "label": "Navigate to Studio in light mode",
+                  "action": "goto",
+                  "assertion": "Studio is loaded in light mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "path": "/?dark=false",
+                  "waitUntil": "domcontentloaded"
+                },
+                {
+                  "id": "checkpoint-2-verify-status-indicator-visual-consistency-assert-light-mode-indicator",
+                  "label": "Assert light mode indicator",
+                  "action": "assert-visible",
+                  "assertion": "Indicator is visible in light mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "locator": "#current-status-pill"
+                },
+                {
+                  "id": "checkpoint-3-verify-status-indicator-visual-consistency-toggle-to-dark-mode",
+                  "label": "Toggle to dark mode",
+                  "action": "click",
+                  "assertion": "Theme is switched to dark mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "target": "#dark-mode-toggle"
+                },
+                {
+                  "id": "checkpoint-4-verify-status-indicator-visual-consistency-assert-dark-mode-indicator",
+                  "label": "Assert dark mode indicator",
+                  "action": "assert-visible",
+                  "assertion": "Indicator is visible in dark mode.",
+                  "screenshotId": "primitive-status-indicator",
+                  "locator": "#current-status-pill"
                 }
               ]
             }
@@ -1313,10 +1058,10 @@
     "decomposition": {
       "objectives": [
         {
-          "id": "objective-1-i-need-a-visual-test-run-indicator-added-to-the-ui-so-i-know-what-tests-are-run-",
-          "title": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-          "summary": "I  need a visual test run indicator added to the ui so i know what tests are run and the status of them so we can monitor live code state. that means the test that the ai generates needs to added and updated realtime with releevant state and status codes.\n\nDesired outcome: Implement a real-time visual test run indicator in the Intent Studio UI that displays active test execution status and state codes for AI-generated tests.",
-          "desiredOutcome": "A persistent UI component in Intent Studio that dynamically updates to show the current execution status (e.g., pending, running, passed, failed) and associated state codes for active AI-generated test runs.",
+          "id": "objective-1-implement-a-real-time-visual-test-run-indicator-in-intent-studio-that-displays-a",
+          "title": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+          "summary": "Implement a real-time visual test run indicator in Intent Studio that displays active test status and state codes for AI-generated tests.",
+          "desiredOutcome": "A persistent, real-time status indicator component in the Intent Studio header that displays the current execution state (e.g., 'Running', 'Passed', 'Failed') and associated state codes for AI-generated test runs.",
           "workstreamIds": [
             "workstream-1-intent-poc-app"
           ]
@@ -1331,64 +1076,112 @@
             "intent-poc-app"
           ],
           "taskIds": [
-            "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio"
+            "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+            "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency"
           ]
         }
       ],
       "tasks": [
         {
-          "id": "task-1-intent-poc-app-scenario-1-display-test-execution-status-in-intent-studio",
-          "title": "Display test execution status in Intent Studio",
-          "summary": "Verify that the test run indicator appears and reflects the initial state of an AI-generated test.",
+          "id": "task-1-intent-poc-app-scenario-1-display-active-test-status-during-execution",
+          "title": "Display active test status during execution",
+          "summary": "Verify the indicator shows the correct status while a test is running.",
           "sourceIds": [
             "intent-poc-app"
           ],
           "scenarioIds": [
-            "scenario-1-display-test-execution-status-in-intent-studio",
-            "scenario-2-update-test-status-in-real-time"
+            "scenario-1-display-active-test-status-during-execution"
           ],
           "workItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
           "subtaskIds": [
-            "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
           "verificationTaskIds": [
-            "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+          ]
+        },
+        {
+          "id": "task-2-intent-poc-app-scenario-2-verify-status-indicator-visual-consistency",
+          "title": "Verify status indicator visual consistency",
+          "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "scenarioIds": [
+            "scenario-2-verify-status-indicator-visual-consistency"
+          ],
+          "workItemIds": [
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          ],
+          "subtaskIds": [
+            "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ]
         }
       ],
       "subtasks": [
         {
-          "id": "subtask-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-          "title": "Implement real-time test execution status indicator",
-          "summary": "Integrate a persistent UI component in Intent Studio that displays the current execution status and state codes for AI-generated test runs.",
+          "id": "subtask-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+          "title": "Verify status indicator real-time execution states",
+          "summary": "Verify that the status indicator correctly transitions through execution states including RUNNING and displays the appropriate state codes.",
           "scenarioIds": [
-            "scenario-1-display-test-execution-status-in-intent-studio",
-            "scenario-2-update-test-status-in-real-time"
+            "scenario-1-display-active-test-status-during-execution"
           ],
           "sourceIds": [
             "intent-poc-app"
           ],
           "workItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
           ],
           "verificationTaskIds": [
-            "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+          ],
+          "dependsOnSubtaskIds": []
+        },
+        {
+          "id": "subtask-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+          "title": "Verify status indicator visual consistency",
+          "summary": "Ensure the indicator renders correctly in both light and dark themes.",
+          "scenarioIds": [
+            "scenario-2-verify-status-indicator-visual-consistency"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
+          ],
+          "verificationTaskIds": [
+            "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ],
           "dependsOnSubtaskIds": []
         }
       ],
       "verificationTasks": [
         {
-          "id": "verify-1-work-1-implement-real-time-test-execution-status-indicator-intent-poc-app",
-          "title": "Verify Implement real-time test execution status indicator",
-          "summary": "Verify the user-visible outcome for Implement real-time test execution status indicator.",
+          "id": "verify-1-work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+          "title": "Verify Verify status indicator real-time execution states",
+          "summary": "Verify the user-visible outcome for Verify status indicator real-time execution states.",
           "sourceIds": [
             "intent-poc-app"
           ],
           "workItemIds": [
-            "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+            "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+          ]
+        },
+        {
+          "id": "verify-1-work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+          "title": "Verify Verify status indicator visual consistency",
+          "summary": "Verify the user-visible outcome for Verify status indicator visual consistency.",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "workItemIds": [
+            "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
           ]
         }
       ]
@@ -1404,64 +1197,7 @@
           "mode": "all",
           "captureIds": []
         },
-        "warnings": [
-          "Requested UI states: theme-mode=light."
-        ],
-        "uiStateRequirements": [
-          {
-            "stateId": "theme-mode",
-            "label": "Theme mode",
-            "description": "The demo app supports light and dark theme states that materially change contrast, tokens, and screenshot evidence.",
-            "requestedValue": "light",
-            "activation": [
-              {
-                "type": "query-param",
-                "target": "dark",
-                "values": {
-                  "light": "false",
-                  "dark": "true"
-                },
-                "notes": [
-                  "The demo app now honors the dark query parameter across Studio and library routes for deterministic verification."
-                ]
-              },
-              {
-                "type": "ui-control",
-                "target": "[data-testid='theme-toggle']",
-                "values": {
-                  "light": "false",
-                  "dark": "true"
-                },
-                "notes": [
-                  "The library surface toggle remains available for manual verification flows."
-                ]
-              },
-              {
-                "type": "ui-control",
-                "target": "#dark-mode-toggle",
-                "values": {
-                  "light": "false",
-                  "dark": "true"
-                },
-                "notes": [
-                  "Intent Studio keeps an explicit toggle for interactive review during manual sessions."
-                ]
-              }
-            ],
-            "verificationStrategies": [
-              "ui-interaction-playwright"
-            ],
-            "notes": [
-              "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-              "Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-              "Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-              "Verify the active theme state before trusting screenshot comparisons.",
-              "Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-              "Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-            ],
-            "reason": "Prompt requests the Theme mode UI state with value \"light\"."
-          }
-        ]
+        "warnings": []
       }
     ],
     "destinations": [
@@ -1559,14 +1295,7 @@
       }
     ],
     "orchestrationStrategy": "single-source",
-    "reviewNotes": [
-      "Source intent-poc-app: Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
-      "Source intent-poc-app: Prefer reusable state activation contracts over prompt-specific routing or one-off checkpoint logic.",
-      "Source intent-poc-app: Theme-sensitive UI bugs require paired light-mode and dark-mode screenshot evidence; do not accept a dark-mode-only capture set.",
-      "Source intent-poc-app: Verify the active theme state before trusting screenshot comparisons.",
-      "Source intent-poc-app: Prefer the shared dark query parameter during generated verification so screenshots start in the requested theme.",
-      "Source intent-poc-app: Dark-theme verification should keep a light-mode reference screenshot alongside the dark-mode target evidence."
-    ]
+    "reviewNotes": []
   },
   "linear": null,
   "source": {
@@ -1577,109 +1306,155 @@
       "captureIds": []
     },
     "configuredCaptureCount": 48,
-    "executedCaptureCount": 0,
+    "executedCaptureCount": 48,
     "sourceType": "local",
     "rootDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "appDir": "/home/andre/Desktop/GeniusMonkey/Intent POC",
     "baseUrl": "http://127.0.0.1:6006",
-    "gitCommit": "78df2c5d8b6cf288aa78c1322c2d75f8c6efc130",
+    "gitCommit": "3feb1ca75b22f61a70b78c832c8add526082be2a",
     "generatedPlaywrightTests": [
-      "tests/intent/intent-poc-app/test-execution-indicator.spec.ts"
+      "tests/intent/intent-poc-app/verify-status-indicator-execution.spec.ts",
+      "tests/intent/intent-poc-app/verify-status-indicator-visual-consistency.spec.ts"
     ]
   },
   "attempts": [
     {
       "attemptNumber": 1,
-      "startedAt": "2026-04-22T04:33:52.050Z",
-      "finishedAt": "2026-04-22T04:34:40.193Z",
-      "status": "failed",
-      "failureStage": "implementation",
+      "startedAt": "2026-04-22T20:04:52.989Z",
+      "finishedAt": "2026-04-22T20:08:40.963Z",
+      "status": "completed",
       "targetedWorkItemIds": [
-        "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+        "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
       ],
-      "completedInAttemptWorkItemIds": [],
-      "pendingTargetedWorkItemIds": [
-        "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+      "completedInAttemptWorkItemIds": [
+        "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
       ],
-      "completedWorkItemIds": [],
+      "pendingTargetedWorkItemIds": [],
+      "completedWorkItemIds": [
+        "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+      ],
       "remainingWorkItemIds": [
-        "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+        "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
       ],
       "implementation": {
-        "status": "failed",
-        "summary": "Implementation could not produce a valid bounded change set.",
-        "error": "{\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}}",
+        "status": "completed",
+        "summary": "Applied 1 file operation (0 create, 1 replace, 0 delete).",
         "targetedWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
         ],
-        "completedWorkItemIds": [],
+        "completedWorkItemIds": [
+          "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+        ],
         "remainingWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
         ],
         "commands": [
           {
             "label": "plan-change-set",
             "command": "gemini:plan-implementation-change-set",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-22T04:33:52.276Z",
-            "finishedAt": "2026-04-22T04:34:36.076Z",
-            "durationMs": 43800,
+            "startedAt": "2026-04-22T20:04:53.060Z",
+            "finishedAt": "2026-04-22T20:05:11.864Z",
+            "durationMs": 18804,
             "status": "completed",
             "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-plan.json"
           },
           {
-            "label": "implementation-failure",
-            "command": "implementation:failed",
+            "label": "materialize-change-set",
+            "command": "gemini:materialize-implementation-files",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-22T04:34:40.191Z",
-            "finishedAt": "2026-04-22T04:34:40.191Z",
-            "durationMs": 0,
-            "status": "failed",
-            "error": "{\"error\":{\"code\":503,\"message\":\"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\"status\":\"UNAVAILABLE\"}}",
-            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-failure.json"
+            "startedAt": "2026-04-22T20:05:11.866Z",
+            "finishedAt": "2026-04-22T20:06:44.431Z",
+            "durationMs": 92565,
+            "status": "completed",
+            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-materialize.json"
+          },
+          {
+            "label": "apply-change-set",
+            "command": "apply:implementation-change-set",
+            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+            "startedAt": "2026-04-22T20:06:44.526Z",
+            "finishedAt": "2026-04-22T20:06:44.529Z",
+            "durationMs": 3,
+            "status": "completed",
+            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-implementation-apply.json"
           }
         ],
-        "fileOperations": []
+        "fileOperations": [
+          {
+            "operation": "replace",
+            "filePath": "src/demo-app/render/render-intent-studio-page.ts",
+            "rationale": "Inject the status indicator component into the Intent Studio header, ensuring it displays the current execution state and state code as required by the acceptance criteria.",
+            "status": "applied"
+          }
+        ]
       },
       "qaVerification": {
-        "status": "skipped",
-        "summary": "QA verification was skipped because implementation did not complete successfully.",
+        "status": "completed",
+        "summary": "QA verification passed 2 commands.",
         "targetedWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
         ],
-        "completedWorkItemIds": [],
+        "completedWorkItemIds": [
+          "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+          "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app"
+        ],
         "remainingWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
         ],
-        "commands": [],
+        "commands": [
+          {
+            "label": "typecheck",
+            "command": "npm run typecheck",
+            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+            "startedAt": "2026-04-22T20:06:46.838Z",
+            "finishedAt": "2026-04-22T20:06:56.716Z",
+            "durationMs": 9878,
+            "status": "completed",
+            "exitCode": 0,
+            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-typecheck.log"
+          },
+          {
+            "label": "generated-playwright",
+            "command": "npx playwright test --workers=1 \"tests/intent/intent-poc-app/verify-status-indicator-execution.spec.ts\"",
+            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
+            "startedAt": "2026-04-22T20:06:56.719Z",
+            "finishedAt": "2026-04-22T20:08:40.961Z",
+            "durationMs": 104242,
+            "status": "completed",
+            "exitCode": 0,
+            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-1-qaverification-generated-playwright.log"
+          }
+        ],
         "fileOperations": []
       }
     },
     {
       "attemptNumber": 2,
-      "startedAt": "2026-04-22T04:34:40.193Z",
-      "finishedAt": "2026-04-22T04:36:46.987Z",
-      "status": "failed",
-      "failureStage": "qaVerification",
+      "startedAt": "2026-04-22T20:08:40.963Z",
+      "finishedAt": "2026-04-22T20:15:48.058Z",
+      "status": "completed",
       "targetedWorkItemIds": [
-        "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+        "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
       ],
       "completedInAttemptWorkItemIds": [
-        "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+        "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
       ],
       "pendingTargetedWorkItemIds": [],
       "completedWorkItemIds": [
-        "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+        "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+        "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
       ],
       "remainingWorkItemIds": [],
       "implementation": {
         "status": "completed",
-        "summary": "Applied 1 file operation (0 create, 1 replace, 0 delete). Requested UI states for downstream verification: theme-mode=light.",
+        "summary": "Applied 2 file operations (0 create, 2 replace, 0 delete).",
         "targetedWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
         ],
         "completedWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+          "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
         ],
         "remainingWorkItemIds": [],
         "commands": [
@@ -1687,9 +1462,9 @@
             "label": "plan-change-set",
             "command": "gemini:plan-implementation-change-set",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-22T04:34:40.376Z",
-            "finishedAt": "2026-04-22T04:34:54.756Z",
-            "durationMs": 14380,
+            "startedAt": "2026-04-22T20:08:41.049Z",
+            "finishedAt": "2026-04-22T20:12:49.530Z",
+            "durationMs": 248481,
             "status": "completed",
             "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-implementation-plan.json"
           },
@@ -1697,9 +1472,9 @@
             "label": "materialize-change-set",
             "command": "gemini:materialize-implementation-files",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-22T04:34:54.776Z",
-            "finishedAt": "2026-04-22T04:36:27.556Z",
-            "durationMs": 92780,
+            "startedAt": "2026-04-22T20:12:49.532Z",
+            "finishedAt": "2026-04-22T20:14:53.251Z",
+            "durationMs": 123719,
             "status": "completed",
             "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-implementation-materialize.json"
           },
@@ -1707,9 +1482,9 @@
             "label": "apply-change-set",
             "command": "apply:implementation-change-set",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-22T04:36:27.708Z",
-            "finishedAt": "2026-04-22T04:36:27.715Z",
-            "durationMs": 7,
+            "startedAt": "2026-04-22T20:14:53.439Z",
+            "finishedAt": "2026-04-22T20:14:53.442Z",
+            "durationMs": 3,
             "status": "completed",
             "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-implementation-apply.json"
           }
@@ -1718,44 +1493,39 @@
           {
             "operation": "replace",
             "filePath": "src/demo-app/render/render-intent-studio-page.ts",
-            "rationale": "Integrate a persistent TestExecutionIndicator component into the Intent Studio layout to display real-time execution status and state codes as requested.",
+            "rationale": "Integrate the new real-time status indicator component into the Intent Studio header and ensure it is theme-aware to satisfy visual consistency requirements.",
+            "status": "applied"
+          },
+          {
+            "operation": "replace",
+            "filePath": "src/demo-app/server/start-intent-studio-server.ts",
+            "rationale": "Update the server logic to correctly propagate real-time test execution status and state codes to the Intent Studio UI.",
             "status": "applied"
           }
         ]
       },
       "qaVerification": {
-        "status": "failed",
-        "summary": "QA verification failed while running 'generated-playwright'. Requested UI states: theme-mode=light.",
-        "error": "Command failed (1).",
+        "status": "completed",
+        "summary": "QA verification passed 1 command.",
         "targetedWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
         ],
         "completedWorkItemIds": [
-          "work-1-implement-real-time-test-execution-status-indicator-intent-poc-app"
+          "work-1-verify-status-indicator-real-time-execution-states-intent-poc-app",
+          "work-2-verify-status-indicator-visual-consistency-intent-poc-app",
+          "work-2-verify-status-indicator-visual-consistency-intent-poc-app"
         ],
         "remainingWorkItemIds": [],
         "commands": [
           {
-            "label": "typecheck",
-            "command": "npm run typecheck",
+            "label": "generated-playwright",
+            "command": "npx playwright test --workers=1 \"tests/intent/intent-poc-app/verify-status-indicator-visual-consistency.spec.ts\"",
             "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-22T04:36:27.777Z",
-            "finishedAt": "2026-04-22T04:36:38.264Z",
-            "durationMs": 10487,
+            "startedAt": "2026-04-22T20:15:10.951Z",
+            "finishedAt": "2026-04-22T20:15:48.057Z",
+            "durationMs": 37106,
             "status": "completed",
             "exitCode": 0,
-            "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-qaverification-typecheck.log"
-          },
-          {
-            "label": "generated-playwright",
-            "command": "npx playwright test \"tests/intent/intent-poc-app/test-execution-indicator.spec.ts\"",
-            "cwd": "/home/andre/Desktop/GeniusMonkey/Intent POC",
-            "startedAt": "2026-04-22T04:36:38.266Z",
-            "finishedAt": "2026-04-22T04:36:46.986Z",
-            "durationMs": 8720,
-            "status": "failed",
-            "exitCode": 1,
-            "error": "Command failed (1).",
             "logPath": "artifacts/sources/intent-poc-app/attempts/attempt-2-qaverification-generated-playwright.log"
           }
         ],
@@ -1777,9 +1547,966 @@
     "disableAnimations": true,
     "extraHTTPHeaders": {}
   },
-  "captures": [],
-  "warnings": [
-    "Requested UI states: theme-mode=light."
+  "captures": [
+    {
+      "captureId": "primitive-color-chip",
+      "name": "Color Chip",
+      "path": "/library/primitive-color-chip",
+      "url": "http://127.0.0.1:6006/library/primitive-color-chip",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-color-chip.png",
+      "relativeOutputPath": "components/primitive-color-chip.png",
+      "durationMs": 966,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-color-chip']",
+      "status": "captured",
+      "hash": "99232a2d6c2b49c3c845f3ffb9b76c25be8c9adaf1ac9c1bf1e3ec11fca0a8eb",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-typography",
+      "name": "Typography Scale",
+      "path": "/library/primitive-typography",
+      "url": "http://127.0.0.1:6006/library/primitive-typography",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-typography.png",
+      "relativeOutputPath": "components/primitive-typography.png",
+      "durationMs": 938,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-typography']",
+      "status": "captured",
+      "hash": "d25b5e62951e40dfe3df0ab2f16c169f4f9d57db7f3e00d1fd352a1c0c9c6a16",
+      "width": 1148,
+      "height": 191,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-pill-tag",
+      "name": "Pill Tag",
+      "path": "/library/primitive-pill-tag",
+      "url": "http://127.0.0.1:6006/library/primitive-pill-tag",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-pill-tag.png",
+      "relativeOutputPath": "components/primitive-pill-tag.png",
+      "durationMs": 934,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-pill-tag']",
+      "status": "captured",
+      "hash": "72663f698ef0c5c1db8fba0375b619afa922712f5bd9553ca34d1e2ce438a7dc",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-input-field",
+      "name": "Input Field",
+      "path": "/library/primitive-input-field",
+      "url": "http://127.0.0.1:6006/library/primitive-input-field",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-input-field.png",
+      "relativeOutputPath": "components/primitive-input-field.png",
+      "durationMs": 943,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-input-field']",
+      "status": "captured",
+      "hash": "be7951b328e2ff26b6217d84ee8d27373ac3c95ff203a2a2fa78eb5df4f36434",
+      "width": 1148,
+      "height": 137,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-button-set",
+      "name": "Button Set",
+      "path": "/library/primitive-button-set",
+      "url": "http://127.0.0.1:6006/library/primitive-button-set",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-button-set.png",
+      "relativeOutputPath": "components/primitive-button-set.png",
+      "durationMs": 929,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-button-set']",
+      "status": "captured",
+      "hash": "6039d6408f2e512ba2e96cd6adca74a694984ea994f26b9c4d78694fba253b24",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-avatar-stack",
+      "name": "Avatar Stack",
+      "path": "/library/primitive-avatar-stack",
+      "url": "http://127.0.0.1:6006/library/primitive-avatar-stack",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-avatar-stack.png",
+      "relativeOutputPath": "components/primitive-avatar-stack.png",
+      "durationMs": 923,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-avatar-stack']",
+      "status": "captured",
+      "hash": "2c3781096819cd07482f3b78745d83f8ce19467efdde79cfae115ea6ee1ccb0d",
+      "width": 1148,
+      "height": 133,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-status-indicator",
+      "name": "Status Indicator",
+      "path": "/library/primitive-status-indicator",
+      "url": "http://127.0.0.1:6006/library/primitive-status-indicator",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-status-indicator.png",
+      "relativeOutputPath": "components/primitive-status-indicator.png",
+      "durationMs": 911,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-status-indicator']",
+      "status": "captured",
+      "hash": "75399e8f22c05619857392180480a03464e1e28e07cc7f465b7f66eb3dff9854",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-spacing-scale",
+      "name": "Spacing Scale",
+      "path": "/library/primitive-spacing-scale",
+      "url": "http://127.0.0.1:6006/library/primitive-spacing-scale",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-spacing-scale.png",
+      "relativeOutputPath": "components/primitive-spacing-scale.png",
+      "durationMs": 937,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-spacing-scale']",
+      "status": "captured",
+      "hash": "ece02510ffe2ab7b3f747cdd9573060cce71fc66e546f8b7b488fa22afc9afb2",
+      "width": 1148,
+      "height": 275,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-icon-list",
+      "name": "Icon List",
+      "path": "/library/primitive-icon-list",
+      "url": "http://127.0.0.1:6006/library/primitive-icon-list",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-icon-list.png",
+      "relativeOutputPath": "components/primitive-icon-list.png",
+      "durationMs": 923,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-icon-list']",
+      "status": "captured",
+      "hash": "c2e2e4e4d08a7d4f339545003c55a09154c4f20283c2dbf05da982ae686091cd",
+      "width": 1148,
+      "height": 123,
+      "warnings": []
+    },
+    {
+      "captureId": "primitive-kpi-block",
+      "name": "KPI Block",
+      "path": "/library/primitive-kpi-block",
+      "url": "http://127.0.0.1:6006/library/primitive-kpi-block",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/primitive-kpi-block.png",
+      "relativeOutputPath": "components/primitive-kpi-block.png",
+      "durationMs": 929,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='primitive-kpi-block']",
+      "status": "captured",
+      "hash": "69be0a5cd947da70513b0da2d459e4997a5f7895ba21072aa2f5aaa3beb18edc",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-primary",
+      "name": "Primary Button",
+      "path": "/library/component-button-primary",
+      "url": "http://127.0.0.1:6006/library/component-button-primary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-primary.png",
+      "relativeOutputPath": "components/component-button-primary.png",
+      "durationMs": 927,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-primary']",
+      "status": "captured",
+      "hash": "93ea2d086a1fec0c56c2216d985ef8353b6373ed0bf3b96f7863453916ccf547",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-secondary",
+      "name": "Secondary Button",
+      "path": "/library/component-button-secondary",
+      "url": "http://127.0.0.1:6006/library/component-button-secondary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-secondary.png",
+      "relativeOutputPath": "components/component-button-secondary.png",
+      "durationMs": 926,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-secondary']",
+      "status": "captured",
+      "hash": "d8244c5b9a65577cda392e5573bf268efdb958df94a6081795d48da62c2cf2f7",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-button-danger",
+      "name": "Danger Button",
+      "path": "/library/component-button-danger",
+      "url": "http://127.0.0.1:6006/library/component-button-danger",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-button-danger.png",
+      "relativeOutputPath": "components/component-button-danger.png",
+      "durationMs": 911,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-button-danger']",
+      "status": "captured",
+      "hash": "e1c36ee544ae199151ccc19da3836d823ba8e45276c274ebc2fbd342c412b706",
+      "width": 1148,
+      "height": 134,
+      "warnings": []
+    },
+    {
+      "captureId": "component-card-highlight",
+      "name": "Highlight Card",
+      "path": "/library/component-card-highlight",
+      "url": "http://127.0.0.1:6006/library/component-card-highlight",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-highlight.png",
+      "relativeOutputPath": "components/component-card-highlight.png",
+      "durationMs": 915,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-card-highlight']",
+      "status": "captured",
+      "hash": "e93bb3b4b099b2cdd88940626233b4460b7537be6fd515cd83c117eab22c717a",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-card-compact",
+      "name": "Compact Card",
+      "path": "/library/component-card-compact",
+      "url": "http://127.0.0.1:6006/library/component-card-compact",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-card-compact.png",
+      "relativeOutputPath": "components/component-card-compact.png",
+      "durationMs": 927,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-card-compact']",
+      "status": "captured",
+      "hash": "5f78d2077d08d1c3c2f0c808d481084c9fe0ce187457d248fa2fce2ab27b05e9",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-banner-info",
+      "name": "Info Banner",
+      "path": "/library/component-banner-info",
+      "url": "http://127.0.0.1:6006/library/component-banner-info",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-info.png",
+      "relativeOutputPath": "components/component-banner-info.png",
+      "durationMs": 925,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-banner-info']",
+      "status": "captured",
+      "hash": "f4c8ae979424e832e5b448759cb1a48ab3a77cf04b429eaf077e515a561d2800",
+      "width": 1148,
+      "height": 151,
+      "warnings": []
+    },
+    {
+      "captureId": "component-banner-warning",
+      "name": "Warning Banner",
+      "path": "/library/component-banner-warning",
+      "url": "http://127.0.0.1:6006/library/component-banner-warning",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-banner-warning.png",
+      "relativeOutputPath": "components/component-banner-warning.png",
+      "durationMs": 925,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-banner-warning']",
+      "status": "captured",
+      "hash": "2b89bdd3ae109db4056d999b2c0422d66ede7b9797f74491f7228dce00d98db9",
+      "width": 1148,
+      "height": 151,
+      "warnings": []
+    },
+    {
+      "captureId": "component-modal-shell",
+      "name": "Modal Shell",
+      "path": "/library/component-modal-shell",
+      "url": "http://127.0.0.1:6006/library/component-modal-shell",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-modal-shell.png",
+      "relativeOutputPath": "components/component-modal-shell.png",
+      "durationMs": 936,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-modal-shell']",
+      "status": "captured",
+      "hash": "d27890dae57c421cb7ffd350ff359bff8acc00d13244a3e2db2c401133a67516",
+      "width": 1148,
+      "height": 196,
+      "warnings": []
+    },
+    {
+      "captureId": "component-table-row",
+      "name": "Table Row",
+      "path": "/library/component-table-row",
+      "url": "http://127.0.0.1:6006/library/component-table-row",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-table-row.png",
+      "relativeOutputPath": "components/component-table-row.png",
+      "durationMs": 921,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-table-row']",
+      "status": "captured",
+      "hash": "219afe3fba3cbed8b153a3f2a8f17cbeeb50209b8ea6d74ea24df17305be6639",
+      "width": 1148,
+      "height": 169,
+      "warnings": []
+    },
+    {
+      "captureId": "component-search-bar",
+      "name": "Search Bar",
+      "path": "/library/component-search-bar",
+      "url": "http://127.0.0.1:6006/library/component-search-bar",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-search-bar.png",
+      "relativeOutputPath": "components/component-search-bar.png",
+      "durationMs": 931,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-search-bar']",
+      "status": "captured",
+      "hash": "9b3954c5d8ef53b4b84b206b027ecf49a73b5fe5496e6eb19890bc4df19b8561",
+      "width": 1148,
+      "height": 137,
+      "warnings": []
+    },
+    {
+      "captureId": "component-stat-tile",
+      "name": "Stat Tile",
+      "path": "/library/component-stat-tile",
+      "url": "http://127.0.0.1:6006/library/component-stat-tile",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-stat-tile.png",
+      "relativeOutputPath": "components/component-stat-tile.png",
+      "durationMs": 912,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-stat-tile']",
+      "status": "captured",
+      "hash": "acc1d920cba619622f569ae9e4889977669b6c83e9b1d6c38a6a4cea8be9b4ee",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "component-nav-tabs",
+      "name": "Nav Tabs",
+      "path": "/library/component-nav-tabs",
+      "url": "http://127.0.0.1:6006/library/component-nav-tabs",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-nav-tabs.png",
+      "relativeOutputPath": "components/component-nav-tabs.png",
+      "durationMs": 926,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-nav-tabs']",
+      "status": "captured",
+      "hash": "52b7a4dc3c4158416328fbe95f06834c0e9dfce73fc1fec45ee6220bff0fe3d8",
+      "width": 1148,
+      "height": 131,
+      "warnings": []
+    },
+    {
+      "captureId": "component-toast-success",
+      "name": "Success Toast",
+      "path": "/library/component-toast-success",
+      "url": "http://127.0.0.1:6006/library/component-toast-success",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-success.png",
+      "relativeOutputPath": "components/component-toast-success.png",
+      "durationMs": 913,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-toast-success']",
+      "status": "captured",
+      "hash": "0b0abe0641f66b88e3b746079dabb3b00be951133f68b05a11344c265d7ec796",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-toast-error",
+      "name": "Error Toast",
+      "path": "/library/component-toast-error",
+      "url": "http://127.0.0.1:6006/library/component-toast-error",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-toast-error.png",
+      "relativeOutputPath": "components/component-toast-error.png",
+      "durationMs": 914,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-toast-error']",
+      "status": "captured",
+      "hash": "13b54b25f2295d9781a410f45ceb6c8a572121e07b825b3eb2810ed05f951179",
+      "width": 1148,
+      "height": 181,
+      "warnings": []
+    },
+    {
+      "captureId": "component-form-section",
+      "name": "Form Section",
+      "path": "/library/component-form-section",
+      "url": "http://127.0.0.1:6006/library/component-form-section",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-form-section.png",
+      "relativeOutputPath": "components/component-form-section.png",
+      "durationMs": 990,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-form-section']",
+      "status": "captured",
+      "hash": "8f59db07ac4f3e044dafdd5602eff5ca59b6e2235e98e9d754c8423caa9283fe",
+      "width": 1148,
+      "height": 300,
+      "warnings": []
+    },
+    {
+      "captureId": "component-user-list-item",
+      "name": "User List Item",
+      "path": "/library/component-user-list-item",
+      "url": "http://127.0.0.1:6006/library/component-user-list-item",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-user-list-item.png",
+      "relativeOutputPath": "components/component-user-list-item.png",
+      "durationMs": 995,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-user-list-item']",
+      "status": "captured",
+      "hash": "38de89f252e50f87a5546512bf0a4091e407fbb4da3738d6917fed4d7b5e323e",
+      "width": 1148,
+      "height": 155,
+      "warnings": []
+    },
+    {
+      "captureId": "component-activity-timeline",
+      "name": "Activity Timeline",
+      "path": "/library/component-activity-timeline",
+      "url": "http://127.0.0.1:6006/library/component-activity-timeline",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/components/component-activity-timeline.png",
+      "relativeOutputPath": "components/component-activity-timeline.png",
+      "durationMs": 935,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='component-activity-timeline']",
+      "status": "captured",
+      "hash": "5a6fbfbb76e6342d315db70c8b989e142d44cd10a37db2600233c4052c574ca9",
+      "width": 1148,
+      "height": 159,
+      "warnings": []
+    },
+    {
+      "captureId": "view-dashboard-summary",
+      "name": "Dashboard Summary View",
+      "path": "/library/view-dashboard-summary",
+      "url": "http://127.0.0.1:6006/library/view-dashboard-summary",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-dashboard-summary.png",
+      "relativeOutputPath": "views/view-dashboard-summary.png",
+      "durationMs": 929,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-dashboard-summary']",
+      "status": "captured",
+      "hash": "2f6e78efc00d59eb4b7d69edfac5d992da893e044b174808a5e10b9294dc36e8",
+      "width": 1148,
+      "height": 438,
+      "warnings": []
+    },
+    {
+      "captureId": "view-list-overview",
+      "name": "List Overview View",
+      "path": "/library/view-list-overview",
+      "url": "http://127.0.0.1:6006/library/view-list-overview",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-list-overview.png",
+      "relativeOutputPath": "views/view-list-overview.png",
+      "durationMs": 917,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-list-overview']",
+      "status": "captured",
+      "hash": "14b0adc5d95ec4c55762c424e12f0a024a0c1848676fc69054c8ff65ca221abd",
+      "width": 1148,
+      "height": 283,
+      "warnings": []
+    },
+    {
+      "captureId": "view-settings-panel",
+      "name": "Settings Panel View",
+      "path": "/library/view-settings-panel",
+      "url": "http://127.0.0.1:6006/library/view-settings-panel",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-settings-panel.png",
+      "relativeOutputPath": "views/view-settings-panel.png",
+      "durationMs": 949,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-settings-panel']",
+      "status": "captured",
+      "hash": "469a3356d2aae50b3df630fa5017504f8f2aec4ec1a4917b62bd8bcf52c70b2c",
+      "width": 1148,
+      "height": 349,
+      "warnings": []
+    },
+    {
+      "captureId": "view-empty-results",
+      "name": "Empty Results View",
+      "path": "/library/view-empty-results",
+      "url": "http://127.0.0.1:6006/library/view-empty-results",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-empty-results.png",
+      "relativeOutputPath": "views/view-empty-results.png",
+      "durationMs": 939,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-empty-results']",
+      "status": "captured",
+      "hash": "14c06fdfa43085ca3d93f3e599dee33ae3845079b3e4b7401b8d6aca77f01216",
+      "width": 1148,
+      "height": 221,
+      "warnings": []
+    },
+    {
+      "captureId": "view-campaign-table",
+      "name": "Campaign Table View",
+      "path": "/library/view-campaign-table",
+      "url": "http://127.0.0.1:6006/library/view-campaign-table",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-campaign-table.png",
+      "relativeOutputPath": "views/view-campaign-table.png",
+      "durationMs": 952,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-campaign-table']",
+      "status": "captured",
+      "hash": "42623944908cec3aefdeb2f1c63bc91ba3a5d0692a63e691253c5df23b21b442",
+      "width": 1148,
+      "height": 299,
+      "warnings": []
+    },
+    {
+      "captureId": "view-notifications-center",
+      "name": "Notifications Center View",
+      "path": "/library/view-notifications-center",
+      "url": "http://127.0.0.1:6006/library/view-notifications-center",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-notifications-center.png",
+      "relativeOutputPath": "views/view-notifications-center.png",
+      "durationMs": 937,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-notifications-center']",
+      "status": "captured",
+      "hash": "1db35105e8da92384bf358646c16c65969103618b3fab99ff5361ddad2f1229c",
+      "width": 1148,
+      "height": 342,
+      "warnings": []
+    },
+    {
+      "captureId": "view-user-directory",
+      "name": "User Directory View",
+      "path": "/library/view-user-directory",
+      "url": "http://127.0.0.1:6006/library/view-user-directory",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-user-directory.png",
+      "relativeOutputPath": "views/view-user-directory.png",
+      "durationMs": 954,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-user-directory']",
+      "status": "captured",
+      "hash": "5468629af8c19c63801e12be93fcfde0497808e203138b6697d21cacb164b239",
+      "width": 1148,
+      "height": 335,
+      "warnings": []
+    },
+    {
+      "captureId": "view-revenue-kpis",
+      "name": "Revenue KPIs View",
+      "path": "/library/view-revenue-kpis",
+      "url": "http://127.0.0.1:6006/library/view-revenue-kpis",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-revenue-kpis.png",
+      "relativeOutputPath": "views/view-revenue-kpis.png",
+      "durationMs": 932,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-revenue-kpis']",
+      "status": "captured",
+      "hash": "e9e122c0dc157eca745543ff59d670ca9f4e6d545c0c994d17171bb93bb863d8",
+      "width": 1148,
+      "height": 157,
+      "warnings": []
+    },
+    {
+      "captureId": "view-onboarding-checklist",
+      "name": "Onboarding Checklist View",
+      "path": "/library/view-onboarding-checklist",
+      "url": "http://127.0.0.1:6006/library/view-onboarding-checklist",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-onboarding-checklist.png",
+      "relativeOutputPath": "views/view-onboarding-checklist.png",
+      "durationMs": 942,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-onboarding-checklist']",
+      "status": "captured",
+      "hash": "cf868a11318264eabe0e38dc1ec82b182a4bcbe90681560b8e4d370d99156eb4",
+      "width": 1148,
+      "height": 349,
+      "warnings": []
+    },
+    {
+      "captureId": "view-approval-queue",
+      "name": "Approval Queue View",
+      "path": "/library/view-approval-queue",
+      "url": "http://127.0.0.1:6006/library/view-approval-queue",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-approval-queue.png",
+      "relativeOutputPath": "views/view-approval-queue.png",
+      "durationMs": 919,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-approval-queue']",
+      "status": "captured",
+      "hash": "3d970a44365ca6729ad8c976cbf53acea5a3246dfaa3c247db32694dd33aff7c",
+      "width": 1148,
+      "height": 387,
+      "warnings": []
+    },
+    {
+      "captureId": "view-audit-log",
+      "name": "Audit Log View",
+      "path": "/library/view-audit-log",
+      "url": "http://127.0.0.1:6006/library/view-audit-log",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-audit-log.png",
+      "relativeOutputPath": "views/view-audit-log.png",
+      "durationMs": 926,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-audit-log']",
+      "status": "captured",
+      "hash": "dc153638a61f36bb7af3afa054cdd9f2765b512a50e00ed08d8f06a96c51cb3f",
+      "width": 1148,
+      "height": 335,
+      "warnings": []
+    },
+    {
+      "captureId": "view-billing-overview",
+      "name": "Billing Overview View",
+      "path": "/library/view-billing-overview",
+      "url": "http://127.0.0.1:6006/library/view-billing-overview",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/views/view-billing-overview.png",
+      "relativeOutputPath": "views/view-billing-overview.png",
+      "durationMs": 923,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='view-billing-overview']",
+      "status": "captured",
+      "hash": "3b81ebc30e9c769dc7cae5cf08f78b7fb440d26e3bd1b4585aedb4418a3b8cb7",
+      "width": 1148,
+      "height": 223,
+      "warnings": []
+    },
+    {
+      "captureId": "page-analytics-overview",
+      "name": "Analytics Overview",
+      "path": "/library/page-analytics-overview",
+      "url": "http://127.0.0.1:6006/library/page-analytics-overview",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-analytics-overview.png",
+      "relativeOutputPath": "pages/page-analytics-overview.png",
+      "durationMs": 921,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "59a40acc2ef542a2db8fbe025850a11551bf6d6e5935b472d334866311908b08",
+      "width": 1440,
+      "height": 900,
+      "warnings": []
+    },
+    {
+      "captureId": "page-account-list",
+      "name": "Account List Page",
+      "path": "/library/page-account-list",
+      "url": "http://127.0.0.1:6006/library/page-account-list",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-account-list.png",
+      "relativeOutputPath": "pages/page-account-list.png",
+      "durationMs": 981,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-account-list']",
+      "status": "captured",
+      "hash": "e2593f1e7f68bf64193b7fb48508099d0c602cbddd1c57a237e7d6b5b8837a00",
+      "width": 1148,
+      "height": 575,
+      "warnings": []
+    },
+    {
+      "captureId": "page-campaign-editor",
+      "name": "Campaign Editor Page",
+      "path": "/library/page-campaign-editor",
+      "url": "http://127.0.0.1:6006/library/page-campaign-editor",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-campaign-editor.png",
+      "relativeOutputPath": "pages/page-campaign-editor.png",
+      "durationMs": 994,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-campaign-editor']",
+      "status": "captured",
+      "hash": "71f9bdcb1698147b726f521cc81610e916272e735ee59430828ab82b4deee3d7",
+      "width": 1148,
+      "height": 693,
+      "warnings": []
+    },
+    {
+      "captureId": "page-system-settings",
+      "name": "System Settings Page",
+      "path": "/library/page-system-settings",
+      "url": "http://127.0.0.1:6006/library/page-system-settings",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-system-settings.png",
+      "relativeOutputPath": "pages/page-system-settings.png",
+      "durationMs": 1081,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-system-settings']",
+      "status": "captured",
+      "hash": "b1d2b25ff18dc416da7e79131ed26a83b6926f28d6009c12e150470ef2e25bd1",
+      "width": 1148,
+      "height": 526,
+      "warnings": []
+    },
+    {
+      "captureId": "page-operations-center",
+      "name": "Operations Center Page",
+      "path": "/library/page-operations-center",
+      "url": "http://127.0.0.1:6006/library/page-operations-center",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-operations-center.png",
+      "relativeOutputPath": "pages/page-operations-center.png",
+      "durationMs": 1080,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-operations-center']",
+      "status": "captured",
+      "hash": "494eb1ce22a1f81aec2f866b399aba4fefb2974dd8993d70cc06a0635f5a870e",
+      "width": 1148,
+      "height": 986,
+      "warnings": []
+    },
+    {
+      "captureId": "page-user-management",
+      "name": "User Management Page",
+      "path": "/library/page-user-management",
+      "url": "http://127.0.0.1:6006/library/page-user-management",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-user-management.png",
+      "relativeOutputPath": "pages/page-user-management.png",
+      "durationMs": 993,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-user-management']",
+      "status": "captured",
+      "hash": "1ab1b4885c1603545e91b1a7750c81688904a02c4810db7f1694f501cb6b5c1c",
+      "width": 1148,
+      "height": 679,
+      "warnings": []
+    },
+    {
+      "captureId": "page-incident-review",
+      "name": "Incident Review Page",
+      "path": "/library/page-incident-review",
+      "url": "http://127.0.0.1:6006/library/page-incident-review",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-incident-review.png",
+      "relativeOutputPath": "pages/page-incident-review.png",
+      "durationMs": 966,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-incident-review']",
+      "status": "captured",
+      "hash": "3ab1390955fd36bb28ad4d2828268fd988e20277499cf96240766e1b7b06a74b",
+      "width": 1148,
+      "height": 634,
+      "warnings": []
+    },
+    {
+      "captureId": "page-revenue-forecast",
+      "name": "Revenue Forecast Page",
+      "path": "/library/page-revenue-forecast",
+      "url": "http://127.0.0.1:6006/library/page-revenue-forecast",
+      "kind": "locator",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/pages/page-revenue-forecast.png",
+      "relativeOutputPath": "pages/page-revenue-forecast.png",
+      "durationMs": 955,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "locator": "[data-testid='page-revenue-forecast']",
+      "status": "captured",
+      "hash": "8b7c99310436544b172bf170fc74910f9ccf1868c1068cd78a22517bced2e37d",
+      "width": 1148,
+      "height": 551,
+      "warnings": []
+    },
+    {
+      "captureId": "library-index",
+      "name": "Surface Library Index",
+      "path": "/library",
+      "url": "http://127.0.0.1:6006/library",
+      "kind": "page",
+      "outputPath": "/home/andre/Desktop/GeniusMonkey/Intent POC/artifacts/library/intent-poc-app/library-index.png",
+      "relativeOutputPath": "library-index.png",
+      "durationMs": 968,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "status": "captured",
+      "hash": "9b84a68b1332ae17e0ccc86a0d3663371c7e1c8adce26fc6e40ed5afd4cd231a",
+      "width": 1440,
+      "height": 1843,
+      "warnings": []
+    }
   ],
+  "warnings": [],
   "comparisonIssues": []
 }

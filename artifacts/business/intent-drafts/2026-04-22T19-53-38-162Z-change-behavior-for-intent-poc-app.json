@@ -1,0 +1,538 @@
+{
+  "reviewedIntentId": "2026-04-22T19-53-38-162Z-change-behavior-for-intent-poc-app",
+  "status": "draft",
+  "createdAt": "2026-04-22T19:53:38.167Z",
+  "updatedAt": "2026-04-22T19:53:52.000Z",
+  "prompt": "## Intent\n\nRun a test suite\n\n## Desired Outcome\n\nExecute the full test suite for the intent-poc-app to verify current system integrity.\n\n## Repo Context\n\n- Intent Driven Development POC workspace\n- Intent Driven Development POC: Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.\n\n## Source Scope\n\n- intent-poc-app\n- Selected source: intent-poc-app.\n- Likely owning surface: Shared Source (high confidence).\n\n## Adaptive Boundaries\n\n- Keep this draft inside intent-poc-app until the owning surface is confirmed.\n\n## Minimum Success\n\n- Full test suite execution completion\n- Report of pass/fail status for all components\n- Execute the full test suite for the intent-poc-app to verify current system integrity.\n- The draft keeps the change centered on Shared Source instead of the whole repo.\n- The final plan names one existing UI verification path instead of inventing a new workflow.\n\n## Baseline\n\n- Capture the current baseline in Shared Source before changing behavior.\n\n## Verification Obligations\n\n- Verify theme-mode state consistency across UI components\n- Ensure dark-mode and light-mode reference screenshots are captured\n- Name the existing Playwright or screenshot check that will prove the behavior change.\n\n## Raw Intent\n\nRun a test suite",
+  "requestedSourceIds": [
+    "intent-poc-app"
+  ],
+  "normalizedIntent": {
+    "intentId": "2026-04-22T19-53-38-162Z-change-behavior-for-intent-poc-app",
+    "receivedAt": "2026-04-22T19:53:51.996Z",
+    "rawPrompt": "Run a test suite\n\nDesired outcome: Execute the full test suite for the intent-poc-app to verify current system integrity.",
+    "summary": "change behavior for intent-poc-app",
+    "intentType": "change-behavior",
+    "codeSurface": {
+      "sourceId": "intent-poc-app",
+      "id": "shared-source",
+      "label": "Shared Source",
+      "confidence": "high",
+      "rationale": "Prompt normalization identified Shared Source as the most likely code surface within intent-poc-app.",
+      "alternatives": []
+    },
+    "businessIntent": {
+      "statement": "Execute the full test suite for the intent-poc-app to verify current system integrity.",
+      "desiredOutcome": "The full Playwright test suite for intent-poc-app is executed, with all tests passing and visual regression evidence captured for all library components.",
+      "acceptanceCriteria": [
+        {
+          "id": "ac-1-all-playwright-test-suites-within-intent-poc-app-are-executed-successfully",
+          "description": "All Playwright test suites within intent-poc-app are executed successfully.",
+          "origin": "inferred"
+        },
+        {
+          "id": "ac-2-visual-regression-screenshots-are-generated-for-all-library-components-defined-i",
+          "description": "Visual regression screenshots are generated for all library components defined in the source.",
+          "origin": "inferred"
+        },
+        {
+          "id": "ac-3-test-execution-results-and-visual-evidence-are-packaged-for-stakeholder-review",
+          "description": "Test execution results and visual evidence are packaged for stakeholder review.",
+          "origin": "inferred"
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "scenario-1-execute-full-test-suite",
+          "title": "Execute full test suite",
+          "goal": "Verify system integrity by running all automated tests.",
+          "given": [
+            "The intent-poc-app environment is ready for testing."
+          ],
+          "when": [
+            "The test runner executes the full Playwright suite."
+          ],
+          "then": [
+            "All tests pass.",
+            "Execution logs are generated."
+          ],
+          "applicableSourceIds": [
+            "intent-poc-app"
+          ]
+        },
+        {
+          "id": "scenario-2-capture-visual-regression-evidence",
+          "title": "Capture visual regression evidence",
+          "goal": "Ensure UI consistency across all library components.",
+          "given": [
+            "The test suite is running.",
+            "The theme-mode is set to light."
+          ],
+          "when": [
+            "The visual regression task is triggered for all library components."
+          ],
+          "then": [
+            "Screenshots for all components are captured.",
+            "Visual evidence is stored for comparison."
+          ],
+          "applicableSourceIds": [
+            "intent-poc-app"
+          ]
+        }
+      ],
+      "workItems": [
+        {
+          "id": "work-1-execute-full-test-suite-intent-poc-app",
+          "type": "playwright-spec",
+          "verificationMode": "tracked-playwright",
+          "title": "Execute full test suite",
+          "description": "Verify system integrity by running all automated tests for the intent-poc-app.",
+          "scenarioIds": [
+            "scenario-1-execute-full-test-suite"
+          ],
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "userVisibleOutcome": "All tests pass and system integrity is verified.",
+          "verification": "The full Playwright test suite is executed, ensuring all components and pages are functional.",
+          "execution": {
+            "order": 1,
+            "dependsOnWorkItemIds": [],
+            "objectiveId": "objective-1-run-a-test-suite-desired-outcome-execute-the-full-test-suite-for-the-intent-poc-",
+            "workstreamId": "workstream-1-intent-poc-app",
+            "taskId": "task-1-intent-poc-app-scenario-1-execute-full-test-suite",
+            "subtaskId": "subtask-1-work-1-execute-full-test-suite-intent-poc-app"
+          },
+          "playwright": {
+            "generatedBy": "llm",
+            "specs": [
+              {
+                "framework": "playwright",
+                "sourceId": "intent-poc-app",
+                "relativeSpecPath": "intent-poc-app/full-suite.spec.ts",
+                "suiteName": "Intent POC App Full Suite",
+                "testName": "Execute full test suite",
+                "scenarioIds": [
+                  "scenario-1-execute-full-test-suite"
+                ],
+                "checkpoints": [
+                  {
+                    "id": "checkpoint-1-execute-full-test-suite-verify-library-index",
+                    "label": "Verify library index",
+                    "action": "goto",
+                    "assertion": "The library index page loads successfully.",
+                    "screenshotId": "shot-library-index",
+                    "path": "/library",
+                    "waitUntil": "networkidle"
+                  },
+                  {
+                    "id": "checkpoint-2-execute-full-test-suite-verify-dashboard-summary",
+                    "label": "Verify dashboard summary",
+                    "action": "goto",
+                    "assertion": "The dashboard summary view is visible.",
+                    "screenshotId": "shot-dashboard-summary",
+                    "path": "/library/view-dashboard-summary",
+                    "waitUntil": "load"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "decomposition": {
+        "objectives": [
+          {
+            "id": "objective-1-run-a-test-suite-desired-outcome-execute-the-full-test-suite-for-the-intent-poc-",
+            "title": "Run a test suite\n\nDesired outcome: Execute the full test suite for the intent-poc-app to verify current system integrity.",
+            "summary": "Run a test suite\n\nDesired outcome: Execute the full test suite for the intent-poc-app to verify current system integrity.",
+            "desiredOutcome": "The full Playwright test suite for intent-poc-app is executed, with all tests passing and visual regression evidence captured for all library components.",
+            "workstreamIds": [
+              "workstream-1-intent-poc-app"
+            ]
+          }
+        ],
+        "workstreams": [
+          {
+            "id": "workstream-1-intent-poc-app",
+            "title": "Source workstream: intent-poc-app",
+            "summary": "Deliver the reviewed intent in intent-poc-app.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "taskIds": [
+              "task-1-intent-poc-app-scenario-1-execute-full-test-suite"
+            ]
+          }
+        ],
+        "tasks": [
+          {
+            "id": "task-1-intent-poc-app-scenario-1-execute-full-test-suite",
+            "title": "Execute full test suite",
+            "summary": "Verify system integrity by running all automated tests.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "scenarioIds": [
+              "scenario-1-execute-full-test-suite"
+            ],
+            "workItemIds": [
+              "work-1-execute-full-test-suite-intent-poc-app"
+            ],
+            "subtaskIds": [
+              "subtask-1-work-1-execute-full-test-suite-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-execute-full-test-suite-intent-poc-app"
+            ]
+          }
+        ],
+        "subtasks": [
+          {
+            "id": "subtask-1-work-1-execute-full-test-suite-intent-poc-app",
+            "title": "Execute full test suite",
+            "summary": "Verify system integrity by running all automated tests for the intent-poc-app.",
+            "scenarioIds": [
+              "scenario-1-execute-full-test-suite"
+            ],
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-1-execute-full-test-suite-intent-poc-app"
+            ],
+            "verificationTaskIds": [
+              "verify-1-work-1-execute-full-test-suite-intent-poc-app"
+            ],
+            "dependsOnSubtaskIds": []
+          }
+        ],
+        "verificationTasks": [
+          {
+            "id": "verify-1-work-1-execute-full-test-suite-intent-poc-app",
+            "title": "Verify Execute full test suite",
+            "summary": "Verify the user-visible outcome for Execute full test suite.",
+            "sourceIds": [
+              "intent-poc-app"
+            ],
+            "workItemIds": [
+              "work-1-execute-full-test-suite-intent-poc-app"
+            ]
+          }
+        ]
+      }
+    },
+    "planning": {
+      "repoCandidates": [
+        {
+          "repoId": "intent-poc",
+          "label": "Intent Driven Development POC",
+          "role": "controller-and-demo-source",
+          "sourceIds": [
+            "intent-poc-app"
+          ],
+          "selectionStatus": "selected",
+          "reason": "Source intent-poc-app was selected in the requested source scope.",
+          "summary": "Current workspace source for Intent Studio, surface library evidence flows, and built-in surface library screenshots.",
+          "sourceTypes": [
+            "local"
+          ],
+          "locations": [
+            "/home/andre/Desktop/GeniusMonkey/Intent POC"
+          ],
+          "refs": [],
+          "notes": [
+            "Use this source for prompt-planning, Studio changes, and built-in surface library evidence.",
+            "Surface library screenshot regeneration routes through this source with an explicit library publish opt-in.",
+            "Configured visual captures across linked sources: 48."
+          ],
+          "captureCount": 48
+        }
+      ],
+      "scopingContext": {
+        "matchedPromptTerms": [
+          "intent-poc-app"
+        ],
+        "sourceMatches": [
+          {
+            "sourceId": "intent-poc-app",
+            "matchedTerms": [
+              "intent-poc-app"
+            ],
+            "reason": "Source intent-poc-app was selected in the requested source scope."
+          }
+        ],
+        "primarySurface": {
+          "sourceId": "intent-poc-app",
+          "id": "shared-source",
+          "label": "Shared Source",
+          "confidence": "high",
+          "rationale": "Prompt normalization identified Shared Source as the most likely code surface within intent-poc-app.",
+          "matchedTerms": [],
+          "primaryPaths": [],
+          "adjacentPaths": []
+        },
+        "alternativeSurfaces": [],
+        "pathHints": [],
+        "uiStateHints": [],
+        "verificationHints": [
+          {
+            "sourceId": "intent-poc-app",
+            "note": "Stateful UI bugs should declare and verify the requested UI state before screenshot evidence is trusted.",
+            "reason": "Matched prompt terms: verify."
+          }
+        ],
+        "repoNoteHints": [],
+        "repoMemoryHints": [],
+        "captureHints": [],
+        "unresolvedQuestions": []
+      },
+      "scopingDetails": {
+        "repoContext": [
+          "Intent Driven Development POC"
+        ],
+        "sourceScope": [
+          "intent-poc-app"
+        ],
+        "minimumSuccess": [
+          "Full test suite execution completion",
+          "System integrity verification"
+        ],
+        "verificationObligations": [
+          "Verify UI state before screenshot evidence",
+          "Ensure theme-sensitive UI coverage"
+        ]
+      },
+      "plannerSections": [
+        {
+          "id": "idd-plan",
+          "title": "IDD Plan",
+          "scope": "business",
+          "summary": "Planner-owned business plan with acceptance criteria, repo context, execution lanes, and delivery notes."
+        },
+        {
+          "id": "idd-source-lane-intent-poc-app",
+          "title": "IDD Source Lane: intent-poc-app",
+          "scope": "source",
+          "sourceId": "intent-poc-app",
+          "summary": "Planner-owned lane for intent-poc-app, intended for downstream implementation and verification handoff."
+        }
+      ],
+      "reviewNotes": [],
+      "linearPlan": {
+        "mode": "new"
+      }
+    },
+    "executionPlan": {
+      "primarySourceId": "intent-poc-app",
+      "sources": [
+        {
+          "sourceId": "intent-poc-app",
+          "selectionReason": "Source intent-poc-app was selected in the requested source scope.",
+          "captureScope": {
+            "mode": "all",
+            "captureIds": []
+          },
+          "warnings": []
+        }
+      ],
+      "destinations": [
+        {
+          "id": "controller-artifacts",
+          "type": "controller",
+          "label": "Controller artifacts",
+          "status": "active",
+          "reason": "Local evidence bundles are always written by the controller.",
+          "details": [
+            "Stores plan, manifests, logs, captures, and summaries on disk."
+          ]
+        },
+        {
+          "id": "source-workspace",
+          "type": "source-workspace",
+          "label": "Source workspace publication",
+          "status": "inactive",
+          "reason": "Workspace publishing is disabled until artifacts.storageMode is set to 'both'.",
+          "details": [
+            "Useful when evidence should live beside the source repository."
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "id": "bdd-planning",
+          "type": "intent-planning",
+          "label": "BDD planning",
+          "enabled": true,
+          "reason": "The system converts the raw prompt into reviewable acceptance criteria and scenarios during the full reviewed plan pass.",
+          "details": [
+            "Deterministic by default, with optional Gemini refinement when configured."
+          ]
+        },
+        {
+          "id": "playwright-tdd",
+          "type": "playwright-tdd",
+          "label": "Playwright TDD generation",
+          "enabled": true,
+          "reason": "Applicable sources now produce Playwright-first executable test plans and checkpoint screenshots.",
+          "details": [
+            "Generated specs are intended for checked-in repo storage with overwrite semantics."
+          ]
+        },
+        {
+          "id": "screenshot-evidence",
+          "type": "screenshot",
+          "label": "Visual verification",
+          "enabled": true,
+          "reason": "Applicable sources currently expose visual checkpoints and capture definitions.",
+          "details": [
+            "Playwright screenshots remain one execution tool rather than the top-level product model."
+          ]
+        },
+        {
+          "id": "environment-deployment",
+          "type": "environment-deployment",
+          "label": "Environment deployment",
+          "enabled": false,
+          "reason": "A generic local or Kubernetes deployment stage is planned but not yet wired into the runner.",
+          "details": [
+            "This will become the shared path for local, minikube, and k3s-backed execution."
+          ]
+        },
+        {
+          "id": "implementation",
+          "type": "implementation",
+          "label": "Implementation loop",
+          "enabled": true,
+          "reason": "The runner can execute bounded implementation attempts against the prepared source workspace.",
+          "details": [
+            "QA failures can feed directly back into the next bounded implementation attempt."
+          ]
+        },
+        {
+          "id": "qa-verification",
+          "type": "qa-verification",
+          "label": "QA verification",
+          "enabled": true,
+          "reason": "The runner can now execute a bounded QA bundle before evidence capture completes the lane.",
+          "details": [
+            "The default QA bundle runs typecheck, the deterministic code test suite, and generated Playwright specs when a source enables them."
+          ]
+        },
+        {
+          "id": "reporting",
+          "type": "reporting",
+          "label": "Evidence reporting",
+          "enabled": true,
+          "reason": "Every run produces summaries and machine-readable manifests.",
+          "details": [
+            "Reports become distribution inputs for downstream review and publishing surfaces."
+          ]
+        }
+      ],
+      "orchestrationStrategy": "single-source",
+      "reviewNotes": []
+    },
+    "sourceId": "intent-poc-app",
+    "captureScope": {
+      "mode": "all",
+      "captureIds": []
+    },
+    "artifacts": {
+      "requireScreenshots": true,
+      "requireManifest": true,
+      "requireHashes": true
+    },
+    "linear": {
+      "createIssue": true,
+      "issueTitle": "IDD: Run a test suite\n\nDesired outcome: Execute the full test suite for the intent-poc-app to verify "
+    },
+    "execution": {
+      "continueOnCaptureError": false
+    },
+    "normalizationMeta": {
+      "source": "llm",
+      "warnings": [
+        "Ensure the environment has sufficient permissions to write screenshot artifacts.",
+        "Verify that the theme-mode is explicitly set to avoid inconsistent visual evidence."
+      ],
+      "requestedPlanningDepth": "full",
+      "effectivePlanningDepth": "full",
+      "ambiguity": {
+        "isAmbiguous": false,
+        "reasons": []
+      },
+      "stages": [
+        {
+          "stageId": "promptNormalization",
+          "label": "Prompt Interpretation",
+          "description": "Bound the raw prompt to intent type, source scope, and capture hints before planning.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": []
+        },
+        {
+          "stageId": "linearScoping",
+          "label": "Linear Scoping",
+          "description": "Shape the work into resumable Linear-owned lanes before execution planning expands.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Linear support is disabled in this POC."
+          ]
+        },
+        {
+          "stageId": "bddPlanning",
+          "label": "BDD Planning",
+          "description": "Refine the business intent, acceptance criteria, and scenarios after prompt interpretation.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": [
+            "Ensure the environment has sufficient permissions to write screenshot artifacts.",
+            "Verify that the theme-mode is explicitly set to avoid inconsistent visual evidence."
+          ]
+        },
+        {
+          "stageId": "tddPlanning",
+          "label": "TDD Planning",
+          "description": "Translate the accepted scenarios into Playwright-first executable test artifacts.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "completed",
+          "source": "llm",
+          "warnings": []
+        },
+        {
+          "stageId": "implementation",
+          "label": "Implementation",
+          "description": "Apply the planned changes against the scoped source workspace.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "Implementation stage configuration is recorded and executes during source runs before QA verification."
+          ]
+        },
+        {
+          "stageId": "qaVerification",
+          "label": "QA Verification",
+          "description": "Verify implementation output, tests, and evidence before completion or retry.",
+          "provider": "gemini",
+          "model": "models/gemini-3.1-flash-lite-preview",
+          "status": "skipped",
+          "source": "skipped",
+          "warnings": [
+            "QA verification configuration is recorded and executes during source runs after implementation completes."
+          ]
+        }
+      ]
+    }
+  }
+}

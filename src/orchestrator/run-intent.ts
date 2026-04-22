@@ -692,8 +692,19 @@ export function buildQAVerificationExecutionPlan(input: {
   const expectsGeneratedPlaywright = activeWorkItems.some(
     (workItem) => workItem.verificationMode !== "targeted-code-validation"
   );
+  const requiresSerialGeneratedPlaywright = activeWorkItems.some(
+    (workItem) => workItem.verificationMode === "tracked-playwright"
+  );
+  const targetedGeneratedPlaywrightTests = input.generatedPlaywrightTests.filter((filePath) => {
+    const normalizedFilePath = path.normalize(filePath);
+    return activeWorkItems.some((workItem) =>
+      workItem.playwright.specs.some(
+        (spec) => spec.sourceId === input.sourceId && normalizedFilePath.endsWith(path.normalize(spec.relativeSpecPath))
+      )
+    );
+  });
 
-  if (expectsGeneratedPlaywright && input.generatedPlaywrightTests.length === 0) {
+  if (expectsGeneratedPlaywright && targetedGeneratedPlaywrightTests.length === 0) {
     return {
       uiStateRequirements,
       error: `Missing targeted tracked Playwright specs for active work items: ${activeWorkItemIds.join(", ")}.`
@@ -716,7 +727,7 @@ export function buildQAVerificationExecutionPlan(input: {
   if (expectsGeneratedPlaywright) {
     commands.push({
       label: "generated-playwright",
-      command: `npx playwright test ${input.generatedPlaywrightTests
+      command: `npx playwright test${requiresSerialGeneratedPlaywright ? " --workers=1" : ""} ${targetedGeneratedPlaywrightTests
         .map((filePath) => quoteShellArg(path.relative(input.workspaceRootDir, filePath)))
         .join(" ")}`
     });
